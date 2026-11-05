@@ -69,9 +69,14 @@ function Ensure-Login {
     gh auth status *> $null
     if ($LASTEXITCODE -ne 0) {
         Say 'Signing in to GitHub. A browser window will open. Follow the steps there.'
-        gh auth login --web --git-protocol https
+        gh auth login --web --git-protocol https --scopes workflow
         gh auth status *> $null
         if ($LASTEXITCODE -ne 0) { Bad 'GitHub sign-in did not finish.'; return $false }
+    }
+    $st = "" + (gh auth status 2>&1 | Out-String)
+    if ($st -notmatch 'workflow') {
+        Say 'GitHub needs one more permission (workflow) so it can run builds. A browser window will open.'
+        gh auth refresh -h github.com -s workflow
     }
     gh auth setup-git
     return $true
@@ -208,9 +213,19 @@ function Build-And-Publish {
         git commit -m "Liquid Baby $($v.Name) build $($v.Code)" | Out-Null
     }
     git branch -M main
-    git push -u origin main
+    $pushOut = "" + (git push -u origin main 2>&1 | Out-String)
+    Write-Host $pushOut
     if ($LASTEXITCODE -ne 0) {
-        Bad 'Push was refused. GitHub has changes that are not in this folder. Do not force anything - tell Claude.'
+        if ($pushOut -match 'workflow') {
+            Bad 'GitHub refused the build file: the sign-in is missing the workflow permission. Run this once, then try again:'
+            Bad '  gh auth refresh -h github.com -s workflow'
+        }
+        elseif ($pushOut -match 'non-fast-forward|fetch first|rejected') {
+            Bad 'Push was refused. GitHub has changes that are not in this folder. Do not force anything - tell Claude.'
+        }
+        else {
+            Bad 'Push failed. Copy the text above and send it to Claude.'
+        }
         return
     }
     $sha = ("" + (git rev-parse HEAD)).Trim()

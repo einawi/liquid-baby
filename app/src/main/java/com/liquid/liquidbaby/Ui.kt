@@ -131,3 +131,34 @@ fun shareText(ctx: Context, subject: String, text: String) {
     i.putExtra(Intent.EXTRA_TEXT, text)
     ctx.startActivity(Intent.createChooser(i, subject))
 }
+
+fun LinearLayout.addSlider(min: Int, max: Int, value: Int, onChange: (Int) -> Unit, onRelease: (Int) -> Unit): android.widget.SeekBar {
+    val sb = android.widget.SeekBar(context)
+    sb.max = max - min
+    sb.progress = (value - min).coerceIn(0, max - min)
+    sb.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
+        override fun onProgressChanged(seekBar: android.widget.SeekBar, progress: Int, fromUser: Boolean) {
+            if (fromUser) onChange(progress + min)
+        }
+
+        override fun onStartTrackingTouch(seekBar: android.widget.SeekBar) {}
+
+        override fun onStopTrackingTouch(seekBar: android.widget.SeekBar) {
+            onRelease(seekBar.progress + min)
+        }
+    })
+    addView(sb)
+    return sb
+}
+
+fun Context.toast(text: String) {
+    Toast.makeText(this, text, Toast.LENGTH_LONG).show()
+}
+
+fun LinearLayout.addRow(): LinearLayout {
+    val r = LinearLayout(context)
+    r.orientation = LinearLayout.HORIZONTAL
+    r.gravity = android.view.Gravity.CENTER_VERTICAL
+    addView(r, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+    return r
+}

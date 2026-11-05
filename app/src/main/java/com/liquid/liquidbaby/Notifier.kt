@@ -43,4 +43,33 @@ object Notifier {
             Diag.e("Could not show update notification", e)
         }
     }
+
+    @Suppress("DEPRECATION")
+    fun alert(ctx: Context, title: String, text: String) {
+        try {
+            if (Build.VERSION.SDK_INT >= 33 &&
+                ctx.checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED
+            ) return
+            val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val builder: Notification.Builder
+            if (Build.VERSION.SDK_INT >= 26) {
+                nm.createNotificationChannel(NotificationChannel("alerts", "Baby sounds", NotificationManager.IMPORTANCE_HIGH))
+                builder = Notification.Builder(ctx, "alerts")
+            } else {
+                builder = Notification.Builder(ctx)
+            }
+            val open = PendingIntent.getActivity(
+                ctx, 3, Intent(ctx, ParentActivity::class.java),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            builder.setSmallIcon(android.R.drawable.ic_dialog_alert)
+                .setContentTitle(title)
+                .setContentText(text)
+                .setContentIntent(open)
+                .setAutoCancel(true)
+            nm.notify(1002, builder.build())
+        } catch (e: Exception) {
+            Diag.e("Could not show alert", e)
+        }
+    }
 }

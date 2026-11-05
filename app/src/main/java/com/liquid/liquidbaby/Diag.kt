@@ -67,5 +67,5 @@ object Diag {
     fun deviceInfo(ctx: Context): String =
         "Liquid Baby " + AppInfo.versionName(ctx) + " (build " + AppInfo.versionCode(ctx) + ")\n" +
             "Device: " + Build.MANUFACTURER + " " + Build.MODEL + ", Android " +
-            Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + ")\n"
+            Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + ")\n" + Net.describe(ctx) + "\n"
 }

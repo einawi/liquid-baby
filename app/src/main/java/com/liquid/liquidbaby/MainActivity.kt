@@ -73,7 +73,12 @@ class MainActivity : Activity() {
             }
             addButton("Use this phone as the child unit") { setRole("child") }
             addButton("Use this phone as a parent unit") { setRole("parent") }
-            addBody("Pairing, sound recording, walkie-talkie and live camera come in the next deliveries.")
+            if (role == "child") {
+                addButton("Open the child screen") { startActivity(Intent(this@MainActivity, ChildActivity::class.java)) }
+            } else if (role == "parent") {
+                addButton("Open the parent screen") { startActivity(Intent(this@MainActivity, ParentActivity::class.java)) }
+            }
+            addBody("Walkie-talkie and live camera come in the next deliveries.")
             addButton("Settings") { startActivity(Intent(this@MainActivity, SettingsActivity::class.java)) }
         }
     }

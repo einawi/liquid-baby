@@ -1,0 +1,84 @@
+package com.liquid.liquidbaby
+
+import java.io.BufferedInputStream
+import java.io.BufferedOutputStream
+import java.io.DataInputStream
+import java.io.DataOutputStream
+import java.io.IOException
+import java.net.Socket
+import java.security.GeneralSecurityException
+
+/** Message types. */
+object T {
+    const val HELLO_PAIR = 1
+    const val PAIR_PUB = 2
+    const val PAIR_CONFIRM = 3
+    const val HELLO_AUTH = 5
+    const val AUTH_REPLY = 6
+    const val ERROR = 9
+    const val SETTINGS = 10
+    const val SET_LENGTH = 11
+    const val SET_SENS = 12
+    const val SYNC = 13
+    const val CLIP_BEGIN = 14
+    const val CLIP_DATA = 15
+    const val CLIP_END = 16
+    const val PING = 17
+    const val PONG = 18
+}
+
+class Msg(val type: Int, val data: ByteArray)
+
+/** A framed TCP connection. Before login messages are plain, afterwards AES-GCM. */
+class Conn(val socket: Socket) {
+    private val input = DataInputStream(BufferedInputStream(socket.getInputStream()))
+    private val output = DataOutputStream(BufferedOutputStream(socket.getOutputStream()))
+    private var aead: Aead? = null
+    private val sendLock = Any()
+    val clipLock = Any()
+
+    fun enableCrypto(sessionKey: ByteArray, isParent: Boolean) {
+        aead = if (isParent) Aead(sessionKey, 0, 1) else Aead(sessionKey, 1, 0)
+    }
+
+    fun send(type: Int, payload: ByteArray = ByteArray(0)) {
+        synchronized(sendLock) {
+            val body = ByteArray(1 + payload.size)
+            body[0] = type.toByte()
+            System.arraycopy(payload, 0, body, 1, payload.size)
+            val a = aead
+            val out = if (a != null) a.seal(body) else body
+            output.writeInt(out.size)
+            output.write(out)
+            output.flush()
+        }
+    }
+
+    fun read(): Msg {
+        val len = input.readInt()
+        val a = aead
+        val limit = if (a != null) 300_000 else 4096
+        if (len < 1 || len > limit) throw IOException("Bad frame size $len")
+        val buf = ByteArray(len)
+        input.readFully(buf)
+        val body: ByteArray
+        if (a != null) {
+            try {
+                body = a.open(buf)
+            } catch (e: GeneralSecurityException) {
+                throw IOException("Decryption failed (keys do not match)")
+            }
+        } else {
+            body = buf
+        }
+        if (body.isEmpty()) throw IOException("Empty message")
+        return Msg(body[0].toInt() and 0xff, body.copyOfRange(1, body.size))
+    }
+
+    fun close() {
+        try {
+            socket.close()
+        } catch (_: Exception) {
+        }
+    }
+}
