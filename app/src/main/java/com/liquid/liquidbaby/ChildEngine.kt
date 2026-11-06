@@ -354,7 +354,7 @@ object ChildEngine {
         if (appCtx.checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             c.send(
                 T.VIEW_ERROR,
-                "The child phone has no camera permission. On the child phone tap 'Allow the camera' and then Stop and Start monitoring.".toByteArray()
+                "The child phone has no camera permission. On the child phone tap 'Allow the camera'.".toByteArray()
             )
             return
         }

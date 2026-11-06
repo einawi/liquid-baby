@@ -148,8 +148,9 @@ class CameraActivity : Activity() {
         sb.append(" - watching now: ").append(maxOf(ParentEngine.viewers, 1)).append("\n")
         if (ParentEngine.talkNote.isNotEmpty()) sb.append(ParentEngine.talkNote).append("\n")
         statusTv?.text = sb.toString()
-        flashBtn?.text = "Flash: " + (if (ParentEngine.viewFlash) "ON (tap to turn off)" else "off (tap to turn on)")
-        flashBtn?.isEnabled = ParentEngine.viewHasFlash && !ParentEngine.viewFront
+        flashBtn?.text = if (!ParentEngine.viewHasFlash) "Flash: this camera does not report a flash"
+        else "Flash: " + (if (ParentEngine.viewFlash) "ON (tap to turn off)" else "off (tap to turn on)")
+        flashBtn?.isEnabled = ParentEngine.viewHasFlash
         switchBtn?.text = "Camera: " + (if (ParentEngine.viewFront) "front" else "back") + " (tap to switch)"
         qualityBtn?.text = "Quality: " + (if (ParentEngine.viewQuality == 1) "Normal" else "Low") + " (tap to change)"
         soundBtn?.text = "Live sound: " + (if (ParentEngine.liveSound) "on" else "off") + " (tap to change)"

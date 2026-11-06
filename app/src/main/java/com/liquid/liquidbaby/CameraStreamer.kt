@@ -228,4 +228,37 @@ class CameraStreamer(
         device = null
         reader = null
     }
+
+    companion object {
+        /** Lists the phone's cameras for the Diagnostics report (needs no camera permission). */
+        fun dump(ctx: Context): String {
+            val sb = StringBuilder("Cameras:\n")
+            try {
+                val cm = ctx.getSystemService(Context.CAMERA_SERVICE) as CameraManager
+                val ids = cm.cameraIdList
+                if (ids.isEmpty()) sb.append("  (none)\n")
+                for (id in ids) {
+                    val ch = cm.getCameraCharacteristics(id)
+                    val facing = when (ch.get(CameraCharacteristics.LENS_FACING)) {
+                        CameraCharacteristics.LENS_FACING_FRONT -> "front"
+                        CameraCharacteristics.LENS_FACING_BACK -> "back"
+                        else -> "other"
+                    }
+                    val flash = ch.get(CameraCharacteristics.FLASH_INFO_AVAILABLE)
+                    val sizes = ch.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+                        ?.getOutputSizes(ImageFormat.YUV_420_888)?.map { intArrayOf(it.width, it.height) } ?: emptyList()
+                    val low = Yuv.pickSize(sizes, 0)
+                    val normal = Yuv.pickSize(sizes, 1)
+                    sb.append("  id ").append(id).append(": ").append(facing)
+                        .append(", flash=").append(flash)
+                        .append(", sensor=").append(ch.get(CameraCharacteristics.SENSOR_ORIENTATION))
+                        .append(", low=").append(low?.joinToString("x"))
+                        .append(", normal=").append(normal?.joinToString("x")).append("\n")
+                }
+            } catch (e: Exception) {
+                sb.append("  error: ").append(e.message).append("\n")
+            }
+            return sb.toString()
+        }
+    }
 }
