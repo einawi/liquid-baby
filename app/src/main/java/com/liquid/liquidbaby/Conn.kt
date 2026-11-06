@@ -25,6 +25,7 @@ object T {
     const val CLIP_END = 16
     const val PING = 17
     const val PONG = 18
+    const val SYNC_ACK = 19
 }
 
 class Msg(val type: Int, val data: ByteArray)

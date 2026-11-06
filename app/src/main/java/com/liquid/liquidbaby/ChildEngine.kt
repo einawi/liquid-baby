@@ -222,7 +222,10 @@ object ChildEngine {
                     monitor?.detector?.sensitivity = v
                     broadcastSettings()
                 }
-                T.SYNC -> sendBacklog(c, if (m.data.size >= 8) Wire.bytesLong(m.data) else 0L)
+                T.SYNC -> {
+                    val after = if (m.data.size >= 8) Wire.bytesLong(m.data) else 0L
+                    if (after < 0L) c.send(T.SYNC_ACK, Wire.longBytes(newestClipTs())) else sendBacklog(c, after)
+                }
             }
         }
         return id
@@ -254,6 +257,11 @@ object ChildEngine {
             }
             c.send(T.CLIP_END)
         }
+    }
+
+    private fun newestClipTs(): Long {
+        val files = clipsDir().listFiles { f -> f.name.endsWith(".wav") } ?: return 0L
+        return files.maxOfOrNull { it.name.removeSuffix(".wav").toLongOrNull() ?: 0L } ?: 0L
     }
 
     private fun sendBacklog(c: Conn, afterTs: Long) {

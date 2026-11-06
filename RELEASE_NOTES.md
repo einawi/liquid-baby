@@ -1,5 +1,5 @@
-Wi-Fi address on old phones.
+Deleted recordings stay deleted.
 
-- The Wi-Fi address now shows on Android 6 (Galaxy J5/J50): the app tries three ways to read it
-- Diagnostics now includes a list of the networks the phone reports, so problems can be understood from one copy
-- No change to pairing, recording or encryption
+- The parent phone now remembers which clips it has already received, so clips you deleted are not sent again after a reconnect or restart
+- A newly paired parent phone only gets new clips (not the old ones kept on the child phone)
+- Clips recorded while a parent phone was offline are still delivered when it reconnects

@@ -84,7 +84,15 @@ object PairStore {
 
     fun savePaired(childId: String, childName: String, key: String, ip: String) {
         sp.edit().putString("childId", childId).putString("childName", childName)
-            .putString("childKey", key).putString("childIp", ip).commit()
+            .putString("childKey", key).putString("childIp", ip).remove("lastSyncTs").commit()
+    }
+
+    /** Time of the newest clip this parent phone has already received (kept even if the clip is deleted). */
+    fun lastSyncTs(): Long = sp.getLong("lastSyncTs", 0L)
+
+    @Synchronized
+    fun raiseLastSyncTs(v: Long) {
+        if (v > sp.getLong("lastSyncTs", 0L)) sp.edit().putLong("lastSyncTs", v).commit()
     }
 
     fun setLastIp(ip: String) {
@@ -92,6 +100,6 @@ object PairStore {
     }
 
     fun clearPaired() {
-        sp.edit().remove("childId").remove("childName").remove("childKey").remove("childIp").commit()
+        sp.edit().remove("childId").remove("childName").remove("childKey").remove("childIp").remove("lastSyncTs").commit()
     }
 }

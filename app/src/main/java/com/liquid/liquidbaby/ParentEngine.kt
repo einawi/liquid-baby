@@ -166,8 +166,9 @@ object ParentEngine {
         Diag.i("Connected to child phone at $ip")
         changed()
 
-        val newest = clips(appCtx).firstOrNull()?.ts ?: 0L
-        c.send(T.SYNC, Wire.longBytes(newest))
+        // -1 = "I am new here": the child only tells me where it is, and sends no old clips
+        val last = PairStore.lastSyncTs()
+        c.send(T.SYNC, Wire.longBytes(if (last == 0L) -1L else last))
         Thread {
             while (running && connected && conn === c) {
                 pause(10_000)
@@ -198,6 +199,7 @@ object ParentEngine {
                         rxTmp = File(dir, "$rxTs.part")
                         rx = FileOutputStream(rxTmp)
                     }
+                    T.SYNC_ACK -> if (m.data.size >= 8) PairStore.raiseLastSyncTs(maxOf(1L, Wire.bytesLong(m.data)))
                     T.CLIP_DATA -> rx?.write(m.data)
                     T.CLIP_END -> {
                         rx?.close()
@@ -218,6 +220,7 @@ object ParentEngine {
     }
 
     private fun finishClip(tmp: File, ts: Long) {
+        PairStore.raiseLastSyncTs(ts)
         val done = File(tmp.parentFile, "$ts.wav")
         val isNew = !done.exists()
         if (isNew) tmp.renameTo(done) else tmp.delete()
