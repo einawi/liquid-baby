@@ -3,6 +3,7 @@ package com.liquid.liquidbaby
 import android.app.Activity
 import android.Manifest
 import android.app.AlertDialog
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.view.MotionEvent
 import android.media.MediaPlayer
@@ -72,6 +73,13 @@ class ParentActivity : Activity() {
                         }
                         .setNegativeButton("Cancel", null)
                         .show()
+                }
+                addButton("Open the live camera") {
+                    if (ParentEngine.connected) {
+                        startActivity(Intent(this@ParentActivity, CameraActivity::class.java))
+                    } else {
+                        toast("Not connected to the child phone yet.")
+                    }
                 }
                 val tb = addButton("Hold to talk to the child") { }
                 tb.textSize = 20f

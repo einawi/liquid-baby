@@ -69,7 +69,14 @@ class UnitService : Service() {
             .setOngoing(true)
         val n = builder.build()
         if (Build.VERSION.SDK_INT >= 30) {
-            val type = if (role == "child") 128 else 16 // microphone / connectedDevice
+            // microphone = 128, camera = 64, connectedDevice = 16
+            var type = 16
+            if (role == "child") {
+                type = 128
+                if (checkSelfPermission(android.Manifest.permission.CAMERA) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    type = type or 64
+                }
+            }
             startForeground(NOTE_ID, n, type)
         } else {
             startForeground(NOTE_ID, n)

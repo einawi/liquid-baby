@@ -30,6 +30,13 @@ object T {
     const val TALK_DATA = 21
     const val TALK_STOP = 22
     const val TALK_DENIED = 23
+    const val VIEW_START = 24
+    const val VIEW_STOP = 25
+    const val VIEW_SET = 26
+    const val VIDEO_FRAME = 27
+    const val LIVE_AUDIO = 28
+    const val VIEW_STATE = 29
+    const val VIEW_ERROR = 30
 }
 
 class Msg(val type: Int, val data: ByteArray)

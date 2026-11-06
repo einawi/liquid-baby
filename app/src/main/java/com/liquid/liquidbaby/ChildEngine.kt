@@ -1,6 +1,8 @@
 package com.liquid.liquidbaby
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import java.io.File
 import java.io.FileInputStream
@@ -17,6 +19,9 @@ object ChildEngine {
     class PairRequest(val sas: String, val name: String) {
         val answer = LinkedBlockingQueue<Boolean>()
     }
+
+    private const val LIVE_LIMIT_MS = 15L * 60 * 1000
+    private const val FLASH_LIMIT_MS = 2L * 60 * 1000
 
     @Volatile
     var running = false
@@ -35,14 +40,25 @@ object ChildEngine {
     var lastClipMs = 0L
 
     @Volatile
-    var talking = false
-        private set
+    var onChange: (() -> Unit)? = null
 
-    private var talkOwner: String? = null
-    private var talkPlayer: TalkPlayer? = null
+    private val talkers = ConcurrentHashMap<String, TalkPlayer>()
+    val talking: Boolean get() = talkers.isNotEmpty()
+
+    private val viewers = ConcurrentHashMap<String, Viewer>()
+    private var streamer: CameraStreamer? = null
 
     @Volatile
-    var onChange: (() -> Unit)? = null
+    private var viewQuality = 1
+
+    @Volatile
+    private var viewFront = false
+
+    @Volatile
+    private var viewFlash = false
+
+    @Volatile
+    private var flashOffAt = 0L
 
     private val connected = ConcurrentHashMap<String, Conn>()
     private var server: ServerSocket? = null
@@ -61,6 +77,9 @@ object ChildEngine {
     fun sensitivity(): Int = Prefs.getInt("sensitivity", 3).coerceIn(1, 5)
 
     fun connectedCount(): Int = connected.size
+
+    fun viewLine(): String =
+        if (viewers.isEmpty()) "" else "Live view active: clip recording paused (" + viewers.size + " watching)"
 
     fun level(): String {
         val m = monitor ?: return ""
@@ -87,6 +106,7 @@ object ChildEngine {
         m.detector.sensitivity = sensitivity()
         monitor = m
         m.start()
+        Thread { watchdog() }.start()
         changed()
     }
 
@@ -95,6 +115,8 @@ object ChildEngine {
         if (!running) return
         running = false
         status = "Stopped"
+        stopAllTalk()
+        stopAllViews()
         monitor?.stopFlag = true
         monitor = null
         try {
@@ -106,11 +128,39 @@ object ChildEngine {
         udp = null
         for (c in connected.values) c.close()
         connected.clear()
-        stopTalk()
         pendingPair?.answer?.offer(false)
         pendingPair = null
         Diag.i("Child unit stopped")
         changed()
+    }
+
+    /** Ends forgotten live views after 15 minutes and switches the flash off after 2 minutes. */
+    private fun watchdog() {
+        while (running) {
+            try {
+                Thread.sleep(5000)
+            } catch (_: InterruptedException) {
+            }
+            val now = System.currentTimeMillis()
+            for (v in viewers.values) {
+                if (now - v.startedAt > LIVE_LIMIT_MS) {
+                    try {
+                        v.conn.send(T.VIEW_ERROR, "Live view ended after 15 minutes. Open it again if you need it.".toByteArray())
+                    } catch (_: Exception) {
+                    }
+                    stopView(v.id)
+                }
+            }
+            synchronized(this) {
+                if (viewFlash && flashOffAt > 0 && now > flashOffAt) {
+                    viewFlash = false
+                    flashOffAt = 0
+                    streamer?.apply(viewFront, viewQuality, false)
+                    broadcastViewState()
+                    Diag.i("Flash switched off automatically")
+                }
+            }
+        }
     }
 
     private fun serverLoop() {
@@ -148,7 +198,10 @@ object ChildEngine {
             Diag.i("Connection ended: " + (e.message ?: e.javaClass.simpleName))
         } finally {
             if (id != null && connected[id] === c) connected.remove(id)
-            if (id != null && talkOwner == id) stopTalk()
+            if (id != null) {
+                stopTalk(id)
+                if (viewers[id]?.conn === c) stopView(id)
+            }
             c.close()
             changed()
         }
@@ -231,9 +284,12 @@ object ChildEngine {
                     monitor?.detector?.sensitivity = v
                     broadcastSettings()
                 }
-                T.TALK_START -> startTalk(id, c)
-                T.TALK_DATA -> if (talkOwner == id) talkPlayer?.write(m.data)
-                T.TALK_STOP -> if (talkOwner == id) stopTalk()
+                T.TALK_START -> startTalk(id)
+                T.TALK_DATA -> talkers[id]?.write(m.data)
+                T.TALK_STOP -> stopTalk(id)
+                T.VIEW_START -> startView(id, c, m.data)
+                T.VIEW_STOP -> stopView(id)
+                T.VIEW_SET -> setView(m.data)
                 T.SYNC -> {
                     val after = if (m.data.size >= 8) Wire.bytesLong(m.data) else 0L
                     if (after < 0L) c.send(T.SYNC_ACK, Wire.longBytes(newestClipTs())) else sendBacklog(c, after)
@@ -243,24 +299,22 @@ object ChildEngine {
         return id
     }
 
+    // ---- walkie-talkie: every talking parent has its own speaker stream, Android mixes them ----
+
+    private fun updateSuppression() {
+        monitor?.suppressUntil =
+            if (viewers.isNotEmpty() || talkers.isNotEmpty()) Long.MAX_VALUE else System.currentTimeMillis() + 2500
+    }
+
     @Synchronized
-    private fun startTalk(id: String, c: Conn) {
-        if (talkOwner != null && talkOwner != id) {
-            try {
-                c.send(T.TALK_DENIED)
-            } catch (_: Exception) {
-            }
-            return
-        }
-        if (talkOwner == id) return
+    private fun startTalk(id: String) {
+        if (talkers.containsKey(id)) return
         try {
             val p = TalkPlayer()
-            p.start(appCtx, Prefs.getInt("talkVolume", 7))
-            talkPlayer = p
-            talkOwner = id
-            talking = true
-            monitor?.suppressUntil = Long.MAX_VALUE
-            Diag.i("Parent started talking")
+            p.start(appCtx, Prefs.getInt("talkVolume", 7), true)
+            talkers[id] = p
+            updateSuppression()
+            Diag.i("A parent started talking (" + talkers.size + " talking)")
             changed()
         } catch (e: Exception) {
             Diag.e("Could not start the speaker", e)
@@ -268,16 +322,115 @@ object ChildEngine {
     }
 
     @Synchronized
-    private fun stopTalk() {
-        if (talkOwner == null && talkPlayer == null) return
-        talkPlayer?.stop()
-        talkPlayer = null
-        talkOwner = null
-        talking = false
-        monitor?.suppressUntil = System.currentTimeMillis() + 2500
-        Diag.i("Parent stopped talking")
+    private fun stopTalk(id: String) {
+        val p = talkers.remove(id) ?: return
+        p.stop()
+        updateSuppression()
+        Diag.i("A parent stopped talking")
         changed()
     }
+
+    private fun stopAllTalk() {
+        for (id in talkers.keys.toList()) stopTalk(id)
+    }
+
+    // ---- live view: camera pictures + live sound for every watching parent ----
+
+    private fun viewStateBytes(): ByteArray = byteArrayOf(
+        viewQuality.toByte(),
+        (if (viewFront) 1 else 0).toByte(),
+        (if (viewFlash) 1 else 0).toByte(),
+        (if (streamer?.hasFlash == true) 1 else 0).toByte(),
+        viewers.size.toByte()
+    )
+
+    private fun broadcastViewState() {
+        val b = viewStateBytes()
+        for (v in viewers.values) v.offerState(b)
+    }
+
+    @Synchronized
+    private fun startView(id: String, c: Conn, data: ByteArray) {
+        if (appCtx.checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            c.send(
+                T.VIEW_ERROR,
+                "The child phone has no camera permission. On the child phone tap 'Allow the camera' and then Stop and Start monitoring.".toByteArray()
+            )
+            return
+        }
+        viewers.remove(id)?.close()
+        viewers[id] = Viewer(id, c) { dead -> stopView(dead.id) }
+        if (streamer == null) {
+            viewQuality = if (data.isNotEmpty()) data[0].toInt().coerceIn(0, 1) else 1
+            viewFront = data.size > 1 && data[1].toInt() == 1
+            viewFlash = data.size > 2 && data[2].toInt() == 1
+            flashOffAt = if (viewFlash) System.currentTimeMillis() + FLASH_LIMIT_MS else 0L
+            val s = CameraStreamer(
+                appCtx,
+                { jpeg -> for (v in viewers.values) v.offerVideo(jpeg) },
+                { msg -> cameraFailed(msg) },
+                { broadcastViewState() }
+            )
+            streamer = s
+            s.start(viewFront, viewQuality, viewFlash)
+            monitor?.liveSink = { pcm -> for (v in viewers.values) v.offerAudio(pcm) }
+        }
+        updateSuppression()
+        broadcastViewState()
+        Diag.i("Live view started (" + viewers.size + " watching)")
+        changed()
+    }
+
+    @Synchronized
+    private fun stopView(id: String) {
+        val v = viewers.remove(id) ?: return
+        v.close()
+        if (viewers.isEmpty()) {
+            streamer?.stop()
+            streamer = null
+            monitor?.liveSink = null
+            viewFlash = false
+            flashOffAt = 0L
+        }
+        updateSuppression()
+        broadcastViewState()
+        Diag.i("Live view ended (" + viewers.size + " still watching)")
+        changed()
+    }
+
+    private fun stopAllViews() {
+        for (id in viewers.keys.toList()) stopView(id)
+    }
+
+    private fun cameraFailed(msg: String) {
+        Diag.i("Camera problem: $msg")
+        for (v in viewers.values) {
+            try {
+                v.conn.send(T.VIEW_ERROR, msg.toByteArray())
+            } catch (_: Exception) {
+            }
+        }
+        Thread { stopAllViews() }.start()
+    }
+
+    @Synchronized
+    private fun setView(data: ByteArray) {
+        val s = streamer ?: return
+        if (data.size < 3) return
+        val q = data[0].toInt().coerceIn(0, 1)
+        val front = data[1].toInt() == 1
+        val flip = front != viewFront
+        val flash = if (flip) false else (data[2].toInt() == 1 && s.hasFlash)
+        viewQuality = q
+        viewFront = front
+        viewFlash = flash
+        flashOffAt = if (flash) System.currentTimeMillis() + FLASH_LIMIT_MS else 0L
+        s.apply(front, q, flash)
+        broadcastViewState()
+        changed()
+    }
+
+    // ---- settings and clips ----
 
     private fun settingsBytes(): ByteArray = byteArrayOf(clipSeconds().toByte(), sensitivity().toByte())
 

@@ -1,6 +1,9 @@
 package com.liquid.liquidbaby
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.os.Build
 import java.io.File
 import java.io.FileOutputStream
@@ -42,6 +45,44 @@ object ParentEngine {
     var talkNote = ""
 
     private var sender: TalkSender? = null
+
+    // ---- live view ----
+
+    @Volatile
+    var viewing = false
+        private set
+
+    @Volatile
+    var viewQuality = 1
+
+    @Volatile
+    var viewFront = false
+
+    @Volatile
+    var viewFlash = false
+
+    @Volatile
+    var viewHasFlash = false
+
+    @Volatile
+    var viewers = 0
+
+    @Volatile
+    var viewNote = ""
+
+    @Volatile
+    var viewRotate = 0
+
+    @Volatile
+    var liveSound = true
+
+    @Volatile
+    var frameListener: ((Bitmap) -> Unit)? = null
+
+    private var livePlayer: TalkPlayer? = null
+
+    @Volatile
+    private var muteLiveUntil = 0L
 
     @Volatile
     var childLength = 30
@@ -85,6 +126,7 @@ object ParentEngine {
         running = false
         connected = false
         endTalk()
+        dropView()
         status = "Stopped"
         conn?.close()
         conn = null
@@ -122,6 +164,8 @@ object ParentEngine {
                 }
             }
             connected = false
+            endTalk()
+            dropView()
             conn?.close()
             conn = null
             changed()
@@ -209,8 +253,25 @@ object ParentEngine {
                         rxTmp = File(dir, "$rxTs.part")
                         rx = FileOutputStream(rxTmp)
                     }
+                    T.VIDEO_FRAME -> if (viewing) showFrame(m.data)
+                    T.LIVE_AUDIO -> if (viewing && liveSound && !talking && System.currentTimeMillis() > muteLiveUntil) {
+                        livePlayer?.write(m.data)
+                    }
+                    T.VIEW_STATE -> if (m.data.size >= 5) {
+                        viewQuality = m.data[0].toInt()
+                        viewFront = m.data[1].toInt() == 1
+                        viewFlash = m.data[2].toInt() == 1
+                        viewHasFlash = m.data[3].toInt() == 1
+                        viewers = m.data[4].toInt()
+                        changed()
+                    }
+                    T.VIEW_ERROR -> {
+                        viewNote = String(m.data)
+                        dropView()
+                        changed()
+                    }
                     T.TALK_DENIED -> {
-                        talkNote = "The other parent phone is talking"
+                        talkNote = "The child phone could not start the speaker"
                         endTalk()
                     }
                     T.SYNC_ACK -> if (m.data.size >= 8) PairStore.raiseLastSyncTs(maxOf(1L, Wire.bytesLong(m.data)))
@@ -255,6 +316,82 @@ object ParentEngine {
         }
     }
 
+    private fun sendAsync(c: Conn, type: Int, data: ByteArray) {
+        Thread {
+            try {
+                c.send(type, data)
+            } catch (e: Exception) {
+                Diag.i("Could not send to the child phone: " + e.message)
+            }
+        }.start()
+    }
+
+    /** Asks the child phone to start the camera and the live sound. */
+    @Synchronized
+    fun beginView(ctx: Context): Boolean {
+        val c = conn
+        if (c == null || !connected) {
+            viewNote = "Not connected to the child phone yet"
+            changed()
+            return false
+        }
+        viewNote = ""
+        viewing = true
+        if (livePlayer == null) {
+            try {
+                val pl = TalkPlayer()
+                pl.start(ctx.applicationContext, 0, false)
+                livePlayer = pl
+            } catch (e: Exception) {
+                Diag.e("Could not start the live sound", e)
+            }
+        }
+        sendAsync(
+            c, T.VIEW_START,
+            byteArrayOf(viewQuality.toByte(), (if (viewFront) 1 else 0).toByte(), (if (viewFlash) 1 else 0).toByte())
+        )
+        changed()
+        return true
+    }
+
+    @Synchronized
+    fun endView() {
+        val c = conn
+        if (viewing && c != null && connected) sendAsync(c, T.VIEW_STOP, ByteArray(0))
+        dropView()
+        changed()
+    }
+
+    @Synchronized
+    private fun dropView() {
+        viewing = false
+        viewers = 0
+        livePlayer?.stop()
+        livePlayer = null
+    }
+
+    fun setView(quality: Int, front: Boolean, flash: Boolean) {
+        val c = conn ?: return
+        if (!connected || !viewing) return
+        sendAsync(
+            c, T.VIEW_SET,
+            byteArrayOf(quality.toByte(), (if (front) 1 else 0).toByte(), (if (flash) 1 else 0).toByte())
+        )
+    }
+
+    private fun showFrame(d: ByteArray) {
+        if (d.size < 100) return
+        val listener = frameListener ?: return
+        val bmp = BitmapFactory.decodeByteArray(d, 1, d.size - 1) ?: return
+        val quarter = ((d[0].toInt() and 3) + viewRotate) and 3
+        val shown = if (quarter == 0) bmp else {
+            val m = Matrix()
+            m.postRotate(quarter * 90f)
+            Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, m, true)
+        }
+        listener(shown)
+    }
+
     /** Starts sending the microphone to the child phone. Returns false if it cannot. */
     @Synchronized
     fun beginTalk(): Boolean {
@@ -283,6 +420,7 @@ object ParentEngine {
 
     @Synchronized
     fun endTalk() {
+        muteLiveUntil = System.currentTimeMillis() + 700
         sender?.stopFlag = true
         sender = null
         talking = false

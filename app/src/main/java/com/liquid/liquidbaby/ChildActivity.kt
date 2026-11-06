@@ -20,6 +20,7 @@ class ChildActivity : Activity() {
     private var statusTv: TextView? = null
     private var toggleBtn: Button? = null
     private var vpnBtn: Button? = null
+    private var camBtn: Button? = null
     private var listBox: LinearLayout? = null
     private var dialogShown = false
 
@@ -39,6 +40,11 @@ class ChildActivity : Activity() {
             vb.visibility = View.GONE
             vpnBtn = vb
             toggleBtn = addButton("Start monitoring") { toggle() }
+            val cb = addButton("Allow the camera (needed for the live camera)") {
+                requestPermissions(arrayOf(Manifest.permission.CAMERA), 21)
+            }
+            cb.visibility = View.GONE
+            camBtn = cb
             addButton("Allow a new parent phone to pair (2 minutes)") { allowPairing() }
             val volLabel = addBody("Walkie-talkie volume: " + Prefs.getInt("talkVolume", 7) + " of 10 (how loud the parent's voice is on this phone)")
             addSlider(1, 10, Prefs.getInt("talkVolume", 7), { v ->
@@ -86,7 +92,7 @@ class ChildActivity : Activity() {
             return
         }
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), 20)
+            requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA), 20)
             return
         }
         UnitService.start(this)
@@ -94,12 +100,18 @@ class ChildActivity : Activity() {
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == 20) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                UnitService.start(this)
-            } else {
-                toast("The microphone permission is needed to listen to the child.")
-            }
+        if (requestCode != 20 && requestCode != 21) return
+        val mic = checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        if (!mic) {
+            toast("The microphone permission is needed to listen to the child.")
+            return
+        }
+        if (ChildEngine.running) {
+            // restart so the background service starts with camera access
+            UnitService.stop(this)
+            ui.postDelayed({ UnitService.start(this) }, 700)
+        } else {
+            UnitService.start(this)
         }
     }
 
@@ -149,6 +161,7 @@ class ChildActivity : Activity() {
                 .append(" of ").append(PairStore.parents().size).append("\n")
             sb.append(ChildEngine.level()).append("\n")
             if (ChildEngine.talking) sb.append("A parent is talking through this phone\n")
+            if (ChildEngine.viewLine().isNotEmpty()) sb.append(ChildEngine.viewLine()).append("\n")
             sb.append("Clip length: ").append(ChildEngine.clipSeconds()).append(" s, sensitivity ")
                 .append(ChildEngine.sensitivity()).append(" of 5 (set from the parent phone)\n")
             if (ChildEngine.lastClipMs > 0) {
@@ -157,9 +170,12 @@ class ChildActivity : Activity() {
             val left = (ChildEngine.pairingUntil - System.currentTimeMillis()) / 1000
             if (left > 0) sb.append("Pairing is open for ").append(left).append(" more seconds\n")
         }
-        sb.append(Net.describe(this))
-        statusTv?.text = sb.toString()
+        sb.append(Net.describe(this)).append("\n")
         vpnBtn?.visibility = if (Net.vpnBlocksLocal(this)) View.VISIBLE else View.GONE
+        val camOk = checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+        camBtn?.visibility = if (camOk) View.GONE else View.VISIBLE
+        sb.append("Camera permission: ").append(if (camOk) "allowed" else "NOT allowed (live camera will not work)").append("\n")
+        statusTv?.text = sb.toString()
         toggleBtn?.text = if (ChildEngine.running) "Stop monitoring" else "Start monitoring"
         fillParentsIfChanged()
         val req = ChildEngine.pendingPair

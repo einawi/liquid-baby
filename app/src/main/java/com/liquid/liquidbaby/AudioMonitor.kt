@@ -27,6 +27,10 @@ class AudioMonitor(
     @Volatile
     var suppressUntil = 0L
 
+    /** While someone watches live, every 100 ms block of sound (16-bit PCM) is handed to this function. */
+    @Volatile
+    var liveSink: ((ByteArray) -> Unit)? = null
+
     val detector = SoundDetector()
 
     private val rate = Wav.RATE
@@ -92,6 +96,12 @@ class AudioMonitor(
                 if (n < buf.size) continue
                 val level = rms(buf, n)
                 lastRms = level
+                val sink = liveSink
+                if (sink != null) {
+                    val pcm = ByteArray(n * 2)
+                    ByteBuffer.wrap(pcm).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().put(buf, 0, n)
+                    sink(pcm)
+                }
                 if (System.currentTimeMillis() < suppressUntil) {
                     detector.reset()
                     ring.clear()

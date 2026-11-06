@@ -78,18 +78,20 @@ class TalkSender(private val conn: Conn, private val onFail: (String) -> Unit) :
     }
 }
 
-/** Walkie-talkie, child side: plays what the parent says through the speaker. */
+/** Plays 16 kHz PCM sound through the speaker (parent's voice on the child phone, live sound on the parent phone). */
 class TalkPlayer {
     private var track: AudioTrack? = null
 
-    fun start(ctx: Context, volumeOutOfTen: Int) {
-        try {
-            val am = ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-            val max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-            val v = Math.round(max * volumeOutOfTen.coerceIn(1, 10) / 10.0).toInt().coerceIn(1, max)
-            am.setStreamVolume(AudioManager.STREAM_MUSIC, v, 0)
-        } catch (e: Exception) {
-            Diag.i("Could not set the speaker volume: " + e.message)
+    fun start(ctx: Context, volumeOutOfTen: Int, changeVolume: Boolean) {
+        if (changeVolume) {
+            try {
+                val am = ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                val max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+                val v = Math.round(max * volumeOutOfTen.coerceIn(1, 10) / 10.0).toInt().coerceIn(1, max)
+                am.setStreamVolume(AudioManager.STREAM_MUSIC, v, 0)
+            } catch (e: Exception) {
+                Diag.i("Could not set the speaker volume: " + e.message)
+            }
         }
         val min = AudioTrack.getMinBufferSize(Wav.RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT)
         val t = AudioTrack.Builder()
@@ -115,7 +117,7 @@ class TalkPlayer {
 
     fun write(data: ByteArray) {
         try {
-            track?.write(data, 0, data.size)
+            track?.write(data, 0, data.size, AudioTrack.WRITE_NON_BLOCKING)
         } catch (e: Exception) {
             Diag.i("Playback problem: " + e.message)
         }

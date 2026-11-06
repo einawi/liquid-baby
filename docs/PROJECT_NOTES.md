@@ -38,6 +38,7 @@ minSdk 23 (Android 6), compileSdk/targetSdk 36.
 ## Features done
 Build 1 (0.1.0): role choice, Settings, App updates, Diagnostics, safe mode, settings backup. Installed and opened OK on Pixel 7 Pro and Galaxy J50 (Android 6.0.1).
 Build 2 (0.2.0): pairing, child listening + sound-triggered recording, parent recordings list + sliders, foreground service. In-app update from build 1 to build 2 worked on the Pixel (Android 17, API 37).
+Build 9 (0.4.0): LIVE CAMERA. Parent CameraActivity (opened from ParentActivity) sends T.VIEW_START [quality, front, flash]; child ChildEngine.startView opens CameraStreamer (Camera2, ImageReader YUV_420_888, nearest 640x480 or 320x240, ~10 or ~7 fps, Yuv.toNv21 -> YuvImage JPEG q60/q50, first byte of each frame = quarter turns to rotate) and sends T.VIDEO_FRAME to every Viewer (own thread + queue, video dropped when behind). Live sound: AudioMonitor.liveSink hands each 100 ms PCM block to the viewers as T.LIVE_AUDIO; parent plays it with TalkPlayer (changeVolume=false, non-blocking writes) and mutes it while its own talk button is held (+700 ms). Several parents can watch (state T.VIEW_STATE [quality, front, flash, hasFlash, viewers] is broadcast; last VIEW_SET wins) and several can talk (one TalkPlayer/AudioTrack per talker; Android mixes them). While any viewer or talker exists AudioMonitor.suppressUntil = forever (no clips); 2.5 s after the last one it resumes. ChildEngine.watchdog (every 5 s): ends a live view after 15 min (T.VIEW_ERROR), switches the flash off after 2 min. Live view also ends when the parent activity pauses, the connection drops, or the camera fails. Child needs CAMERA permission BEFORE the foreground service starts (type microphone|camera, Android 14 checks it); after allowing it the child screen restarts the service. Rotate button on the parent screen adds quarter turns locally. Camera + flash + two-parent video are untested on phones.
 Build 8 (0.3.0): WALKIE-TALKIE. Parent: hold-to-talk button (touch listener) -> TalkSender records 16 kHz mono PCM16 (VOICE_COMMUNICATION, fallback MIC) in 40 ms frames (640 samples) and sends T.TALK_START, T.TALK_DATA..., T.TALK_STOP over the encrypted connection. Child: TalkPlayer (AudioTrack stream, USAGE_MEDIA/SPEECH) plays the frames; sets STREAM_MUSIC volume from the child-screen slider 'talkVolume' (1-10, default 7); AudioMonitor.suppressUntil stops the child from recording its own speaker (until talk ends + 2.5 s). One talker at a time (T.TALK_DENIED to a second parent). Talk stops if the connection drops. No compression yet (about 32 KB/s). Parent needs the RECORD_AUDIO permission (asked on first press).
 Build 7 (0.2.5): deleted clips came back because SYNC used the newest clip still on the parent's disk. Parent now stores lastSyncTs in PairStore (max timestamp ever received). SYNC(-1) = fresh pairing: child answers SYNC_ACK(newest clip ts) and sends nothing old; parent stores max(1, ack). Old SYNC semantics kept for ts >= 0.
 Build 6 (0.2.4): Galaxy J5 (Android 6.0.1) child screen showed "Wi-Fi: not found" although Wi-Fi was connected (cause not known: Net.wifiNetwork() found no Wi-Fi network on that phone). Net.wifiIp() now falls back to the wlan interface and then WifiManager; Net.vpnActive() also looks for tun/ppp interfaces; Diagnostics now lists the networks Android reports (Net.dump) so the cause can be read from the next copy. Pinning to Wi-Fi is skipped when no Wi-Fi network object is found (fine without a VPN).
@@ -58,7 +59,7 @@ Build 3 (0.2.1): fixes after the first Pixel test. The user typed 129.168.1.101 
 
 ## Planned stages
 2. DONE in build 8: Walkie-talkie (parent voice to child speaker, over the same connection)
-3. Live camera
+3. DONE in build 9: Live camera (MJPEG over the same connection)
 4. Role swap and polish; listening interval; clip compression; more backups
 
 ## Open questions / not tested yet
@@ -68,7 +69,7 @@ Build 3 (0.2.1): fixes after the first Pixel test. The user typed 129.168.1.101 
 ## Planned stages
 1. Pairing (6-digit code, encrypted, local discovery via NSD), sound-triggered recording 15-60 s, parent list + slider, background service on child unit
 2. Walkie-talkie
-3. Live camera
+3. DONE in build 9: Live camera (MJPEG over the same connection)
 4. Role swap and polish
 
 ## Known risks
