@@ -5,7 +5,9 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import java.net.DatagramSocket
+import android.net.wifi.WifiManager
 import java.net.Inet4Address
+import java.net.NetworkInterface
 import java.net.Socket
 
 /**
@@ -30,9 +32,18 @@ object Net {
         }
     }
 
+    private fun tunnelInterfaceUp(): Boolean {
+        return try {
+            val all = NetworkInterface.getNetworkInterfaces() ?: return false
+            all.asSequence().any { it.isUp && (it.name.startsWith("tun") || it.name.startsWith("ppp") || it.name.startsWith("tap")) }
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     @Suppress("DEPRECATION")
     fun vpnActive(ctx: Context): Boolean {
-        return try {
+        val byApi = try {
             val c = cm(ctx)
             c.allNetworks.any { n ->
                 c.getNetworkCapabilities(n)?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true
@@ -40,9 +51,44 @@ object Net {
         } catch (e: Exception) {
             false
         }
+        return byApi || tunnelInterfaceUp()
     }
 
-    fun wifiIp(ctx: Context): String? {
+    /** What Android tells us about the networks. Added to the Diagnostics report. */
+    @Suppress("DEPRECATION")
+    fun dump(ctx: Context): String {
+        val sb = StringBuilder("Networks seen by the app:\n")
+        try {
+            val c = cm(ctx)
+            val nets = c.allNetworks
+            if (nets.isEmpty()) sb.append("  (none)\n")
+            for (n in nets) {
+                val caps = c.getNetworkCapabilities(n)
+                val lp = c.getLinkProperties(n)
+                sb.append("  ").append(n).append(" ").append(caps?.toString() ?: "no capabilities")
+                    .append(" | ").append(lp?.interfaceName).append(" ").append(lp?.linkAddresses).append("\n")
+            }
+        } catch (e: Exception) {
+            sb.append("  error: ").append(e.message).append("\n")
+        }
+        try {
+            val all = NetworkInterface.getNetworkInterfaces()
+            if (all != null) {
+                sb.append("Interfaces: ")
+                for (ni in all) {
+                    if (ni.isLoopback) continue
+                    sb.append(ni.name).append(if (ni.isUp) " up " else " down ")
+                    sb.append(ni.interfaceAddresses.filter { it.address is Inet4Address }.joinToString(",") { it.address.hostAddress ?: "" }).append("; ")
+                }
+                sb.append("\n")
+            }
+        } catch (e: Exception) {
+            sb.append("Interfaces: error ").append(e.message).append("\n")
+        }
+        return sb.toString()
+    }
+
+    private fun ipViaNetworkApi(ctx: Context): String? {
         return try {
             val n = wifiNetwork(ctx) ?: return null
             val lp = cm(ctx).getLinkProperties(n) ?: return null
@@ -52,8 +98,47 @@ object Net {
         }
     }
 
+    private fun wifiInterface(): NetworkInterface? {
+        return try {
+            val all = NetworkInterface.getNetworkInterfaces() ?: return null
+            for (ni in all) {
+                if (!ni.isUp || ni.isLoopback) continue
+                if (!ni.name.startsWith("wlan")) continue
+                if (ni.interfaceAddresses.any { it.address is Inet4Address }) return ni
+            }
+            null
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun ipViaWifiManager(ctx: Context): String? {
+        return try {
+            val wm = ctx.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+            val ip = wm.connectionInfo?.ipAddress ?: 0
+            if (ip == 0) null
+            else (ip and 255).toString() + "." + ((ip shr 8) and 255) + "." + ((ip shr 16) and 255) + "." + ((ip shr 24) and 255)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /** Wi-Fi address of this phone. Tries three ways because old phones answer differently. */
+    fun wifiIp(ctx: Context): String? {
+        ipViaNetworkApi(ctx)?.let { return it }
+        wifiInterface()?.interfaceAddresses?.firstOrNull { it.address is Inet4Address }?.address?.hostAddress?.let { return it }
+        return ipViaWifiManager(ctx)
+    }
+
     /** Subnet broadcast address such as 192.168.1.255, or null. */
     fun broadcastAddress(ctx: Context): String? {
+        try {
+            val ia = wifiInterface()?.interfaceAddresses?.firstOrNull { it.address is Inet4Address }
+            val bc = ia?.broadcast?.hostAddress
+            if (bc != null) return bc
+        } catch (e: Exception) {
+        }
         return try {
             val n = wifiNetwork(ctx) ?: return null
             val lp = cm(ctx).getLinkProperties(n) ?: return null

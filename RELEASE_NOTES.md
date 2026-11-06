@@ -1,4 +1,5 @@
-Update fix for old phones.
+Wi-Fi address on old phones.
 
-- Fixes "Trust anchor for certification path not found" when downloading an update on Android 6 (Galaxy J5/J50): the app now carries a built-in list of trusted certificate authorities and uses it when the phone rejects the download server
+- The Wi-Fi address now shows on Android 6 (Galaxy J5/J50): the app tries three ways to read it
+- Diagnostics now includes a list of the networks the phone reports, so problems can be understood from one copy
 - No change to pairing, recording or encryption
