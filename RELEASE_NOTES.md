@@ -1,5 +1,6 @@
-Deleted recordings stay deleted.
+Walkie-talkie.
 
-- The parent phone now remembers which clips it has already received, so clips you deleted are not sent again after a reconnect or restart
-- A newly paired parent phone only gets new clips (not the old ones kept on the child phone)
-- Clips recorded while a parent phone was offline are still delivered when it reconnects
+- Parent unit: hold the big "Hold to talk to the child" button and speak; the child phone plays your voice right away (encrypted, local network only)
+- Child unit: new "Walkie-talkie volume" slider; the child screen shows when a parent is talking
+- While a parent talks, the child phone does not record its own speaker as a baby sound
+- Only one parent can talk at a time

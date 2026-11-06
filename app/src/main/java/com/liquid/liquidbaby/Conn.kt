@@ -26,6 +26,10 @@ object T {
     const val PING = 17
     const val PONG = 18
     const val SYNC_ACK = 19
+    const val TALK_START = 20
+    const val TALK_DATA = 21
+    const val TALK_STOP = 22
+    const val TALK_DENIED = 23
 }
 
 class Msg(val type: Int, val data: ByteArray)

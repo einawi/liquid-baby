@@ -23,6 +23,10 @@ class AudioMonitor(
     @Volatile
     var lastRms = 0.0
 
+    /** No new clips are started before this time (used while the parent is talking). */
+    @Volatile
+    var suppressUntil = 0L
+
     val detector = SoundDetector()
 
     private val rate = Wav.RATE
@@ -88,6 +92,11 @@ class AudioMonitor(
                 if (n < buf.size) continue
                 val level = rms(buf, n)
                 lastRms = level
+                if (System.currentTimeMillis() < suppressUntil) {
+                    detector.reset()
+                    ring.clear()
+                    continue
+                }
                 ring.addLast(buf.copyOf(n))
                 if (ring.size > 20) ring.removeFirst()
                 if (detector.feed(level)) {

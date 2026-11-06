@@ -38,6 +38,7 @@ minSdk 23 (Android 6), compileSdk/targetSdk 36.
 ## Features done
 Build 1 (0.1.0): role choice, Settings, App updates, Diagnostics, safe mode, settings backup. Installed and opened OK on Pixel 7 Pro and Galaxy J50 (Android 6.0.1).
 Build 2 (0.2.0): pairing, child listening + sound-triggered recording, parent recordings list + sliders, foreground service. In-app update from build 1 to build 2 worked on the Pixel (Android 17, API 37).
+Build 8 (0.3.0): WALKIE-TALKIE. Parent: hold-to-talk button (touch listener) -> TalkSender records 16 kHz mono PCM16 (VOICE_COMMUNICATION, fallback MIC) in 40 ms frames (640 samples) and sends T.TALK_START, T.TALK_DATA..., T.TALK_STOP over the encrypted connection. Child: TalkPlayer (AudioTrack stream, USAGE_MEDIA/SPEECH) plays the frames; sets STREAM_MUSIC volume from the child-screen slider 'talkVolume' (1-10, default 7); AudioMonitor.suppressUntil stops the child from recording its own speaker (until talk ends + 2.5 s). One talker at a time (T.TALK_DENIED to a second parent). Talk stops if the connection drops. No compression yet (about 32 KB/s). Parent needs the RECORD_AUDIO permission (asked on first press).
 Build 7 (0.2.5): deleted clips came back because SYNC used the newest clip still on the parent's disk. Parent now stores lastSyncTs in PairStore (max timestamp ever received). SYNC(-1) = fresh pairing: child answers SYNC_ACK(newest clip ts) and sends nothing old; parent stores max(1, ack). Old SYNC semantics kept for ts >= 0.
 Build 6 (0.2.4): Galaxy J5 (Android 6.0.1) child screen showed "Wi-Fi: not found" although Wi-Fi was connected (cause not known: Net.wifiNetwork() found no Wi-Fi network on that phone). Net.wifiIp() now falls back to the wlan interface and then WifiManager; Net.vpnActive() also looks for tun/ppp interfaces; Diagnostics now lists the networks Android reports (Net.dump) so the cause can be read from the next copy. Pinning to Wi-Fi is skipped when no Wi-Fi network object is found (fine without a VPN).
 Build 5 (0.2.3): Galaxy J5 (Android 6.0.1) could check for updates but the download failed with CertPathValidatorException (Trust anchor not found) on the release-assets.githubusercontent.com host. Added TrustFallback (res/raw/cacert.pem = Mozilla roots from certifi, 118 certs) used by Updater after an SSLException. The J5 must be updated by copying the APK once (it cannot download the fix itself).
@@ -56,7 +57,7 @@ Build 3 (0.2.1): fixes after the first Pixel test. The user typed 129.168.1.101 
 - UnitService (foreground): child = microphone type, parent = connectedDevice type; holds wake lock, Wi-Fi lock, multicast lock. After a phone restart the user must open the app (Android does not allow starting the microphone from boot).
 
 ## Planned stages
-2. Walkie-talkie (parent voice to child speaker, over the same connection)
+2. DONE in build 8: Walkie-talkie (parent voice to child speaker, over the same connection)
 3. Live camera
 4. Role swap and polish; listening interval; clip compression; more backups
 

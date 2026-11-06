@@ -35,6 +35,15 @@ object ParentEngine {
     var onChange: (() -> Unit)? = null
 
     @Volatile
+    var talking = false
+        private set
+
+    @Volatile
+    var talkNote = ""
+
+    private var sender: TalkSender? = null
+
+    @Volatile
     var childLength = 30
 
     @Volatile
@@ -75,6 +84,7 @@ object ParentEngine {
         if (!running) return
         running = false
         connected = false
+        endTalk()
         status = "Stopped"
         conn?.close()
         conn = null
@@ -199,6 +209,10 @@ object ParentEngine {
                         rxTmp = File(dir, "$rxTs.part")
                         rx = FileOutputStream(rxTmp)
                     }
+                    T.TALK_DENIED -> {
+                        talkNote = "The other parent phone is talking"
+                        endTalk()
+                    }
                     T.SYNC_ACK -> if (m.data.size >= 8) PairStore.raiseLastSyncTs(maxOf(1L, Wire.bytesLong(m.data)))
                     T.CLIP_DATA -> rx?.write(m.data)
                     T.CLIP_END -> {
@@ -239,6 +253,40 @@ object ParentEngine {
             childLength = (d[0].toInt() and 255).coerceIn(15, 60)
             childSens = (d[1].toInt() and 255).coerceIn(1, 5)
         }
+    }
+
+    /** Starts sending the microphone to the child phone. Returns false if it cannot. */
+    @Synchronized
+    fun beginTalk(): Boolean {
+        val c = conn
+        if (c == null || !connected) {
+            talkNote = "Not connected to the child phone yet"
+            changed()
+            return false
+        }
+        if (sender != null) return true
+        talkNote = ""
+        val s = TalkSender(c) { msg ->
+            talkNote = msg
+            synchronized(this) {
+                talking = false
+                sender = null
+            }
+            changed()
+        }
+        sender = s
+        talking = true
+        s.start()
+        changed()
+        return true
+    }
+
+    @Synchronized
+    fun endTalk() {
+        sender?.stopFlag = true
+        sender = null
+        talking = false
+        changed()
     }
 
     fun sendSettings(length: Int, sens: Int) {

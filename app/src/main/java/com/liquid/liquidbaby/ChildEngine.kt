@@ -35,6 +35,13 @@ object ChildEngine {
     var lastClipMs = 0L
 
     @Volatile
+    var talking = false
+        private set
+
+    private var talkOwner: String? = null
+    private var talkPlayer: TalkPlayer? = null
+
+    @Volatile
     var onChange: (() -> Unit)? = null
 
     private val connected = ConcurrentHashMap<String, Conn>()
@@ -99,6 +106,7 @@ object ChildEngine {
         udp = null
         for (c in connected.values) c.close()
         connected.clear()
+        stopTalk()
         pendingPair?.answer?.offer(false)
         pendingPair = null
         Diag.i("Child unit stopped")
@@ -140,6 +148,7 @@ object ChildEngine {
             Diag.i("Connection ended: " + (e.message ?: e.javaClass.simpleName))
         } finally {
             if (id != null && connected[id] === c) connected.remove(id)
+            if (id != null && talkOwner == id) stopTalk()
             c.close()
             changed()
         }
@@ -222,6 +231,9 @@ object ChildEngine {
                     monitor?.detector?.sensitivity = v
                     broadcastSettings()
                 }
+                T.TALK_START -> startTalk(id, c)
+                T.TALK_DATA -> if (talkOwner == id) talkPlayer?.write(m.data)
+                T.TALK_STOP -> if (talkOwner == id) stopTalk()
                 T.SYNC -> {
                     val after = if (m.data.size >= 8) Wire.bytesLong(m.data) else 0L
                     if (after < 0L) c.send(T.SYNC_ACK, Wire.longBytes(newestClipTs())) else sendBacklog(c, after)
@@ -229,6 +241,42 @@ object ChildEngine {
             }
         }
         return id
+    }
+
+    @Synchronized
+    private fun startTalk(id: String, c: Conn) {
+        if (talkOwner != null && talkOwner != id) {
+            try {
+                c.send(T.TALK_DENIED)
+            } catch (_: Exception) {
+            }
+            return
+        }
+        if (talkOwner == id) return
+        try {
+            val p = TalkPlayer()
+            p.start(appCtx, Prefs.getInt("talkVolume", 7))
+            talkPlayer = p
+            talkOwner = id
+            talking = true
+            monitor?.suppressUntil = Long.MAX_VALUE
+            Diag.i("Parent started talking")
+            changed()
+        } catch (e: Exception) {
+            Diag.e("Could not start the speaker", e)
+        }
+    }
+
+    @Synchronized
+    private fun stopTalk() {
+        if (talkOwner == null && talkPlayer == null) return
+        talkPlayer?.stop()
+        talkPlayer = null
+        talkOwner = null
+        talking = false
+        monitor?.suppressUntil = System.currentTimeMillis() + 2500
+        Diag.i("Parent stopped talking")
+        changed()
     }
 
     private fun settingsBytes(): ByteArray = byteArrayOf(clipSeconds().toByte(), sensitivity().toByte())

@@ -40,6 +40,12 @@ class ChildActivity : Activity() {
             vpnBtn = vb
             toggleBtn = addButton("Start monitoring") { toggle() }
             addButton("Allow a new parent phone to pair (2 minutes)") { allowPairing() }
+            val volLabel = addBody("Walkie-talkie volume: " + Prefs.getInt("talkVolume", 7) + " of 10 (how loud the parent's voice is on this phone)")
+            addSlider(1, 10, Prefs.getInt("talkVolume", 7), { v ->
+                volLabel.text = "Walkie-talkie volume: $v of 10 (how loud the parent's voice is on this phone)"
+            }, { v ->
+                Prefs.putInt("talkVolume", v)
+            })
             addBody("Paired parent phones")
             val box = LinearLayout(context)
             box.orientation = LinearLayout.VERTICAL
@@ -142,6 +148,7 @@ class ChildActivity : Activity() {
             sb.append("Parent phones connected: ").append(ChildEngine.connectedCount())
                 .append(" of ").append(PairStore.parents().size).append("\n")
             sb.append(ChildEngine.level()).append("\n")
+            if (ChildEngine.talking) sb.append("A parent is talking through this phone\n")
             sb.append("Clip length: ").append(ChildEngine.clipSeconds()).append(" s, sensitivity ")
                 .append(ChildEngine.sensitivity()).append(" of 5 (set from the parent phone)\n")
             if (ChildEngine.lastClipMs > 0) {

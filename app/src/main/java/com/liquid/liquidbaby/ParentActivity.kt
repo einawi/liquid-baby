@@ -1,7 +1,10 @@
 package com.liquid.liquidbaby
 
 import android.app.Activity
+import android.Manifest
 import android.app.AlertDialog
+import android.content.pm.PackageManager
+import android.view.MotionEvent
 import android.media.MediaPlayer
 import android.os.Bundle
 import android.os.Handler
@@ -21,6 +24,7 @@ class ParentActivity : Activity() {
     private var statusTv: TextView? = null
     private var toggleBtn: Button? = null
     private var vpnBtn: Button? = null
+    private var talkBtn: Button? = null
     private var listBox: LinearLayout? = null
     private var lenLabel: TextView? = null
     private var sensLabel: TextView? = null
@@ -69,6 +73,17 @@ class ParentActivity : Activity() {
                         .setNegativeButton("Cancel", null)
                         .show()
                 }
+                val tb = addButton("Hold to talk to the child") { }
+                tb.textSize = 20f
+                tb.minHeight = dp(96)
+                tb.setOnTouchListener { _, ev ->
+                    when (ev.action) {
+                        MotionEvent.ACTION_DOWN -> onTalkDown()
+                        MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> onTalkUp()
+                    }
+                    true
+                }
+                talkBtn = tb
                 lenLabel = addBody("")
                 lenBar = addSlider(15, 60, ParentEngine.childLength, { v ->
                     draggingLen = true
@@ -112,7 +127,26 @@ class ParentActivity : Activity() {
         super.onPause()
         ParentEngine.onChange = null
         ui.removeCallbacks(tick)
+        onTalkUp()
         stopPlayer()
+    }
+
+    private fun onTalkDown() {
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), 30)
+            toast("Allow the microphone, then hold the button again.")
+            return
+        }
+        if (ParentEngine.beginTalk()) {
+            talkBtn?.text = "Talking...  release to stop"
+        } else {
+            toast(ParentEngine.talkNote)
+        }
+    }
+
+    private fun onTalkUp() {
+        ParentEngine.endTalk()
+        talkBtn?.text = "Hold to talk to the child"
     }
 
     private fun toggle() {
@@ -120,7 +154,9 @@ class ParentActivity : Activity() {
     }
 
     private fun refresh() {
-        statusTv?.text = "Status: " + ParentEngine.status + "\n" + Net.describe(this)
+        val note = if (ParentEngine.talkNote.isEmpty()) "" else ParentEngine.talkNote + "\n"
+        statusTv?.text = "Status: " + ParentEngine.status + "\n" + note + Net.describe(this)
+        if (!ParentEngine.talking && talkBtn?.text?.startsWith("Talking") == true) talkBtn?.text = "Hold to talk to the child"
         vpnBtn?.visibility = if (Net.vpnBlocksLocal(this)) View.VISIBLE else View.GONE
         toggleBtn?.text = if (ParentEngine.running) "Stop listening" else "Start listening"
         if (!draggingLen) {
