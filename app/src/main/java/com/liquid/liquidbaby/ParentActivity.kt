@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.text.InputType
+import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -19,6 +20,7 @@ class ParentActivity : Activity() {
     private val ui = Handler(Looper.getMainLooper())
     private var statusTv: TextView? = null
     private var toggleBtn: Button? = null
+    private var vpnBtn: Button? = null
     private var listBox: LinearLayout? = null
     private var lenLabel: TextView? = null
     private var sensLabel: TextView? = null
@@ -46,6 +48,9 @@ class ParentActivity : Activity() {
         screen {
             addTitle("Parent unit")
             statusTv = addBody("")
+            val vb = addButton("A VPN is blocking local connections: open VPN settings") { openVpnSettings() }
+            vb.visibility = View.GONE
+            vpnBtn = vb
             val paired = PairStore.paired()
             if (paired == null) {
                 addButton("Pair with the child phone") { startPairFlow() }
@@ -116,6 +121,7 @@ class ParentActivity : Activity() {
 
     private fun refresh() {
         statusTv?.text = "Status: " + ParentEngine.status + "\n" + Net.describe(this)
+        vpnBtn?.visibility = if (Net.vpnBlocksLocal(this)) View.VISIBLE else View.GONE
         toggleBtn?.text = if (ParentEngine.running) "Stop listening" else "Start listening"
         if (!draggingLen) {
             lenLabel?.text = "Clip length: " + ParentEngine.childLength + " seconds"

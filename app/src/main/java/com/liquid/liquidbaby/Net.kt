@@ -101,10 +101,47 @@ object Net {
         }
     }
 
+    @Volatile
+    private var bypassCheckedAt = 0L
+
+    @Volatile
+    private var bypassOk = true
+
+    /** True when the app may send local traffic straight over Wi-Fi (no VPN, or a VPN that allows it). */
+    fun canUseWifiDirectly(ctx: Context): Boolean {
+        if (!vpnActive(ctx)) return true
+        val now = System.currentTimeMillis()
+        if (now - bypassCheckedAt < 10_000) return bypassOk
+        var ok = false
+        var ds: DatagramSocket? = null
+        try {
+            val n = wifiNetwork(ctx)
+            if (n != null) {
+                ds = DatagramSocket(null)
+                n.bindSocket(ds)
+                ok = true
+            }
+        } catch (e: Exception) {
+            ok = false
+        } finally {
+            ds?.close()
+        }
+        bypassOk = ok
+        bypassCheckedAt = now
+        return ok
+    }
+
+    /** A VPN is on and Android does not let this app go around it: local connections will fail. */
+    fun vpnBlocksLocal(ctx: Context): Boolean = vpnActive(ctx) && !canUseWifiDirectly(ctx)
+
     fun describe(ctx: Context): String {
         val ip = wifiIp(ctx)
         val wifi = if (ip == null) "Wi-Fi: not found" else "Wi-Fi IP: $ip"
-        val vpn = if (vpnActive(ctx)) "VPN: ON (app talks directly over Wi-Fi)" else "VPN: off"
+        val vpn = when {
+            !vpnActive(ctx) -> "VPN: off"
+            canUseWifiDirectly(ctx) -> "VPN: ON (the app goes around it over Wi-Fi)"
+            else -> "VPN: ON - it BLOCKS local connections. Turn the VPN off on this phone."
+        }
         return "$wifi\n$vpn"
     }
 }

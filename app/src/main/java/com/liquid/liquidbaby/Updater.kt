@@ -48,8 +48,33 @@ object Updater {
 
     private const val CHECK_EVERY_MS = 6L * 60 * 60 * 1000
 
+    private var appCtx: Context? = null
+
+    @Volatile
+    private var useFallbackTrust = false
+
+    fun init(ctx: Context) {
+        appCtx = ctx.applicationContext
+    }
+
+    /** Runs the block; if the phone does not trust GitHub's certificate, retries once with the built-in list. */
+    private fun <T> withTrustRetry(block: () -> T): T {
+        try {
+            return block()
+        } catch (e: javax.net.ssl.SSLException) {
+            if (useFallbackTrust || appCtx == null) throw e
+            Diag.i("This phone does not trust the certificate (" + e.message + "). Retrying with built-in certificates.")
+            useFallbackTrust = true
+            return block()
+        }
+    }
+
     private fun open(url: String, json: Boolean): HttpURLConnection {
         val c = URL(url).openConnection() as HttpURLConnection
+        val ctx = appCtx
+        if (useFallbackTrust && ctx != null && c is javax.net.ssl.HttpsURLConnection) {
+            c.sslSocketFactory = TrustFallback.socketFactory(ctx)
+        }
         c.connectTimeout = 15_000
         c.readTimeout = 30_000
         c.instanceFollowRedirects = true
@@ -59,7 +84,9 @@ object Updater {
     }
 
     /** Blocking. Returns null if the repository has no release yet. */
-    fun fetchLatest(): Info? {
+    fun fetchLatest(): Info? = withTrustRetry { fetchLatestOnce() }
+
+    private fun fetchLatestOnce(): Info? {
         val repo = BuildConfig.GITHUB_REPO
         if (repo.isBlank()) throw IllegalStateException("Update repository is not configured in this build.")
         val c = open("https://api.github.com/repos/$repo/releases/latest", true)
@@ -157,7 +184,7 @@ object Updater {
 
     /** Blocking. Downloads, verifies the checksum, and returns the APK file. */
     fun download(ctx: Context, info: Info, onProgress: (Int) -> Unit): File =
-        synchronized(downloadLock) { downloadLocked(ctx, info, onProgress) }
+        synchronized(downloadLock) { withTrustRetry { downloadLocked(ctx, info, onProgress) } }
 
     private fun downloadLocked(ctx: Context, info: Info, onProgress: (Int) -> Unit): File {
         val dir = updatesDir(ctx)

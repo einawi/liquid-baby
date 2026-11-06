@@ -295,7 +295,9 @@ object ParentEngine {
                 listener.onResult(true, "Paired with $childName")
             } catch (e: java.net.SocketTimeoutException) {
                 Diag.e("Pairing failed (no answer from $ip)", e)
-                listener.onResult(false, "No answer from $ip. Check the address, that the child phone shows 'Monitoring' and is on the same Wi-Fi.")
+                val why = if (Net.vpnBlocksLocal(app)) "A VPN is ON on this phone and blocks local connections. Turn the VPN off here (and on the child phone), then try again."
+                else "No answer from $ip. Check the address, that the child phone shows 'Monitoring' and is on the same Wi-Fi. If the child phone has a VPN on, turn it off."
+                listener.onResult(false, why)
             } catch (e: java.net.ConnectException) {
                 Diag.e("Pairing failed (refused by $ip)", e)
                 listener.onResult(false, "The phone at $ip refused the connection. Is Start monitoring on, on the child phone?")

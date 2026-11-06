@@ -8,6 +8,7 @@ class App : Application() {
         Diag.init(this)
         Prefs.init(this)
         PairStore.init(this)
+        Updater.init(this)
         CrashGuard.install(this)
         Diag.i("App started: " + AppInfo.versionName(this) + " build " + AppInfo.versionCode(this))
     }

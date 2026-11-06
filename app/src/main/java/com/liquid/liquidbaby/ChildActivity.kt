@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -18,6 +19,7 @@ class ChildActivity : Activity() {
     private val ui = Handler(Looper.getMainLooper())
     private var statusTv: TextView? = null
     private var toggleBtn: Button? = null
+    private var vpnBtn: Button? = null
     private var listBox: LinearLayout? = null
     private var dialogShown = false
 
@@ -33,6 +35,9 @@ class ChildActivity : Activity() {
         screen {
             addTitle("Child unit")
             statusTv = addBody("")
+            val vb = addButton("A VPN is blocking local connections: open VPN settings") { openVpnSettings() }
+            vb.visibility = View.GONE
+            vpnBtn = vb
             toggleBtn = addButton("Start monitoring") { toggle() }
             addButton("Allow a new parent phone to pair (2 minutes)") { allowPairing() }
             addBody("Paired parent phones")
@@ -147,6 +152,7 @@ class ChildActivity : Activity() {
         }
         sb.append(Net.describe(this))
         statusTv?.text = sb.toString()
+        vpnBtn?.visibility = if (Net.vpnBlocksLocal(this)) View.VISIBLE else View.GONE
         toggleBtn?.text = if (ChildEngine.running) "Stop monitoring" else "Start monitoring"
         fillParentsIfChanged()
         val req = ChildEngine.pendingPair

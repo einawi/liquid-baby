@@ -162,3 +162,13 @@ fun LinearLayout.addRow(): LinearLayout {
     addView(r, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
     return r
 }
+
+fun Context.openVpnSettings() {
+    try {
+        val action = if (Build.VERSION.SDK_INT >= 24) android.provider.Settings.ACTION_VPN_SETTINGS
+        else android.provider.Settings.ACTION_WIRELESS_SETTINGS
+        startActivity(Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    } catch (e: Exception) {
+        toast("Open the phone settings and turn the VPN off.")
+    }
+}
