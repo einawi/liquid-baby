@@ -214,18 +214,41 @@ class ParentActivity : Activity() {
     }
 
     private fun askIp() {
+        val own = Net.wifiIp(this) ?: ""
         val input = EditText(this)
-        input.inputType = InputType.TYPE_CLASS_TEXT
-        input.hint = "For example 192.168.1.20"
+        input.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+        input.hint = "For example 192.168.1.101"
+        if (own.contains('.')) {
+            input.setText(own.substringBeforeLast('.') + ".")
+            input.setSelection(input.text.length)
+        }
         AlertDialog.Builder(this)
             .setTitle("IP address shown on the child phone")
             .setView(input)
             .setPositiveButton("Pair") { _, _ ->
                 val ip = input.text.toString().trim()
-                if (ip.isNotEmpty()) pair(ip)
+                checkAndPair(ip, own)
             }
             .setNegativeButton("Cancel", null)
             .show()
+    }
+
+    private fun checkAndPair(ip: String, own: String) {
+        if (!Ip.isValid(ip)) {
+            toast("That is not a valid address. It looks like 192.168.1.101 (four numbers with dots).")
+            askIp()
+            return
+        }
+        if (own.isNotEmpty() && !Ip.sameSubnet24(ip, own)) {
+            AlertDialog.Builder(this)
+                .setTitle("Different network?")
+                .setMessage("This phone is $own but you typed $ip. Both phones must start with the same first three numbers. Check the digits.")
+                .setPositiveButton("Try anyway") { _, _ -> pair(ip) }
+                .setNegativeButton("Fix it") { _, _ -> askIp() }
+                .show()
+            return
+        }
+        pair(ip)
     }
 
     private fun pair(ip: String) {

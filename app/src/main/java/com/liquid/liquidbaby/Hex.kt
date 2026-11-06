@@ -127,3 +127,20 @@ class SoundDetector {
         private val MULT = doubleArrayOf(0.0, 8.0, 6.0, 4.0, 3.0, 2.5)
     }
 }
+
+/** IPv4 helpers for the manual address entry. */
+object Ip {
+    fun parse(s: String): IntArray? {
+        val m = Regex("^(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})$").find(s.trim()) ?: return null
+        val v = IntArray(4) { m.groupValues[it + 1].toInt() }
+        return if (v.all { it in 0..255 }) v else null
+    }
+
+    fun isValid(s: String): Boolean = parse(s) != null
+
+    fun sameSubnet24(a: String, b: String): Boolean {
+        val x = parse(a) ?: return false
+        val y = parse(b) ?: return false
+        return x[0] == y[0] && x[1] == y[1] && x[2] == y[2]
+    }
+}

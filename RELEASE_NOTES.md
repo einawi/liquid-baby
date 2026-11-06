@@ -1,7 +1,6 @@
-Delivery 2: pairing, listening and recordings.
+Pairing fixes.
 
-- Pair the parent phone with the child phone by comparing a 6-digit number (all messages are encrypted)
-- Child unit listens to the room and records a clip when it hears a sound (15-60 seconds)
-- Parent unit: recordings list with play and delete, clip length slider, sensitivity slider
-- Local traffic is sent directly over Wi-Fi, so it also works when a phone has a VPN on
-- Works in the background with a notification (child: microphone, parent: connection)
+- Typing the child phone address: the box now starts with your Wi-Fi numbers (for example 192.168.1.), the address is checked, and you get a warning if it is on a different network
+- Clearer message when the child phone does not answer
+- Finding the child phone: the UDP search is set up in a way that should work on Android 17
+- Update check: still works when the GitHub limit is reached; two downloads can no longer collide

@@ -293,6 +293,12 @@ object ParentEngine {
                 PairStore.savePaired(Hex.encode(f[1]), childName, Hex.encode(Crypto.pairKey(secret)), ip)
                 Diag.i("Paired with child phone $childName")
                 listener.onResult(true, "Paired with $childName")
+            } catch (e: java.net.SocketTimeoutException) {
+                Diag.e("Pairing failed (no answer from $ip)", e)
+                listener.onResult(false, "No answer from $ip. Check the address, that the child phone shows 'Monitoring' and is on the same Wi-Fi.")
+            } catch (e: java.net.ConnectException) {
+                Diag.e("Pairing failed (refused by $ip)", e)
+                listener.onResult(false, "The phone at $ip refused the connection. Is Start monitoring on, on the child phone?")
             } catch (e: Exception) {
                 Diag.e("Pairing failed", e)
                 listener.onResult(false, "Pairing failed: " + (e.message ?: e.javaClass.simpleName))

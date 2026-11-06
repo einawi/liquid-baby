@@ -65,6 +65,7 @@ object Updater {
         val c = open("https://api.github.com/repos/$repo/releases/latest", true)
         try {
             if (c.responseCode == 404) return null
+            if (c.responseCode == 403 || c.responseCode == 429) return fetchViaRedirect(repo)
             if (c.responseCode != 200) throw IllegalStateException("GitHub answered HTTP " + c.responseCode)
             val text = c.inputStream.bufferedReader().use { it.readText() }
             val o = JSONObject(text)
@@ -93,6 +94,42 @@ object Updater {
         }
     }
 
+    private fun fetchText(url: String): String? {
+        return try {
+            val c = open(url, false)
+            try {
+                if (c.responseCode == 200) c.inputStream.bufferedReader().use { it.readText() } else null
+            } finally {
+                c.disconnect()
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /** Used when the GitHub API refuses (limit reached): read the latest tag from the normal web redirect. */
+    private fun fetchViaRedirect(repo: String): Info? {
+        val c = open("https://github.com/$repo/releases/latest", false)
+        c.instanceFollowRedirects = false
+        try {
+            val code = c.responseCode
+            if (code == 404) return null
+            if (code !in 300..399) throw IllegalStateException("GitHub answered HTTP $code")
+            val loc = c.getHeaderField("Location") ?: throw IllegalStateException("GitHub gave no release address")
+            val tag = java.net.URLDecoder.decode(loc.substringAfterLast("/releases/tag/", ""), "UTF-8")
+            if (tag.isEmpty()) return null
+            val parsed = VersionUtil.parseTag(tag)
+                ?: throw IllegalStateException("Release tag '$tag' is not in the form v<version>-build<number>.")
+            val apk = VersionUtil.apkFileName("LiquidBaby", parsed.name, parsed.code)
+            val base = "https://github.com/$repo/releases/download/$tag/$apk"
+            val notes = fetchText("https://raw.githubusercontent.com/$repo/main/RELEASE_NOTES.md") ?: ""
+            Diag.i("Update info read through the web redirect (API limit)")
+            return Info(tag, parsed.name, parsed.code, notes, VersionUtil.isRequired(notes), base, 0L, "$base.sha256")
+        } finally {
+            c.disconnect()
+        }
+    }
+
     fun cached(): Info? {
         val s = Prefs.getString("availableJson")
         return if (s.isEmpty()) null else Info.fromJson(s)
@@ -116,8 +153,13 @@ object Updater {
         }
     }
 
+    private val downloadLock = Any()
+
     /** Blocking. Downloads, verifies the checksum, and returns the APK file. */
-    fun download(ctx: Context, info: Info, onProgress: (Int) -> Unit): File {
+    fun download(ctx: Context, info: Info, onProgress: (Int) -> Unit): File =
+        synchronized(downloadLock) { downloadLocked(ctx, info, onProgress) }
+
+    private fun downloadLocked(ctx: Context, info: Info, onProgress: (Int) -> Unit): File {
         val dir = updatesDir(ctx)
         dir.listFiles()?.forEach { if (it.name != apkFile(ctx, info).name) it.delete() }
         val target = apkFile(ctx, info)

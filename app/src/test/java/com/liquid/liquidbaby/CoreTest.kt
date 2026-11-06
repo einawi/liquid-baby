@@ -182,4 +182,14 @@ class CoreTest {
         assertFalse(lowHit)
         assertTrue(highHit)
     }
+
+    @Test
+    fun ipChecks() {
+        assertTrue(Ip.isValid("192.168.1.101"))
+        assertFalse(Ip.isValid("192.168.1"))
+        assertFalse(Ip.isValid("300.1.1.1"))
+        assertFalse(Ip.isValid("abc"))
+        assertTrue(Ip.sameSubnet24("192.168.1.109", "192.168.1.101"))
+        assertFalse(Ip.sameSubnet24("192.168.1.109", "129.168.1.101"))
+    }
 }

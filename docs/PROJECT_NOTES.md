@@ -37,7 +37,8 @@ minSdk 23 (Android 6), compileSdk/targetSdk 36.
 
 ## Features done
 Build 1 (0.1.0): role choice, Settings, App updates, Diagnostics, safe mode, settings backup. Installed and opened OK on Pixel 7 Pro and Galaxy J50 (Android 6.0.1).
-Build 2 (0.2.0): pairing, child listening + sound-triggered recording, parent recordings list + sliders, foreground service.
+Build 2 (0.2.0): pairing, child listening + sound-triggered recording, parent recordings list + sliders, foreground service. In-app update from build 1 to build 2 worked on the Pixel (Android 17, API 37).
+Build 3 (0.2.1): fixes after the first Pixel test. The user typed 129.168.1.101 instead of 192.168.1.101 (manual IP box now prefilled with the Wi-Fi prefix, validated, same-/24 warning). Pinning an already-bound UDP socket to Wi-Fi gave EPERM on Android 17, so UDP sockets are now created unbound, pinned, then bound (still falls back to unpinned). Updater: one download at a time (two threads collided), fallback to the github.com/releases/latest redirect + raw RELEASE_NOTES.md when the API answers 403/429.
 
 ## Network design (build 2)
 - One persistent TCP connection (port 45455) per parent phone; the PARENT connects to the CHILD (child = server). Everything else (clips, settings, ping) travels on it. Future walkie-talkie and camera will use the same connection.

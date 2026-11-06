@@ -21,8 +21,9 @@ object Discovery {
         val found = LinkedHashMap<String, Found>()
         var ds: DatagramSocket? = null
         try {
-            ds = DatagramSocket()
+            ds = DatagramSocket(null)
             Net.bind(ctx, ds)
+            ds.bind(InetSocketAddress(0))
             ds.broadcast = true
             val data = ASK.toByteArray()
             val targets = ArrayList<String>()
@@ -58,6 +59,7 @@ object Discovery {
         } finally {
             ds?.close()
         }
+        Diag.i("Scan finished: " + found.size + " child phone(s) found")
         return found.values.toList()
     }
 
@@ -65,8 +67,8 @@ object Discovery {
     fun startResponder(ctx: Context, id: String, name: String): DatagramSocket {
         val ds = DatagramSocket(null)
         ds.reuseAddress = true
-        ds.bind(InetSocketAddress(UDP_PORT))
         Net.bind(ctx, ds)
+        ds.bind(InetSocketAddress(UDP_PORT))
         Thread {
             val buf = ByteArray(512)
             while (!ds.isClosed) {

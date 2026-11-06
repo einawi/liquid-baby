@@ -71,19 +71,33 @@ object Net {
         }
     }
 
-    fun bind(ctx: Context, s: Socket) {
-        try {
-            wifiNetwork(ctx)?.bindSocket(s)
+    fun bind(ctx: Context, s: Socket): Boolean {
+        return try {
+            val n = wifiNetwork(ctx)
+            if (n == null) {
+                false
+            } else {
+                n.bindSocket(s)
+                true
+            }
         } catch (e: Exception) {
-            Diag.e("Could not pin a socket to Wi-Fi", e)
+            Diag.i("Could not pin a TCP socket to Wi-Fi: " + e.message)
+            false
         }
     }
 
-    fun bind(ctx: Context, s: DatagramSocket) {
-        try {
-            wifiNetwork(ctx)?.bindSocket(s)
+    fun bind(ctx: Context, s: DatagramSocket): Boolean {
+        return try {
+            val n = wifiNetwork(ctx)
+            if (n == null) {
+                false
+            } else {
+                n.bindSocket(s)
+                true
+            }
         } catch (e: Exception) {
-            Diag.e("Could not pin a UDP socket to Wi-Fi", e)
+            Diag.i("Could not pin a UDP socket to Wi-Fi (continuing without): " + e.message)
+            false
         }
     }
 
