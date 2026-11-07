@@ -1,6 +1,4 @@
-Start-up crash fix.
+Start-up crash fix (part 2).
 
-- Fixes "Liquid Baby keeps stopping" on newer phones at start-up
-- If a screen fails, the app now shows the error text on screen (with a Copy button) instead of closing
-- The window blur effect can no longer crash the app; if the phone does not support it, the normal look is used
-- Safe mode uses plain screens, so it still opens after two quick crashes
+- The window blur is now applied after the screen is created (it crashed on Android 12+ when set too early)
+- Safe mode has a "Try normal start" button again, so it cannot get stuck

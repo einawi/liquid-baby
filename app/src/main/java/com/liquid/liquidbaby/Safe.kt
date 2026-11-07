@@ -13,7 +13,7 @@ import android.widget.Toast
 
 /** Plain screens that do not use the glass styling, so they still open when a normal screen fails. */
 object Safe {
-    fun showText(a: Activity, title: String, body: String) {
+    fun showText(a: Activity, title: String, body: String, actions: List<Pair<String, () -> Unit>> = emptyList()) {
         val col = LinearLayout(a)
         col.orientation = LinearLayout.VERTICAL
         col.setBackgroundColor(0xFF0B1D2A.toInt())
@@ -33,6 +33,12 @@ object Safe {
             Toast.makeText(a, "Copied", Toast.LENGTH_SHORT).show()
         }
         col.addView(copy, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        for ((label, action) in actions) {
+            val b = Button(a)
+            b.text = label
+            b.setOnClickListener { action() }
+            col.addView(b, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        }
 
         val tv = TextView(a)
         tv.text = body

@@ -13,6 +13,12 @@ class SafeModeActivity : Activity() {
         val body = "Liquid Baby crashed twice right after starting, so it opened in this safe screen.\n" +
             "Send this text to Claude.\n\n" +
             Diag.deviceInfo(this) + "\n" + (if (crash.isEmpty()) "(no crash text saved)" else crash)
-        Safe.showText(this, "Safe mode", body)
+        Safe.showText(this, "Safe mode", body, listOf(
+            "Try normal start" to {
+                CrashGuard.reset(this)
+                startActivity(Intent(this, MainActivity::class.java))
+                finish()
+            }
+        ))
     }
 }

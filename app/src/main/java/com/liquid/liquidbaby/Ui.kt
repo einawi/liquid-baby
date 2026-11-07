@@ -60,14 +60,6 @@ fun Activity.screen(build: LinearLayout.() -> Unit) {
     val sv = ScrollView(this)
     // Android 12+: the window blurs what is behind the app (frosted glass). Older phones get a solid gradient.
     sv.background = Look.background(if (blur) 210 else 255)
-    if (blur) {
-        try {
-            window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-            window.setBackgroundBlurRadius(60)
-        } catch (t: Throwable) {
-            Diag.i("Window blur not available: " + t.message)
-        }
-    }
     sv.addView(col)
     sv.setOnApplyWindowInsetsListener { v, insets ->
         var l = 0
@@ -90,6 +82,15 @@ fun Activity.screen(build: LinearLayout.() -> Unit) {
         insets
     }
     setContentView(sv)
+    // Blur only AFTER the window exists (setting it earlier caused a null-window crash on Android 12+).
+    if (blur) {
+        try {
+            window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            window.setBackgroundBlurRadius(60)
+        } catch (t: Throwable) {
+            Diag.i("Window blur not available: " + t.message)
+        }
+    }
 }
 
 fun LinearLayout.addTitle(text: String): TextView {
