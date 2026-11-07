@@ -36,6 +36,14 @@ object Look {
     }
 
     /** Corner radius follows the theme: sharp for neon, round for ocean and aurora. */
+    fun pill(fill: Int): GradientDrawable {
+        val g = GradientDrawable()
+        g.shape = GradientDrawable.RECTANGLE
+        g.cornerRadius = 999f
+        g.setColor(fill)
+        return g
+    }
+
     fun glass(ctx: Context, radiusDp: Int, fill: Int): GradientDrawable {
         val t = Themes.current()
         val g = GradientDrawable()
@@ -143,6 +151,36 @@ fun LinearLayout.addButton(text: String, onClick: () -> Unit): Button {
     val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
     lp.topMargin = context.dp(8)
     addView(b, lp)
+    return b
+}
+
+/** A small pill at the top of a screen: connection status. */
+fun LinearLayout.addChip(text: String): TextView {
+    val tv = TextView(context)
+    tv.textSize = 14f
+    tv.setTextColor(Look.TEXT)
+    tv.setPadding(context.dp(14), context.dp(6), context.dp(14), context.dp(6))
+    tv.background = Look.pill(0xFF6B7785.toInt())
+    tv.text = Tr.t(text)
+    val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+    lp.bottomMargin = context.dp(12)
+    addView(tv, lp)
+    return tv
+}
+
+fun setChip(tv: TextView?, text: String, color: Int) {
+    tv ?: return
+    tv.text = Tr.t(text)
+    tv.background = Look.pill(color)
+}
+
+/** A button with an icon on its left. */
+fun LinearLayout.addIconButton(text: String, icon: Int, onClick: () -> Unit): Button {
+    val b = addButton(text, onClick)
+    val d = context.getDrawable(icon)
+    d?.setTint(Look.TEXT)
+    b.setCompoundDrawablesRelativeWithIntrinsicBounds(d, null, null, null)
+    b.compoundDrawablePadding = context.dp(10)
     return b
 }
 

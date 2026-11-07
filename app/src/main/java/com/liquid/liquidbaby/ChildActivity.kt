@@ -21,6 +21,7 @@ class ChildActivity : Activity() {
     private var toggleBtn: Button? = null
     private var vpnBtn: Button? = null
     private var camBtn: Button? = null
+    private var chipTv: TextView? = null
     private var listBox: LinearLayout? = null
     private var dialogShown = false
 
@@ -35,6 +36,7 @@ class ChildActivity : Activity() {
         super.onCreate(savedInstanceState)
         screen {
             addTitle("Child unit")
+            chipTv = addChip("")
             statusTv = addBody("")
             val vb = addButton("A VPN is blocking local connections: open VPN settings") { openVpnSettings() }
             vb.visibility = View.GONE
@@ -197,6 +199,8 @@ class ChildActivity : Activity() {
         }
         sb.append(Net.describe(this)).append("\n")
         vpnBtn?.visibility = if (Net.vpnBlocksLocal(this)) View.VISIBLE else View.GONE
+        if (ChildEngine.running) setChip(chipTv, "Monitoring", 0xFF2E9E6A.toInt())
+        else setChip(chipTv, "Stopped", 0xFF6B7785.toInt())
         val camOk = checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
         camBtn?.visibility = if (camOk) View.GONE else View.VISIBLE
         sb.append("Camera permission: ").append(if (camOk) "allowed" else "NOT allowed (live camera will not work)").append("\n")

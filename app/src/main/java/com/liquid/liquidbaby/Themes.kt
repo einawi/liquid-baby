@@ -47,7 +47,7 @@ object Themes {
 
     fun mode(): String = Prefs.getString("themeMode", "system")
 
-    fun style(): String = Prefs.getString("themeStyle", "classic")
+    fun style(): String = Prefs.getString("themeStyle", "minimal")
 
     fun isDark(): Boolean = when (mode()) {
         "dark" -> true

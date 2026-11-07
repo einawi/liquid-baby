@@ -45,6 +45,7 @@ class ParentActivity : Activity() {
     private var tempDot: View? = null
     private var tempLine: TextView? = null
     private var warnedVault = false
+    private var chipTv: TextView? = null
     private fun intervalText(v: Int): String =
         if (v == 0) "Listening: continuously" else "Checking every $v seconds (listens 5 s each time)"
     private var listenBtn: Button? = null
@@ -79,6 +80,7 @@ class ParentActivity : Activity() {
     private fun build() {
         screen {
             addTitle("Parent unit")
+            chipTv = addChip("")
             statusTv = addBody("")
             val vb = addButton("A VPN is blocking local connections: open VPN settings") { openVpnSettings() }
             vb.visibility = View.GONE
@@ -101,15 +103,15 @@ class ParentActivity : Activity() {
                         .setNegativeButton("Cancel", null)
                         .show()
                 }
-                listenBtn = addButton("Listen to the room (sound only)") { toggleListen() }
-                addButton("Open the live camera") {
+                listenBtn = addIconButton("Listen to the room (sound only)", R.drawable.ic_listen) { toggleListen() }
+                addIconButton("Open the live camera", R.drawable.ic_camera) {
                     if (ParentEngine.connected) {
                         startActivity(Intent(this@ParentActivity, CameraActivity::class.java))
                     } else {
                         toast("Not connected to the child phone yet.")
                     }
                 }
-                val tb = addButton("Hold to talk to the child") { }
+                val tb = addIconButton("Hold to talk to the child", R.drawable.ic_mic) { }
                 tb.textSize = 20f
                 tb.minHeight = dp(96)
                 tb.setOnTouchListener { _, ev ->
@@ -239,6 +241,8 @@ class ParentActivity : Activity() {
     }
 
     private fun refreshExtra() {
+        if (ParentEngine.connected) setChip(chipTv, "Connected", 0xFF2E9E6A.toInt())
+        else setChip(chipTv, "Not connected", 0xFF6B7785.toInt())
         intervalLabel?.text = Tr.t(intervalText(ParentEngine.childInterval))
         walkieLabel?.text = Tr.t("Walkie-talkie volume on the child phone: " + ParentEngine.childTalkVol + " of 10")
         val pct = ParentEngine.batteryPct
