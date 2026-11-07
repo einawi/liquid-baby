@@ -44,6 +44,7 @@ class ParentActivity : Activity() {
     private var statusDot: View? = null
     private var tempDot: View? = null
     private var tempLine: TextView? = null
+    private var warnedVault = false
     private fun intervalText(v: Int): String =
         if (v == 0) "Listening: continuously" else "Checking every $v seconds (listens 5 s each time)"
     private var listenBtn: Button? = null
@@ -188,6 +189,10 @@ class ParentActivity : Activity() {
         super.onResume()
         ParentEngine.onChange = { runOnUiThread { refresh() } }
         ParentEngine.setLevelSub(true)
+        if (Vault.failed && !warnedVault) {
+            warnedVault = true
+            toast("تحذير: تشفير المفاتيح غير متاح على هذا الجوال")
+        }
         if (Prefs.getBool("serviceWanted", false) && !ParentEngine.running && PairStore.paired() != null) {
             UnitService.start(this)
         }

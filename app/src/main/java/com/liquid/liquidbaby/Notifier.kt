@@ -57,6 +57,13 @@ object Notifier {
         val tone = toneUri(ctx)
         val vib = vibrateWhenRinging(ctx)
         val id = "alerts_" + mode + "_" + (if (vib) 1 else 0) + "_" + Math.abs(tone.toString().hashCode())
+        try {
+            for (old in nm(ctx).notificationChannels) {
+                if (old.id.startsWith("alerts_") && old.id != id) nm(ctx).deleteNotificationChannel(old.id)
+            }
+        } catch (e: Exception) {
+            Diag.i("Could not clean old alert channels: " + e.message)
+        }
         if (nm(ctx).getNotificationChannel(id) == null) {
             val ch = NotificationChannel(id, "Baby alerts", NotificationManager.IMPORTANCE_HIGH)
             val attrs = AudioAttributes.Builder()
@@ -119,6 +126,7 @@ object Notifier {
             val icon = android.graphics.drawable.Icon.createWithResource(
                 ctx, if (playing) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
             )
+            if (Build.VERSION.SDK_INT >= 26) b.setOnlyAlertOnce(true)
             b.addAction(Notification.Action.Builder(icon, Tr.t(if (playing) "Stop" else "Play"), toggle).build())
             if (canPost(ctx)) {
                 nm(ctx).notify(1004, b.build())

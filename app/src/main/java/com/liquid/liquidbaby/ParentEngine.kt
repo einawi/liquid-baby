@@ -122,6 +122,7 @@ object ParentEngine {
     var lastContact = System.currentTimeMillis()
 
     private var offlineAlerted = false
+    private var inBacklog = false
     private var lowAlerted = false
     private var hotAlerted = false
 
@@ -209,21 +210,22 @@ object ParentEngine {
         }
     }
 
-    private fun open(ip: String): Conn {
+    private fun open(ip: String, timeoutMs: Int = 4000): Conn {
         val s = Socket()
         Net.bind(appCtx, s)
-        s.connect(InetSocketAddress(ip, Discovery.TCP_PORT), 4000)
+        s.connect(InetSocketAddress(ip, Discovery.TCP_PORT), timeoutMs)
         s.tcpNoDelay = true
         s.soTimeout = 10_000
         return Conn(s)
     }
 
     private fun find(p: PairStore.Paired): Pair<Conn, String> {
-        if (p.lastIp.isNotEmpty()) {
+        // Addresses remembered from earlier connections, most recent first (short timeout each).
+        for (ip in PairStore.rememberedIps()) {
             try {
-                return Pair(open(p.lastIp), p.lastIp)
+                return Pair(open(ip, 1500), ip)
             } catch (e: IOException) {
-                Diag.i("Last address did not answer: " + e.message)
+                Diag.i("Address $ip did not answer")
             }
         }
         for (d in Discovery.scan(appCtx)) {
@@ -260,6 +262,7 @@ object ParentEngine {
 
         // -1 = "I am new here": the child only tells me where it is, and sends no old clips
         val last = PairStore.lastSyncTs()
+        inBacklog = true
         c.send(T.SYNC, Wire.longBytes(if (last == 0L) -1L else last))
         flushPendingDeletes(c)
         Thread {
@@ -318,6 +321,7 @@ object ParentEngine {
                     T.STATUS -> if (m.data.size >= 4) onStatus(m.data)
                     T.LEVEL -> if (m.data.isNotEmpty()) level = m.data[0].toInt() and 255
                     T.DELETED_LIST -> applyDeleted(m.data)
+                    T.SYNC_END -> inBacklog = false
                     T.SYNC_ACK -> if (m.data.size >= 8) PairStore.raiseLastSyncTs(maxOf(1L, Wire.bytesLong(m.data)))
                     T.CLIP_DATA -> rx?.write(m.data)
                     T.CLIP_END -> {
@@ -348,7 +352,7 @@ object ParentEngine {
         if (isNew) {
             Diag.i("Clip received: " + done.name)
             val fresh = System.currentTimeMillis() - ts < 10 * 60 * 1000L
-            if (fresh) Notifier.clipReady(appCtx, done, ts, false)
+            if (fresh && !inBacklog) Notifier.clipReady(appCtx, done, ts, false)
         }
         changed()
     }

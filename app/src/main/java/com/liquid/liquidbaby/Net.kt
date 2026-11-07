@@ -18,6 +18,21 @@ object Net {
 
     private fun cm(ctx: Context) = ctx.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
+    /** When this phone shares its own connection (hotspot), its local network is not the home Wi-Fi. */
+    private fun isHotspotNet(c: ConnectivityManager, n: Network): Boolean {
+        val name = c.getLinkProperties(n)?.interfaceName ?: return false
+        return name.startsWith("ap_") || name.startsWith("swlan")
+    }
+
+    private var warnedBind = false
+
+    private fun warnBindOnce(msg: String) {
+        if (!warnedBind) {
+            warnedBind = true
+            Diag.i(msg)
+        }
+    }
+
     @Suppress("DEPRECATION")
     fun wifiNetwork(ctx: Context): Network? {
         return try {
@@ -25,7 +40,8 @@ object Net {
             c.allNetworks.firstOrNull { n ->
                 val caps = c.getNetworkCapabilities(n)
                 caps != null && caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) &&
-                    !caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
+                    !caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) &&
+                    !isHotspotNet(c, n)
             }
         } catch (e: Exception) {
             null
@@ -104,6 +120,7 @@ object Net {
             for (ni in all) {
                 if (!ni.isUp || ni.isLoopback) continue
                 if (!ni.name.startsWith("wlan")) continue
+                if (ni.name.startsWith("ap_") || ni.name.startsWith("swlan")) continue
                 if (ni.interfaceAddresses.any { it.address is Inet4Address }) return ni
             }
             null
@@ -166,7 +183,7 @@ object Net {
                 true
             }
         } catch (e: Exception) {
-            Diag.i("Could not pin a TCP socket to Wi-Fi: " + e.message)
+            warnBindOnce("Could not pin a TCP socket to Wi-Fi: " + e.message)
             false
         }
     }
@@ -181,7 +198,7 @@ object Net {
                 true
             }
         } catch (e: Exception) {
-            Diag.i("Could not pin a UDP socket to Wi-Fi (continuing without): " + e.message)
+            warnBindOnce("Could not pin a UDP socket to Wi-Fi (continuing without): " + e.message)
             false
         }
     }

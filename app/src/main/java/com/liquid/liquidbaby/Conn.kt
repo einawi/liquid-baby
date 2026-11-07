@@ -46,6 +46,7 @@ object T {
     const val DELETED_LIST = 37
     const val SUB_LEVEL = 38
     const val LEVEL = 39
+    const val SYNC_END = 40
 }
 
 class Msg(val type: Int, val data: ByteArray)

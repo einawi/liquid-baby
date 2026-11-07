@@ -13,6 +13,10 @@ import javax.crypto.spec.GCMParameterSpec
 object Vault {
     private const val ALIAS = "liquidbaby_vault"
 
+    /** True when the Keystore could not encrypt on this phone. */
+    @Volatile
+    var failed = false
+
     private fun key(): SecretKey {
         val ks = KeyStore.getInstance("AndroidKeyStore")
         ks.load(null)
@@ -35,6 +39,7 @@ object Vault {
         val ct = c.doFinal(plain.toByteArray())
         "v1:" + Base64.encodeToString(c.iv + ct, Base64.NO_WRAP)
     } catch (e: Exception) {
+        failed = true
         Diag.e("Keystore encryption failed, storing without encryption", e)
         plain
     }

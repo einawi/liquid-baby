@@ -331,6 +331,7 @@ object ChildEngine {
                 T.SYNC -> {
                     val after = if (m.data.size >= 8) Wire.bytesLong(m.data) else 0L
                     if (after < 0L) c.send(T.SYNC_ACK, Wire.longBytes(newestClipTs())) else sendBacklog(c, after)
+                    c.send(T.SYNC_END)
                 }
             }
         }

@@ -94,11 +94,21 @@ object PairStore {
     }
 
     fun setLastIp(ip: String) {
-        sp.edit().putString("childIp", ip).apply()
+        val old = (sp.getString("childIps", "") ?: "").split(",").filter { it.isNotBlank() && it != ip }
+        val list = (listOf(ip) + old).take(5)
+        sp.edit().putString("childIp", ip).putString("childIps", list.joinToString(",")).apply()
+    }
+
+    /** Addresses the child phone had recently (its address can change on the router). */
+    fun rememberedIps(): List<String> {
+        val list = (sp.getString("childIps", "") ?: "").split(",").filter { it.isNotBlank() }
+        if (list.isNotEmpty()) return list
+        val one = sp.getString("childIp", "") ?: ""
+        return if (one.isNotEmpty()) listOf(one) else emptyList()
     }
 
     fun clearPaired() {
-        sp.edit().remove("childId").remove("childName").remove("childKey").remove("childIp").remove("lastSyncTs").commit()
+        sp.edit().remove("childId").remove("childName").remove("childKey").remove("childIp").remove("childIps").remove("lastSyncTs").commit()
     }
 
     /** Deletes made while the child phone was not reachable; sent when it connects again. */
@@ -106,6 +116,6 @@ object PairStore {
         (sp.getString("pendingDel", "") ?: "").split(",").mapNotNull { it.trim().toLongOrNull() }
 
     fun setPendingDeletes(list: List<Long>) {
-        sp.edit().putString("pendingDel", list.joinToString(",")).apply()
+        sp.edit().putString("pendingDel", list.takeLast(500).joinToString(",")).apply()
     }
 }
