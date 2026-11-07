@@ -126,7 +126,7 @@ class CameraActivity : Activity() {
             return
         }
         if (ParentEngine.beginTalk()) {
-            talkBtn?.text = "Talking...  release to stop (live sound is muted)"
+            talkBtn?.text = Tr.t("Talking...  release to stop (live sound is muted)")
         } else {
             toast(ParentEngine.talkNote)
         }
@@ -134,7 +134,7 @@ class CameraActivity : Activity() {
 
     private fun onTalkUp() {
         ParentEngine.endTalk()
-        talkBtn?.text = "Hold to talk to the child"
+        talkBtn?.text = Tr.t("Hold to talk to the child")
     }
 
     private fun refresh() {
@@ -154,15 +154,15 @@ class CameraActivity : Activity() {
         sb.append(if (ParentEngine.viewing) "Live" else "Starting...")
         sb.append(" - watching now: ").append(maxOf(ParentEngine.viewers, 1)).append("\n")
         if (ParentEngine.talkNote.isNotEmpty()) sb.append(ParentEngine.talkNote).append("\n")
-        statusTv?.text = sb.toString()
+        statusTv?.text = Tr.t(sb.toString())
         val flashState = if (ParentEngine.viewFlash) "ON (tap to turn off)" else "off (tap to turn on)"
         val flashNote = if (ParentEngine.viewHasFlash) "" else " - this camera does not report a flash, so it may not light"
-        flashBtn?.text = "Flash: $flashState$flashNote"
+        flashBtn?.text = Tr.t("Flash: $flashState$flashNote")
         flashBtn?.isEnabled = true
-        switchBtn?.text = "Camera: " + (if (ParentEngine.viewFront) "front" else "back") + " (tap to switch)"
-        nightBtn?.text = "Night mode: " + (if (ParentEngine.viewNight) "on (tap to turn off)" else "off (tap to turn on)")
-        qualityBtn?.text = "Quality: " + (if (ParentEngine.viewQuality == 1) "Normal" else "Low") + " (tap to change)"
-        soundBtn?.text = "Live sound: " + (if (ParentEngine.liveSound) "on" else "off") + " (tap to change)"
+        switchBtn?.text = Tr.t("Camera: " + (if (ParentEngine.viewFront) "front" else "back") + " (tap to switch)")
+        nightBtn?.text = Tr.t("Night mode: " + (if (ParentEngine.viewNight) "on (tap to turn off)" else "off (tap to turn on)"))
+        qualityBtn?.text = Tr.t("Quality: " + (if (ParentEngine.viewQuality == 1) "Normal" else "Low") + " (tap to change)")
+        soundBtn?.text = Tr.t("Live sound: " + (if (ParentEngine.liveSound) "on" else "off") + " (tap to change)")
         val night = ParentEngine.viewNight
         if (night != lastNight) {
             lastNight = night
@@ -178,7 +178,7 @@ class CameraActivity : Activity() {
             ) else null
         }
         if (!ParentEngine.talking && talkBtn?.text?.startsWith("Talking") == true) {
-            talkBtn?.text = "Hold to talk to the child"
+            talkBtn?.text = Tr.t("Hold to talk to the child")
         }
     }
 }

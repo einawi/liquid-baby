@@ -41,6 +41,8 @@ class ParentActivity : Activity() {
     private var walkieLabel: TextView? = null
     private var statusLine: TextView? = null
     private var meter: android.widget.ProgressBar? = null
+    private var statusDot: View? = null
+    private var tempDot: View? = null
     private fun intervalText(v: Int): String =
         if (v == 0) "Listening: continuously" else "Checking every $v seconds (listens 5 s each time)"
     private var listenBtn: Button? = null
@@ -119,7 +121,7 @@ class ParentActivity : Activity() {
                 lenLabel = addBody("")
                 lenBar = addSlider(5, 60, ParentEngine.childLength, { v ->
                     draggingLen = true
-                    lenLabel?.text = "Clip length: $v seconds"
+                    lenLabel?.text = Tr.t("Clip length: $v seconds")
                 }, { v ->
                     draggingLen = false
                     Prefs.putInt("clipSeconds", v)
@@ -129,7 +131,7 @@ class ParentActivity : Activity() {
                 sensLabel = addBody("")
                 sensBar = addSlider(1, 5, ParentEngine.childSens, { v ->
                     draggingSens = true
-                    sensLabel?.text = "Sensitivity: $v of 5 (5 = hears quieter sounds)"
+                    sensLabel?.text = Tr.t("Sensitivity: $v of 5 (5 = hears quieter sounds)")
                 }, { v ->
                     draggingSens = false
                     ParentEngine.childSens = v
@@ -137,17 +139,30 @@ class ParentActivity : Activity() {
                 })
                 intervalLabel = addBody("")
                 intervalBar = addSlider(0, 15, ParentEngine.childInterval, { v ->
-                    intervalLabel?.text = intervalText(v)
+                    intervalLabel?.text = Tr.t(intervalText(v))
                 }, { v ->
                     ParentEngine.setInterval(v)
                 })
                 walkieLabel = addBody("")
                 addSlider(1, 10, ParentEngine.childTalkVol, { v ->
-                    walkieLabel?.text = "Walkie-talkie volume on the child phone: $v of 10"
+                    walkieLabel?.text = Tr.t("Walkie-talkie volume on the child phone: $v of 10")
                 }, { v ->
                     ParentEngine.setTalkVolume(v)
                 })
-                statusLine = addBody("")
+                val statusRow = addRow()
+                statusDot = View(context)
+                statusRow.addView(statusDot, LinearLayout.LayoutParams(dp(14), dp(14)).apply {
+                    leftMargin = dp(8)
+                    rightMargin = dp(8)
+                })
+                tempDot = View(context)
+                statusRow.addView(tempDot, LinearLayout.LayoutParams(dp(14), dp(14)).apply {
+                    rightMargin = dp(8)
+                })
+                statusLine = TextView(context)
+                statusLine?.textSize = 16f
+                statusLine?.setTextColor(Look.SUB)
+                statusRow.addView(statusLine, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
                 meter = android.widget.ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal)
                 meter?.max = 100
                 addView(meter, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(10)))
@@ -189,7 +204,7 @@ class ParentActivity : Activity() {
             return
         }
         if (ParentEngine.beginTalk()) {
-            talkBtn?.text = "Talking...  release to stop"
+            talkBtn?.text = Tr.t("Talking...  release to stop")
         } else {
             toast(ParentEngine.talkNote)
         }
@@ -197,7 +212,7 @@ class ParentActivity : Activity() {
 
     private fun onTalkUp() {
         ParentEngine.endTalk()
-        talkBtn?.text = "Hold to talk to the child"
+        talkBtn?.text = Tr.t("Hold to talk to the child")
     }
 
     private fun toggle() {
@@ -205,33 +220,55 @@ class ParentActivity : Activity() {
     }
 
     private fun refreshExtra() {
-        intervalLabel?.text = intervalText(ParentEngine.childInterval)
-        walkieLabel?.text = "Walkie-talkie volume on the child phone: " + ParentEngine.childTalkVol + " of 10"
+        intervalLabel?.text = Tr.t(intervalText(ParentEngine.childInterval))
+        walkieLabel?.text = Tr.t("Walkie-talkie volume on the child phone: " + ParentEngine.childTalkVol + " of 10")
         val parts = ArrayList<String>()
         if (ParentEngine.batteryPct >= 0) {
-            parts.add("Child battery: " + ParentEngine.batteryPct + "%" + (if (ParentEngine.charging) " (charging)" else ""))
+            parts.add("Child unit battery: " + ParentEngine.batteryPct + "%" + (if (ParentEngine.charging) " (charging)" else ""))
         }
         if (ParentEngine.batteryPct >= 0) {
             parts.add("Temperature: " + String.format(java.util.Locale.US, "%.1f", ParentEngine.tempC) + " °C")
         }
-        statusLine?.text = parts.joinToString("   ")
+        statusLine?.text = Tr.t(parts.joinToString("   "))
+        val pct = ParentEngine.batteryPct
+        val dotColor = when {
+            pct < 0 -> 0xFF8899AA.toInt()
+            !ParentEngine.charging && pct < 20 -> 0xFFE53935.toInt()
+            !ParentEngine.charging && pct < 40 -> 0xFFFFA726.toInt()
+            else -> 0xFF66BB6A.toInt()
+        }
+        statusDot?.background = android.graphics.drawable.GradientDrawable().apply {
+            shape = android.graphics.drawable.GradientDrawable.OVAL
+            setColor(dotColor)
+        }
+        val tc = ParentEngine.tempC
+        val tempColor = when {
+            ParentEngine.batteryPct < 0 -> 0xFF8899AA.toInt()
+            tc >= 42.0 -> 0xFFE53935.toInt()
+            tc >= 38.0 -> 0xFFFFA726.toInt()
+            else -> 0xFF66BB6A.toInt()
+        }
+        tempDot?.background = android.graphics.drawable.GradientDrawable().apply {
+            shape = android.graphics.drawable.GradientDrawable.OVAL
+            setColor(tempColor)
+        }
         meter?.progress = ParentEngine.level
     }
 
     private fun refresh() {
         refreshExtra()
         val note = if (ParentEngine.talkNote.isEmpty()) "" else ParentEngine.talkNote + "\n"
-        statusTv?.text = "Status: " + ParentEngine.status + "\n" + note + Net.describe(this)
+        statusTv?.text = Tr.t("Status: " + ParentEngine.status + "\n" + note + Net.describe(this))
         if (!ParentEngine.talking && talkBtn?.text?.startsWith("Talking") == true) talkBtn?.text = "Hold to talk to the child"
         vpnBtn?.visibility = if (Net.vpnBlocksLocal(this)) View.VISIBLE else View.GONE
-        toggleBtn?.text = if (ParentEngine.running) "Stop listening" else "Start listening"
-        listenBtn?.text = if (ParentEngine.listening) "Stop listening to the room" else "Listen to the room (sound only)"
+        toggleBtn?.text = Tr.t(if (ParentEngine.running) "Stop listening" else "Start listening")
+        listenBtn?.text = Tr.t(if (ParentEngine.listening) "Stop listening to the room" else "Listen to the room (sound only)")
         if (!draggingLen) {
-            lenLabel?.text = "Clip length: " + ParentEngine.childLength + " seconds"
+            lenLabel?.text = Tr.t("Clip length: " + ParentEngine.childLength + " seconds")
             lenBar?.progress = ParentEngine.childLength - 5
         }
         if (!draggingSens) {
-            sensLabel?.text = "Sensitivity: " + ParentEngine.childSens + " of 5 (5 = hears quieter sounds)"
+            sensLabel?.text = Tr.t("Sensitivity: " + ParentEngine.childSens + " of 5 (5 = hears quieter sounds)")
             sensBar?.progress = ParentEngine.childSens - 1
         }
         if (listBox != null) {

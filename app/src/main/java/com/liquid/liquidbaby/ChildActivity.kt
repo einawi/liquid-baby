@@ -200,8 +200,8 @@ class ChildActivity : Activity() {
         val camOk = checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
         camBtn?.visibility = if (camOk) View.GONE else View.VISIBLE
         sb.append("Camera permission: ").append(if (camOk) "allowed" else "NOT allowed (live camera will not work)").append("\n")
-        statusTv?.text = sb.toString()
-        toggleBtn?.text = if (ChildEngine.running) "Stop monitoring" else "Start monitoring"
+        statusTv?.text = Tr.t(sb.toString())
+        toggleBtn?.text = Tr.t(if (ChildEngine.running) "Stop monitoring" else "Start monitoring")
         fillParentsIfChanged()
         val req = ChildEngine.pendingPair
         if (req != null && !dialogShown) {

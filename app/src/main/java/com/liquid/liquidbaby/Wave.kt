@@ -68,7 +68,7 @@ class WaveView(ctx: Context) : View(ctx) {
             val lit = (i + 0.5f) / n <= progress
             val pulse = if (playing) 0.82f + 0.18f * sin(t + i * 0.7).toFloat() else 1f
             val h = max(4f, bars[i] * height * 0.95f * pulse)
-            paint.color = if (lit) 0xFF7FE8FF.toInt() else 0x66FFFFFF
+            paint.color = if (lit) Themes.current().accent else 0x66FFFFFF
             val left = i * gap + (gap - bw) / 2
             c.drawRoundRect(left, mid - h / 2, left + bw, mid + h / 2, bw / 2, bw / 2, paint)
         }

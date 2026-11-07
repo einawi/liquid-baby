@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Adaptive icon foreground. Everything stays inside the centre safe area (about 66 of 108). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Sleeping baby's moon -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M52,34 C38,38 36,70 52,74 C43,67 43,42 52,34 Z" />
+    <!-- Three sound waves -->
+    <path
+        android:strokeColor="#7FE8FF"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M61,46 Q67,54 61,62" />
+    <path
+        android:strokeColor="#7FE8FF"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M69,40 Q78,54 69,68" />
+    <path
+        android:strokeColor="#7FE8FF"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M77,34 Q90,54 77,74" />
+</vector>

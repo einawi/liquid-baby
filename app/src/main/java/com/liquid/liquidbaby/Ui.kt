@@ -10,6 +10,7 @@ import android.graphics.Typeface
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
+import android.view.View
 import android.view.WindowInsets
 import android.widget.Button
 import android.widget.CheckBox
@@ -20,28 +21,28 @@ import android.widget.Toast
 
 /** Colours and shapes of the glass look used on every screen. */
 object Look {
-    val TEXT = 0xFFFFFFFF.toInt()
-    val SUB = 0xE6FFFFFF.toInt()
-    val GLASS = 0x33FFFFFF
-    val GLASS_EDGE = 0x66FFFFFF
-    val BUTTON = 0x4DFFFFFF
-    val BANNER = 0xCC1E88E5.toInt()
+    val TEXT: Int get() = Themes.current().text
+    val SUB: Int get() = Themes.current().sub
+    val GLASS: Int get() = Themes.current().glass
+    val GLASS_EDGE: Int get() = Themes.current().edge
+    val BUTTON: Int get() = Themes.current().button
+    val BANNER: Int get() = Themes.current().banner
 
     fun background(alpha: Int): GradientDrawable {
-        val g = GradientDrawable(
-            GradientDrawable.Orientation.TOP_BOTTOM,
-            intArrayOf(0xF00B1D2A.toInt(), 0xF0163B4E.toInt(), 0xF01F5A6B.toInt())
-        )
+        val t = Themes.current()
+        val g = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(t.top, t.mid, t.bottom))
         g.setAlpha(alpha)
         return g
     }
 
+    /** Corner radius follows the theme: sharp for neon, round for ocean and aurora. */
     fun glass(ctx: Context, radiusDp: Int, fill: Int): GradientDrawable {
+        val t = Themes.current()
         val g = GradientDrawable()
         g.shape = GradientDrawable.RECTANGLE
-        g.cornerRadius = ctx.dp(radiusDp).toFloat()
+        g.cornerRadius = ctx.dp((t.radius * radiusDp / 22).coerceAtLeast(2)).toFloat()
         g.setColor(fill)
-        g.setStroke(ctx.dp(1), GLASS_EDGE)
+        g.setStroke(ctx.dp(1), t.edge)
         return g
     }
 }
@@ -56,10 +57,12 @@ fun Activity.screen(build: LinearLayout.() -> Unit) {
     val col = LinearLayout(this)
     col.orientation = LinearLayout.VERTICAL
     col.setPadding(dp(18), dp(18), dp(18), dp(28))
+    if (Tr.isAr()) col.layoutDirection = View.LAYOUT_DIRECTION_RTL
     col.build()
     val sv = ScrollView(this)
     // Android 12+: the window blurs what is behind the app (frosted glass). Older phones get a solid gradient.
     sv.background = Look.background(if (blur) 210 else 255)
+    if (Tr.isAr()) sv.layoutDirection = View.LAYOUT_DIRECTION_RTL
     sv.addView(col)
     sv.setOnApplyWindowInsetsListener { v, insets ->
         var l = 0
@@ -86,7 +89,7 @@ fun Activity.screen(build: LinearLayout.() -> Unit) {
     if (blur) {
         try {
             window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-            window.setBackgroundBlurRadius(60)
+            window.setBackgroundBlurRadius(Themes.current().blur)
         } catch (t: Throwable) {
             Diag.i("Window blur not available: " + t.message)
         }
@@ -95,7 +98,7 @@ fun Activity.screen(build: LinearLayout.() -> Unit) {
 
 fun LinearLayout.addTitle(text: String): TextView {
     val tv = TextView(context)
-    tv.text = text
+    tv.text = Tr.t(text)
     tv.textSize = 28f
     tv.setTypeface(tv.typeface, Typeface.BOLD)
     tv.setTextColor(Look.TEXT)
@@ -106,7 +109,7 @@ fun LinearLayout.addTitle(text: String): TextView {
 
 fun LinearLayout.addBody(text: String): TextView {
     val tv = TextView(context)
-    tv.text = text
+    tv.text = Tr.t(text)
     tv.textSize = 16f
     tv.setTextColor(Look.SUB)
     tv.setPadding(0, context.dp(4), 0, context.dp(8))
@@ -116,7 +119,7 @@ fun LinearLayout.addBody(text: String): TextView {
 
 fun LinearLayout.addMono(text: String): TextView {
     val tv = TextView(context)
-    tv.text = text
+    tv.text = Tr.t(text)
     tv.textSize = 11f
     tv.typeface = Typeface.MONOSPACE
     tv.setTextColor(Look.TEXT)
@@ -129,7 +132,7 @@ fun LinearLayout.addMono(text: String): TextView {
 
 fun LinearLayout.addButton(text: String, onClick: () -> Unit): Button {
     val b = Button(context)
-    b.text = text
+    b.text = Tr.t(text)
     b.isAllCaps = false
     b.setTextColor(Look.TEXT)
     b.background = Look.glass(context, 22, Look.BUTTON)
@@ -143,7 +146,7 @@ fun LinearLayout.addButton(text: String, onClick: () -> Unit): Button {
 
 fun LinearLayout.addCheck(text: String, checked: Boolean, onChange: (Boolean) -> Unit): CheckBox {
     val c = CheckBox(context)
-    c.text = text
+    c.text = Tr.t(text)
     c.setTextColor(Look.TEXT)
     c.isChecked = checked
     c.setOnCheckedChangeListener { _, v -> onChange(v) }
@@ -153,7 +156,7 @@ fun LinearLayout.addCheck(text: String, checked: Boolean, onChange: (Boolean) ->
 
 fun LinearLayout.addBanner(text: String, onClick: () -> Unit): TextView {
     val tv = TextView(context)
-    tv.text = text
+    tv.text = Tr.t(text)
     tv.textSize = 16f
     tv.setTextColor(Look.TEXT)
     tv.background = Look.glass(context, 18, Look.BANNER)
@@ -185,7 +188,7 @@ fun LinearLayout.addSlider(min: Int, max: Int, value: Int, onChange: (Int) -> Un
 }
 
 fun Context.toast(text: String) {
-    Toast.makeText(this, text, Toast.LENGTH_LONG).show()
+    Toast.makeText(this, Tr.t(text), Toast.LENGTH_LONG).show()
 }
 
 fun LinearLayout.addRow(): LinearLayout {
