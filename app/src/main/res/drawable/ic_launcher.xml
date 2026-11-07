@@ -1,19 +1,47 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="96dp"
-    android:height="96dp"
-    android:viewportWidth="96"
-    android:viewportHeight="96">
-    <path
-        android:fillColor="#1E88E5"
-        android:pathData="M16,0 L80,0 A16,16 0 0 1 96,16 L96,80 A16,16 0 0 1 80,96 L16,96 A16,16 0 0 1 0,80 L0,16 A16,16 0 0 1 16,0 Z" />
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Background: deep blue to teal, the same colours as the app's glass look -->
+    <path android:pathData="M0,0h108v108h-108z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="0"
+                android:startY="0"
+                android:endX="108"
+                android:endY="108"
+                android:startColor="#0B1D2A"
+                android:endColor="#1F7A8C" />
+        </aapt:attr>
+    </path>
+
+    <!-- A sleeping baby's moon: a soft crescent -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M48,20 A28,28 0 1 0 48,76 A28,28 0 1 0 48,20 Z" />
+        android:pathData="M54,26 C32,32 30,78 54,84 C38,74 38,36 54,26 Z" />
+
+    <!-- Three sound waves: the phone is listening -->
     <path
-        android:fillColor="#1E88E5"
-        android:pathData="M36,42 A4,4 0 1 0 36,50 A4,4 0 1 0 36,42 Z" />
+        android:strokeColor="#7FE8FF"
+        android:strokeWidth="4.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M68,44 Q76,54 68,64" />
     <path
-        android:fillColor="#1E88E5"
-        android:pathData="M60,42 A4,4 0 1 0 60,50 A4,4 0 1 0 60,42 Z" />
+        android:strokeColor="#7FE8FF"
+        android:strokeWidth="4.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M77,36 Q90,54 77,72" />
+    <path
+        android:strokeColor="#7FE8FF"
+        android:strokeWidth="4.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M86,28 Q104,54 86,80" />
 </vector>

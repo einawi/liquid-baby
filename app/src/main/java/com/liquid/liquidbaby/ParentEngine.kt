@@ -101,6 +101,31 @@ object ParentEngine {
     var childSens = 3
 
     @Volatile
+    var childInterval = 0
+
+    @Volatile
+    var childTalkVol = 7
+
+    @Volatile
+    var batteryPct = -1
+
+    @Volatile
+    var charging = false
+
+    @Volatile
+    var tempC = 0.0
+
+    @Volatile
+    var level = 0
+
+    @Volatile
+    var lastContact = System.currentTimeMillis()
+
+    private var offlineAlerted = false
+    private var lowAlerted = false
+    private var hotAlerted = false
+
+    @Volatile
     private var conn: Conn? = null
 
     private lateinit var appCtx: Context
@@ -127,6 +152,7 @@ object ParentEngine {
         status = "Starting"
         Diag.i("Parent unit starting. " + Net.describe(appCtx).replace("\n", ", "))
         Thread { loop() }.start()
+        Thread { watchLoop() }.start()
         changed()
     }
 
@@ -226,6 +252,8 @@ object ParentEngine {
         c.socket.soTimeout = 40_000
         PairStore.setLastIp(ip)
         connected = true
+        offlineAlerted = false
+        lastContact = System.currentTimeMillis()
         status = "Connected to " + p.childName
         Diag.i("Connected to child phone at $ip")
         changed()
@@ -233,6 +261,7 @@ object ParentEngine {
         // -1 = "I am new here": the child only tells me where it is, and sends no old clips
         val last = PairStore.lastSyncTs()
         c.send(T.SYNC, Wire.longBytes(if (last == 0L) -1L else last))
+        flushPendingDeletes(c)
         Thread {
             while (running && connected && conn === c) {
                 pause(10_000)
@@ -250,6 +279,7 @@ object ParentEngine {
         try {
             while (running) {
                 val m = c.read()
+                lastContact = System.currentTimeMillis()
                 when (m.type) {
                     T.SETTINGS -> {
                         applySettings(m.data)
@@ -285,6 +315,9 @@ object ParentEngine {
                         talkNote = "The child phone could not start the speaker"
                         endTalk()
                     }
+                    T.STATUS -> if (m.data.size >= 4) onStatus(m.data)
+                    T.LEVEL -> if (m.data.isNotEmpty()) level = m.data[0].toInt() and 255
+                    T.DELETED_LIST -> applyDeleted(m.data)
                     T.SYNC_ACK -> if (m.data.size >= 8) PairStore.raiseLastSyncTs(maxOf(1L, Wire.bytesLong(m.data)))
                     T.CLIP_DATA -> rx?.write(m.data)
                     T.CLIP_END -> {
@@ -315,15 +348,19 @@ object ParentEngine {
         if (isNew) {
             Diag.i("Clip received: " + done.name)
             val fresh = System.currentTimeMillis() - ts < 10 * 60 * 1000L
-            if (fresh) Notifier.alert(appCtx, "Liquid Baby", "A sound was recorded (" + (Wav.durationMs(done.length()) / 1000) + " s)")
+            if (fresh) Notifier.clipReady(appCtx, done, ts, false)
         }
         changed()
     }
 
     private fun applySettings(d: ByteArray) {
         if (d.size >= 2) {
-            childLength = (d[0].toInt() and 255).coerceIn(15, 60)
+            childLength = (d[0].toInt() and 255).coerceIn(5, 60)
             childSens = (d[1].toInt() and 255).coerceIn(1, 5)
+        }
+        if (d.size >= 4) {
+            childInterval = (d[2].toInt() and 255).coerceIn(0, 15)
+            childTalkVol = (d[3].toInt() and 255).coerceIn(1, 10)
         }
     }
 
@@ -474,6 +511,103 @@ object ParentEngine {
         sender = null
         talking = false
         changed()
+    }
+
+    fun setInterval(v: Int) {
+        val c = conn ?: return
+        if (connected) sendAsync(c, T.SET_INTERVAL, byteArrayOf(v.toByte()))
+    }
+
+    fun setTalkVolume(v: Int) {
+        val c = conn ?: return
+        if (connected) sendAsync(c, T.SET_TALKVOL, byteArrayOf(v.toByte()))
+    }
+
+    fun setLevelSub(on: Boolean) {
+        val c = conn ?: return
+        if (connected) sendAsync(c, T.SUB_LEVEL, byteArrayOf(if (on) 1 else 0))
+    }
+
+    /** Deletes a recording here and on the child phone; if the child is not reachable, it is done on reconnect. */
+    fun deleteClip(ctx: Context, ts: Long) {
+        File(clipsDir(ctx), "$ts.wav").delete()
+        val c = conn
+        if (connected && c != null) {
+            sendAsync(c, T.DELETE_CLIP, Wire.longBytes(ts))
+        } else {
+            PairStore.setPendingDeletes(PairStore.pendingDeletes() + ts)
+        }
+        changed()
+    }
+
+    private fun flushPendingDeletes(c: Conn) {
+        val list = PairStore.pendingDeletes()
+        if (list.isEmpty()) return
+        for (ts in list) {
+            try {
+                c.send(T.DELETE_CLIP, Wire.longBytes(ts))
+            } catch (_: Exception) {
+            }
+        }
+        PairStore.setPendingDeletes(emptyList())
+    }
+
+    private fun applyDeleted(d: ByteArray) {
+        var i = 0
+        while (i + 8 <= d.size) {
+            val ts = Wire.bytesLong(d.copyOfRange(i, i + 8))
+            File(clipsDir(appCtx), "$ts.wav").delete()
+            i += 8
+        }
+        changed()
+    }
+
+    /** Child phone status: battery, charging, temperature. Warns once per problem. */
+    private fun onStatus(d: ByteArray) {
+        val pct = d[0].toInt() and 255
+        val chg = d[1].toInt() == 1
+        val temp = (((d[2].toInt() and 255) shl 8) or (d[3].toInt() and 255)).toShort().toInt()
+        batteryPct = pct
+        charging = chg
+        tempC = temp / 10.0
+        val low = !chg && pct < 20
+        if (low && !lowAlerted) {
+            lowAlerted = true
+            Notifier.alert(appCtx, "Liquid Baby", "Child phone battery is low: $pct% and not charging")
+        }
+        if (!low) lowAlerted = false
+        val hot = tempC > 42.0
+        if (hot && !hotAlerted) {
+            hotAlerted = true
+            Notifier.alert(appCtx, "Liquid Baby", "Child phone is hot: " + String.format(java.util.Locale.US, "%.1f", tempC) + " °C")
+        }
+        if (!hot) hotAlerted = false
+        changed()
+    }
+
+    /** Watches the connection: an alert after 100 seconds without contact; deletes recordings older than 8 hours. */
+    private fun watchLoop() {
+        var tick = 0
+        while (running) {
+            try {
+                Thread.sleep(2000)
+            } catch (_: InterruptedException) {
+            }
+            if (!running) break
+            tick++
+            if (PairStore.paired() != null && !connected &&
+                System.currentTimeMillis() - lastContact > 100_000L && !offlineAlerted
+            ) {
+                offlineAlerted = true
+                Notifier.alert(appCtx, "Liquid Baby", "No answer from the child phone for 100 seconds. Check that it is on, on Wi-Fi, and monitoring.")
+            }
+            if (tick % 15 == 0) {
+                val cutoff = System.currentTimeMillis() - 8L * 60 * 60 * 1000
+                for (item in clips(appCtx)) {
+                    if (item.ts < cutoff) item.file.delete()
+                }
+            }
+        }
     }
 
     fun sendSettings(length: Int, sens: Int) {

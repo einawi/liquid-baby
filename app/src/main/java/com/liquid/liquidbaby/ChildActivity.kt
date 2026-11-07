@@ -46,12 +46,8 @@ class ChildActivity : Activity() {
             cb.visibility = View.GONE
             camBtn = cb
             addButton("Allow a new parent phone to pair (2 minutes)") { allowPairing() }
-            val volLabel = addBody("Walkie-talkie volume: " + Prefs.getInt("talkVolume", 7) + " of 10 (how loud the parent's voice is on this phone)")
-            addSlider(1, 10, Prefs.getInt("talkVolume", 7), { v ->
-                volLabel.text = "Walkie-talkie volume: $v of 10 (how loud the parent's voice is on this phone)"
-            }, { v ->
-                Prefs.putInt("talkVolume", v)
-            })
+            addBody("Walkie-talkie volume is set from the parent phone.")
+            addButton("Dark screen (touch the screen to wake it)") { showDark() }
             addBody("Paired parent phones")
             val box = LinearLayout(context)
             box.orientation = LinearLayout.VERTICAL
@@ -115,6 +111,32 @@ class ChildActivity : Activity() {
         }
     }
 
+    private var dark: android.view.View? = null
+
+    /** Black screen over the app. The monitoring keeps running; touching the screen wakes it. */
+    private fun showDark() {
+        val v = android.view.View(this)
+        v.setBackgroundColor(android.graphics.Color.BLACK)
+        v.setOnTouchListener { _, _ ->
+            hideDark()
+            true
+        }
+        dark = v
+        window.addContentView(
+            v,
+            android.view.ViewGroup.LayoutParams(
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
+    }
+
+    private fun hideDark() {
+        val v = dark ?: return
+        (v.parent as? android.view.ViewGroup)?.removeView(v)
+        dark = null
+    }
+
     private fun allowPairing() {
         if (!ChildEngine.running) {
             toast("Tap Start monitoring first.")
@@ -139,6 +161,9 @@ class ChildActivity : Activity() {
             val b = Button(this)
             b.text = "Remove"
             b.isAllCaps = false
+            b.setTextColor(Look.TEXT)
+            b.background = Look.glass(this, 18, Look.BUTTON)
+            b.minHeight = dp(44)
             b.setOnClickListener {
                 AlertDialog.Builder(this)
                     .setTitle("Remove this parent phone?")

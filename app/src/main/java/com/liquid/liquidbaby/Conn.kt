@@ -39,6 +39,13 @@ object T {
     const val VIEW_ERROR = 30
     const val LISTEN_START = 31
     const val LISTEN_STOP = 32
+    const val SET_INTERVAL = 33
+    const val SET_TALKVOL = 34
+    const val STATUS = 35
+    const val DELETE_CLIP = 36
+    const val DELETED_LIST = 37
+    const val SUB_LEVEL = 38
+    const val LEVEL = 39
 }
 
 class Msg(val type: Int, val data: ByteArray)

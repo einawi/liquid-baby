@@ -47,6 +47,7 @@ object ChildEngine {
 
     private val viewers = ConcurrentHashMap<String, Viewer>()
     private val listeners = ConcurrentHashMap<String, Viewer>()
+    private val levelSubs: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
     @Volatile
     private var viewNight = false
     private var streamer: CameraStreamer? = null
@@ -75,7 +76,7 @@ object ChildEngine {
 
     private fun clipsDir(): File = File(appCtx.filesDir, "childclips")
 
-    fun clipSeconds(): Int = Prefs.getInt("clipSeconds", 30).coerceIn(15, 60)
+    fun clipSeconds(): Int = Prefs.getInt("clipSeconds", 30).coerceIn(5, 60)
 
     fun sensitivity(): Int = Prefs.getInt("sensitivity", 3).coerceIn(1, 5)
 
@@ -110,10 +111,13 @@ object ChildEngine {
             changed()
         })
         m.detector.sensitivity = sensitivity()
+        m.intervalSec = Prefs.getInt("interval", 0).coerceIn(0, 15)
         m.liveSink = { pcm -> fanOutAudio(pcm) }
         monitor = m
         m.start()
         Thread { watchdog() }.start()
+        Thread { statusLoop() }.start()
+        Thread { levelLoop() }.start()
         changed()
     }
 
@@ -217,6 +221,7 @@ object ChildEngine {
             if (id != null && connected[id] === c) connected.remove(id)
             if (id != null) {
                 stopTalk(id)
+                levelSubs.remove(id)
                 if (viewers[id]?.conn === c) stopView(id)
                 if (listeners[id]?.conn === c) stopListen(id)
             }
@@ -286,6 +291,7 @@ object ChildEngine {
         connected[id]?.close()
         connected[id] = c
         c.send(T.SETTINGS, settingsBytes())
+        c.send(T.DELETED_LIST, deletedBytes())
         Diag.i("Parent phone logged in")
         changed()
         while (running) {
@@ -293,7 +299,7 @@ object ChildEngine {
             when (m.type) {
                 T.PING -> c.send(T.PONG)
                 T.SET_LENGTH -> if (m.data.isNotEmpty()) {
-                    Prefs.putInt("clipSeconds", (m.data[0].toInt() and 255).coerceIn(15, 60))
+                    Prefs.putInt("clipSeconds", (m.data[0].toInt() and 255).coerceIn(5, 60))
                     broadcastSettings()
                 }
                 T.SET_SENS -> if (m.data.isNotEmpty()) {
@@ -310,6 +316,18 @@ object ChildEngine {
                 T.LISTEN_START -> startListen(id, c)
                 T.LISTEN_STOP -> stopListen(id)
                 T.VIEW_SET -> setView(m.data)
+                T.SET_INTERVAL -> if (m.data.isNotEmpty()) {
+                    val v = (m.data[0].toInt() and 255).coerceIn(0, 15)
+                    Prefs.putInt("interval", v)
+                    monitor?.intervalSec = v
+                    broadcastSettings()
+                }
+                T.SET_TALKVOL -> if (m.data.isNotEmpty()) {
+                    Prefs.putInt("talkVolume", (m.data[0].toInt() and 255).coerceIn(1, 10))
+                    broadcastSettings()
+                }
+                T.DELETE_CLIP -> if (m.data.size >= 8) deleteClip(Wire.bytesLong(m.data))
+                T.SUB_LEVEL -> if (m.data.isNotEmpty() && m.data[0].toInt() == 1) levelSubs.add(id) else levelSubs.remove(id)
                 T.SYNC -> {
                     val after = if (m.data.size >= 8) Wire.bytesLong(m.data) else 0L
                     if (after < 0L) c.send(T.SYNC_ACK, Wire.longBytes(newestClipTs())) else sendBacklog(c, after)
@@ -486,9 +504,140 @@ object ChildEngine {
         changed()
     }
 
+    // ---- deleted clips, cleanup, status and live level ----
+
+    private val DELETED_MAX = 500
+    private val KEEP_MS = 8L * 60 * 60 * 1000
+
+    private fun deletedFile(): File = File(appCtx.filesDir, "deleted.bin")
+
+    @Synchronized
+    private fun loadDeleted(): MutableList<Long> {
+        val f = deletedFile()
+        val out = ArrayList<Long>()
+        if (!f.exists()) return out
+        val b = f.readBytes()
+        var i = 0
+        while (i + 8 <= b.size) {
+            out.add(Wire.bytesLong(b.copyOfRange(i, i + 8)))
+            i += 8
+        }
+        return out
+    }
+
+    @Synchronized
+    private fun markDeleted(ts: Long) {
+        val list = loadDeleted()
+        if (!list.contains(ts)) list.add(ts)
+        val kept = list.takeLast(DELETED_MAX)
+        val out = ByteArray(kept.size * 8)
+        for ((idx, v) in kept.withIndex()) System.arraycopy(Wire.longBytes(v), 0, out, idx * 8, 8)
+        deletedFile().writeBytes(out)
+    }
+
+    private fun deletedBytes(): ByteArray {
+        val list = loadDeleted()
+        val out = ByteArray(list.size * 8)
+        for ((idx, v) in list.withIndex()) System.arraycopy(Wire.longBytes(v), 0, out, idx * 8, 8)
+        return out
+    }
+
+    /** Deletes a clip from the child phone and tells every parent phone (offline ones get it on reconnect). */
+    fun deleteClip(ts: Long) {
+        File(clipsDir(), "$ts.wav").delete()
+        markDeleted(ts)
+        broadcastDeleted()
+        changed()
+    }
+
+    private fun broadcastDeleted() {
+        val b = deletedBytes()
+        for (c in connected.values) {
+            try {
+                c.send(T.DELETED_LIST, b)
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    private fun cleanupOld() {
+        val cutoff = System.currentTimeMillis() - KEEP_MS
+        val files = clipsDir().listFiles { f -> f.name.endsWith(".wav") } ?: return
+        var any = false
+        for (f in files) {
+            val ts = f.name.removeSuffix(".wav").toLongOrNull() ?: continue
+            if (ts < cutoff) {
+                f.delete()
+                markDeleted(ts)
+                any = true
+            }
+        }
+        if (any) {
+            broadcastDeleted()
+            changed()
+        }
+    }
+
+    /** Every 30 seconds: battery and temperature to the parent phones, and the 8-hour cleanup. */
+    private fun statusLoop() {
+        var tick = 0
+        while (running) {
+            try {
+                Thread.sleep(1000)
+            } catch (_: InterruptedException) {
+            }
+            tick++
+            if (tick % 30 != 0) continue
+            try {
+                val bi = appCtx.registerReceiver(null, android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED))
+                val level = bi?.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1) ?: -1
+                val scale = bi?.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, 100) ?: 100
+                val pct = if (level < 0 || scale <= 0) 0 else level * 100 / scale
+                val st = bi?.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, -1) ?: -1
+                val charging = if (st == android.os.BatteryManager.BATTERY_STATUS_CHARGING ||
+                    st == android.os.BatteryManager.BATTERY_STATUS_FULL) 1 else 0
+                val temp = bi?.getIntExtra(android.os.BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0
+                val payload = byteArrayOf(pct.toByte(), charging.toByte(), (temp shr 8).toByte(), temp.toByte())
+                for (c in connected.values) {
+                    try {
+                        c.send(T.STATUS, payload)
+                    } catch (_: Exception) {
+                    }
+                }
+                cleanupOld()
+            } catch (e: Exception) {
+                Diag.i("Status: " + e.message)
+            }
+        }
+    }
+
+    /** Twice a second, while a parent is watching the sound meter. */
+    private fun levelLoop() {
+        while (running) {
+            try {
+                Thread.sleep(500)
+            } catch (_: InterruptedException) {
+            }
+            val m = monitor ?: continue
+            val lvl = (m.lastRms / 4000.0 * 100.0).coerceIn(0.0, 100.0).toInt()
+            for (id in levelSubs) {
+                val c = connected[id] ?: continue
+                try {
+                    c.send(T.LEVEL, byteArrayOf(lvl.toByte()))
+                } catch (_: Exception) {
+                }
+            }
+        }
+    }
+
     // ---- settings and clips ----
 
-    private fun settingsBytes(): ByteArray = byteArrayOf(clipSeconds().toByte(), sensitivity().toByte())
+    private fun settingsBytes(): ByteArray = byteArrayOf(
+        clipSeconds().toByte(),
+        sensitivity().toByte(),
+        Prefs.getInt("interval", 0).coerceIn(0, 15).toByte(),
+        Prefs.getInt("talkVolume", 7).coerceIn(1, 10).toByte()
+    )
 
     private fun broadcastSettings() {
         for (c in connected.values) {

@@ -16,6 +16,15 @@ class AudioMonitor(
     private val onClip: (File, Long) -> Unit,
     private val onStatus: (String) -> Unit
 ) : Thread("LiquidBaby-monitor") {
+    companion object {
+        const val LISTEN_WINDOW_MS = 5000L
+    }
+
+    /** 0 = listen all the time. 1..15 = wake up every N seconds and listen for 5 seconds. */
+    @Volatile
+    var intervalSec = 0
+
+    private var lpState = 0.0
 
     @Volatile
     var stopFlag = false
@@ -51,7 +60,10 @@ class AudioMonitor(
         var sum = 0.0
         for (i in 0 until n) {
             val v = buf[i].toDouble()
-            sum += v * v
+            // high-pass: removes low rumble (fans, motors, hum) before measuring
+            lpState += 0.06 * (v - lpState)
+            val hp = v - lpState
+            sum += hp * hp
         }
         return Math.sqrt(sum / n)
     }
@@ -76,11 +88,26 @@ class AudioMonitor(
                 return
             }
             rec.startRecording()
+            var recording = true
             onStatus("Listening")
             val ring = ArrayDeque<ShortArray>()
             val buf = ShortArray(block)
             var errors = 0
             while (!stopFlag) {
+                val iv = intervalSec
+                val active = iv == 0 || (System.currentTimeMillis() % (iv * 1000L)) < LISTEN_WINDOW_MS
+                if (!active) {
+                    if (recording) {
+                        rec.stop()
+                        recording = false
+                    }
+                    sleep(100)
+                    continue
+                }
+                if (!recording) {
+                    rec.startRecording()
+                    recording = true
+                }
                 val n = readBlock(rec, buf)
                 if (n < 0) {
                     errors++
@@ -128,7 +155,7 @@ class AudioMonitor(
     }
 
     private fun record(rec: AudioRecord, ring: ArrayDeque<ShortArray>) {
-        val total = clipSeconds().coerceIn(15, 60) * rate
+        val total = clipSeconds().coerceIn(5, 60) * rate
         val pcm = ByteArrayOutputStream(total * 2 + 64)
         var samples = 0
         val startMs = System.currentTimeMillis() - ring.size * 100L

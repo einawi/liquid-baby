@@ -5,8 +5,11 @@ import android.app.AlertDialog
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.media.RingtoneManager
+import android.net.Uri
 import android.os.Bundle
-import android.widget.Toast
+import android.text.InputType
+import android.widget.EditText
 
 class SettingsActivity : Activity() {
 
@@ -17,6 +20,9 @@ class SettingsActivity : Activity() {
             addButton("App updates") { startActivity(Intent(this@SettingsActivity, UpdatesActivity::class.java)) }
             addButton("Diagnostics") { startActivity(Intent(this@SettingsActivity, DiagnosticsActivity::class.java)) }
             addButton("Change phone role") { askRole() }
+            addButton("Notification sound") { pickTone() }
+            addButton(if (Lock.pinSet()) "Change PIN" else "Set PIN (lock the parent phone)") { setPin() }
+            if (Lock.pinSet()) addButton("Remove PIN") { removePin() }
             addBody("Backup / Export of your settings")
             addButton("Export settings (share)") {
                 shareText(this@SettingsActivity, "Liquid Baby settings", Prefs.exportJson())
@@ -25,10 +31,9 @@ class SettingsActivity : Activity() {
                 copyToClipboard(this@SettingsActivity, "Liquid Baby settings", Prefs.exportJson())
             }
             addButton("Restore settings from clipboard") { restore() }
-            addBody("Recordings will be added to the backup when recording arrives.")
             addButton("Write a test line to Diagnostics") {
                 Diag.e("Test error line created from Settings")
-                Toast.makeText(this@SettingsActivity, "Done. Open Diagnostics to see it.", Toast.LENGTH_SHORT).show()
+                toast("Done. Open Diagnostics to see it.")
             }
         }
     }
@@ -39,8 +44,64 @@ class SettingsActivity : Activity() {
             .setTitle("This phone is the")
             .setItems(items) { _, which ->
                 Prefs.putString("role", if (which == 0) "child" else "parent")
-                Toast.makeText(this, "Saved", Toast.LENGTH_SHORT).show()
+                toast("Saved")
             }
+            .show()
+    }
+
+    private fun pickTone() {
+        val i = Intent(RingtoneManager.ACTION_RINGTONE_PICKER)
+        i.putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_NOTIFICATION)
+        i.putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+        i.putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, Notifier.toneUri(this))
+        startActivityForResult(i, 77)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == 77 && resultCode == RESULT_OK) {
+            val uri = data?.getParcelableExtra<Uri>(RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
+            Prefs.putString("alertTone", uri?.toString() ?: "")
+            toast("Notification sound saved")
+        }
+    }
+
+    private fun setPin() {
+        val input = EditText(this)
+        input.hint = "4 to 8 digits"
+        input.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
+        AlertDialog.Builder(this)
+            .setTitle("PIN")
+            .setView(input)
+            .setPositiveButton("Save") { _, _ ->
+                val pin = input.text.toString()
+                if (pin.length in 4..8 && pin.all { it.isDigit() }) {
+                    Lock.setPin(pin)
+                    toast("PIN saved")
+                } else {
+                    toast("Use 4 to 8 digits")
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun removePin() {
+        val input = EditText(this)
+        input.hint = "Current PIN"
+        input.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
+        AlertDialog.Builder(this)
+            .setTitle("Remove PIN")
+            .setView(input)
+            .setPositiveButton("Remove") { _, _ ->
+                if (Lock.checkPin(input.text.toString())) {
+                    Lock.clearPin()
+                    toast("PIN removed")
+                } else {
+                    toast("Wrong PIN")
+                }
+            }
+            .setNegativeButton("Cancel", null)
             .show()
     }
 
@@ -48,7 +109,6 @@ class SettingsActivity : Activity() {
         val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         val text = cm.primaryClip?.getItemAt(0)?.coerceToText(this)?.toString() ?: ""
         val n = Prefs.importJson(text)
-        val msg = if (n < 0) "The clipboard does not contain exported settings." else "Restored $n settings."
-        Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
+        toast(if (n < 0) "The clipboard does not contain exported settings." else "Restored $n settings.")
     }
 }

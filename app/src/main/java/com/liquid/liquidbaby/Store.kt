@@ -5,7 +5,7 @@ import android.content.SharedPreferences
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** Pairing keys. Kept in their own file so they are never part of the settings export. */
+/** Pairing keys (kept out of the settings export). Keys are encrypted with the Android Keystore. */
 object PairStore {
     private lateinit var sp: SharedPreferences
 
@@ -22,11 +22,13 @@ object PairStore {
         return id
     }
 
-    // ---- child side ----
-
     class Peer(val id: String, val name: String, val key: String)
 
+    class Paired(val childId: String, val childName: String, val parentId: String, val key: String, val lastIp: String)
+
     fun unitId(): String = idFor("unitId")
+
+    fun parentId(): String = idFor("parentId")
 
     @Synchronized
     fun parents(): List<Peer> {
@@ -35,7 +37,7 @@ object PairStore {
             val a = JSONArray(sp.getString("parents", "[]"))
             for (i in 0 until a.length()) {
                 val o = a.getJSONObject(i)
-                out.add(Peer(o.getString("id"), o.optString("name"), o.getString("key")))
+                out.add(Peer(o.getString("id"), o.optString("name"), Vault.dec(o.getString("key"))))
             }
         } catch (e: Exception) {
             Diag.e("Could not read paired parents", e)
@@ -46,7 +48,7 @@ object PairStore {
     @Synchronized
     private fun saveParents(list: List<Peer>) {
         val a = JSONArray()
-        for (p in list) a.put(JSONObject().put("id", p.id).put("name", p.name).put("key", p.key))
+        for (p in list) a.put(JSONObject().put("id", p.id).put("name", p.name).put("key", Vault.enc(p.key)))
         sp.edit().putString("parents", a.toString()).commit()
     }
 
@@ -69,22 +71,18 @@ object PairStore {
 
     // ---- parent side ----
 
-    class Paired(val childId: String, val childName: String, val parentId: String, val key: String, val lastIp: String)
-
-    fun parentId(): String = idFor("parentId")
-
     fun paired(): Paired? {
         val childId = sp.getString("childId", null) ?: return null
-        val key = sp.getString("childKey", null) ?: return null
+        val stored = sp.getString("childKey", null) ?: return null
         return Paired(
-            childId, sp.getString("childName", "") ?: "", parentId(), key,
+            childId, sp.getString("childName", "") ?: "", parentId(), Vault.dec(stored),
             sp.getString("childIp", "") ?: ""
         )
     }
 
     fun savePaired(childId: String, childName: String, key: String, ip: String) {
         sp.edit().putString("childId", childId).putString("childName", childName)
-            .putString("childKey", key).putString("childIp", ip).remove("lastSyncTs").commit()
+            .putString("childKey", Vault.enc(key)).putString("childIp", ip).remove("lastSyncTs").commit()
     }
 
     /** Time of the newest clip this parent phone has already received (kept even if the clip is deleted). */
@@ -101,5 +99,13 @@ object PairStore {
 
     fun clearPaired() {
         sp.edit().remove("childId").remove("childName").remove("childKey").remove("childIp").remove("lastSyncTs").commit()
+    }
+
+    /** Deletes made while the child phone was not reachable; sent when it connects again. */
+    fun pendingDeletes(): List<Long> =
+        (sp.getString("pendingDel", "") ?: "").split(",").mapNotNull { it.trim().toLongOrNull() }
+
+    fun setPendingDeletes(list: List<Long>) {
+        sp.edit().putString("pendingDel", list.joinToString(",")).apply()
     }
 }
