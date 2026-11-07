@@ -116,14 +116,16 @@ object Notifier {
                 .setContentIntent(openApp(ctx, 4, ParentActivity::class.java))
                 .setDeleteIntent(gone)
                 .setAutoCancel(true)
-            b.addAction(
-                Notification.Action.Builder(
-                    if (playing) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play,
-                    if (playing) "Stop" else "Play",
-                    toggle
-                ).build()
+            val icon = android.graphics.drawable.Icon.createWithResource(
+                ctx, if (playing) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
             )
-            if (canPost(ctx)) nm(ctx).notify(1004, b.build())
+            b.addAction(Notification.Action.Builder(icon, if (playing) "Stop" else "Play", toggle).build())
+            if (canPost(ctx)) {
+                nm(ctx).notify(1004, b.build())
+                Diag.i("Recording notice posted: " + file.name)
+            } else {
+                Diag.i("Recording notice not shown: notifications are not allowed")
+            }
         } catch (e: Exception) {
             Diag.e("Could not show recording notice", e)
         }

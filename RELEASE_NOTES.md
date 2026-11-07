@@ -1,4 +1,7 @@
-Themes and temperature colour.
+Fixes and new icon.
 
-- Settings > Theme: six looks (Ocean, Sunset, Forest, Aurora, Minimal light, Neon sharp), each with its own colours, corner shape and blur. The current one is marked with a tick.
-- Parent screen: a temperature dot next to the battery dot (green under 38 °C, orange from 38 °C, red from 42 °C).
+- New recording notification shows its Play / Stop button (with an icon), and the app logs when it is shown
+- Recordings list: Play and Delete are now round icon buttons instead of text
+- Battery and temperature are on separate rows, each with its colour dot; the dots are no longer in the middle of the text in Arabic
+- "Remove" on the child screen is translated
+- New app icon: a heart with a sound wave, in the Pixel style, and a full-square version for Android 6 and 7

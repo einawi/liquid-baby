@@ -70,6 +70,8 @@ object Tr {
         "Restore settings from clipboard" to "استرجع الإعدادات من الحافظة",
         "Write a test line to Diagnostics" to "اكتب سطر تجربة في التشخيص",
         "Saved" to "تم الحفظ",
+        "Remove" to "إزالة",
+        "Hold to talk" to "اضغط للتحدث",
         "Copied" to "تم النسخ",
         "Done. Open Diagnostics to see it." to "تم. افتح التشخيص لرؤيته.",
         "Listening: continuously" to "المراقبة: مستمرة",
@@ -94,12 +96,17 @@ object Tr {
         "Starting... - watching now: " to "جارٍ البدء... - يشاهد الآن: ",
         "Parent phones connected: " to "جوالات الأبوين المتصلة: ",
         "Live sound active" to "الصوت المباشر نشط",
+        "Last clip: " to "آخر تسجيل: ",
+        "Camera permission: " to "صلاحية الكاميرا: ",
     )
 
     private val words = listOf(
         " seconds" to " ثانية",
         " of 10" to " من 10",
         " of 5" to " من 5",
+        "(5 = hears quieter sounds)" to "(5 = يسمع الأصوات الأهدأ)",
+        "(set from the parent phone)" to "(يُضبط من جوال الأبوين)",
+        "allowed" to "مسموحة",
         "(listens 5 s each time)" to "(يستمع 5 ثوان في كل مرة)",
         " (charging)" to " (على الشاحن)",
         "(tap to change)" to "(اضغط للتغيير)",

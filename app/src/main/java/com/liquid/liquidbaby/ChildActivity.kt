@@ -159,7 +159,7 @@ class ChildActivity : Activity() {
             tv.textSize = 16f
             row.addView(tv, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
             val b = Button(this)
-            b.text = "Remove"
+            b.text = Tr.t("Remove")
             b.isAllCaps = false
             b.setTextColor(Look.TEXT)
             b.background = Look.glass(this, 18, Look.BUTTON)

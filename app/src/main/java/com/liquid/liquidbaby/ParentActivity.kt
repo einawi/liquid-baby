@@ -43,6 +43,7 @@ class ParentActivity : Activity() {
     private var meter: android.widget.ProgressBar? = null
     private var statusDot: View? = null
     private var tempDot: View? = null
+    private var tempLine: TextView? = null
     private fun intervalText(v: Int): String =
         if (v == 0) "Listening: continuously" else "Checking every $v seconds (listens 5 s each time)"
     private var listenBtn: Button? = null
@@ -149,20 +150,26 @@ class ParentActivity : Activity() {
                 }, { v ->
                     ParentEngine.setTalkVolume(v)
                 })
-                val statusRow = addRow()
+                val batteryRow = addRow()
                 statusDot = View(context)
-                statusRow.addView(statusDot, LinearLayout.LayoutParams(dp(14), dp(14)).apply {
+                batteryRow.addView(statusDot, LinearLayout.LayoutParams(dp(14), dp(14)).apply {
                     leftMargin = dp(8)
-                    rightMargin = dp(8)
-                })
-                tempDot = View(context)
-                statusRow.addView(tempDot, LinearLayout.LayoutParams(dp(14), dp(14)).apply {
                     rightMargin = dp(8)
                 })
                 statusLine = TextView(context)
                 statusLine?.textSize = 16f
                 statusLine?.setTextColor(Look.SUB)
-                statusRow.addView(statusLine, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+                batteryRow.addView(statusLine, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+                val tempRow = addRow()
+                tempDot = View(context)
+                tempRow.addView(tempDot, LinearLayout.LayoutParams(dp(14), dp(14)).apply {
+                    leftMargin = dp(8)
+                    rightMargin = dp(8)
+                })
+                tempLine = TextView(context)
+                tempLine?.textSize = 16f
+                tempLine?.setTextColor(Look.SUB)
+                tempRow.addView(tempLine, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
                 meter = android.widget.ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal)
                 meter?.max = 100
                 addView(meter, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(10)))
@@ -219,39 +226,38 @@ class ParentActivity : Activity() {
         if (ParentEngine.running) UnitService.stop(this) else UnitService.start(this)
     }
 
+    private fun paintDot(v: View?, color: Int) {
+        v?.background = android.graphics.drawable.GradientDrawable().apply {
+            shape = android.graphics.drawable.GradientDrawable.OVAL
+            setColor(color)
+        }
+    }
+
     private fun refreshExtra() {
         intervalLabel?.text = Tr.t(intervalText(ParentEngine.childInterval))
         walkieLabel?.text = Tr.t("Walkie-talkie volume on the child phone: " + ParentEngine.childTalkVol + " of 10")
-        val parts = ArrayList<String>()
-        if (ParentEngine.batteryPct >= 0) {
-            parts.add("Child unit battery: " + ParentEngine.batteryPct + "%" + (if (ParentEngine.charging) " (charging)" else ""))
-        }
-        if (ParentEngine.batteryPct >= 0) {
-            parts.add("Temperature: " + String.format(java.util.Locale.US, "%.1f", ParentEngine.tempC) + " °C")
-        }
-        statusLine?.text = Tr.t(parts.joinToString("   "))
         val pct = ParentEngine.batteryPct
-        val dotColor = when {
+        val tc = ParentEngine.tempC
+        statusLine?.text = Tr.t(
+            if (pct < 0) "Child unit battery: --"
+            else "Child unit battery: " + pct + "%" + (if (ParentEngine.charging) " (charging)" else "")
+        )
+        tempLine?.text = Tr.t(
+            if (pct < 0) "Temperature: --"
+            else "Temperature: " + String.format(java.util.Locale.US, "%.1f", tc) + " °C"
+        )
+        paintDot(statusDot, when {
             pct < 0 -> 0xFF8899AA.toInt()
             !ParentEngine.charging && pct < 20 -> 0xFFE53935.toInt()
             !ParentEngine.charging && pct < 40 -> 0xFFFFA726.toInt()
             else -> 0xFF66BB6A.toInt()
-        }
-        statusDot?.background = android.graphics.drawable.GradientDrawable().apply {
-            shape = android.graphics.drawable.GradientDrawable.OVAL
-            setColor(dotColor)
-        }
-        val tc = ParentEngine.tempC
-        val tempColor = when {
-            ParentEngine.batteryPct < 0 -> 0xFF8899AA.toInt()
+        })
+        paintDot(tempDot, when {
+            pct < 0 -> 0xFF8899AA.toInt()
             tc >= 42.0 -> 0xFFE53935.toInt()
             tc >= 38.0 -> 0xFFFFA726.toInt()
             else -> 0xFF66BB6A.toInt()
-        }
-        tempDot?.background = android.graphics.drawable.GradientDrawable().apply {
-            shape = android.graphics.drawable.GradientDrawable.OVAL
-            setColor(tempColor)
-        }
+        })
         meter?.progress = ParentEngine.level
     }
 
@@ -297,27 +303,29 @@ class ParentActivity : Activity() {
                 waveView = wv
                 row.addView(wv, LinearLayout.LayoutParams(0, dp(34), 1.2f))
             }
-            val play = Button(this)
-            play.isAllCaps = false
-            play.setTextColor(Look.TEXT)
+            val play = android.widget.ImageButton(this)
+            play.setImageResource(if (playingTs == c.ts) R.drawable.ic_btn_pause else R.drawable.ic_btn_play)
             play.background = Look.glass(this, 18, Look.BUTTON)
-            play.text = if (playingTs == c.ts) "Stop" else "Play"
+            play.setColorFilter(Look.TEXT)
+            play.setPadding(dp(10), dp(10), dp(10), dp(10))
+            play.contentDescription = "Play"
             play.setOnClickListener {
                 if (playingTs == c.ts) stopPlayer() else play(c)
                 fillList()
             }
-            row.addView(play)
-            val del = Button(this)
-            del.isAllCaps = false
-            del.setTextColor(Look.TEXT)
+            row.addView(play, LinearLayout.LayoutParams(dp(46), dp(46)).apply { leftMargin = dp(8) })
+            val del = android.widget.ImageButton(this)
+            del.setImageResource(R.drawable.ic_btn_delete)
             del.background = Look.glass(this, 18, Look.BUTTON)
-            del.text = "Delete"
+            del.setColorFilter(Look.TEXT)
+            del.setPadding(dp(10), dp(10), dp(10), dp(10))
+            del.contentDescription = "Delete"
             del.setOnClickListener {
                 if (playingTs == c.ts) stopPlayer()
                 ParentEngine.deleteClip(this, c.ts)
                 fillList()
             }
-            row.addView(del)
+            row.addView(del, LinearLayout.LayoutParams(dp(46), dp(46)).apply { leftMargin = dp(8) })
         }
     }
 
