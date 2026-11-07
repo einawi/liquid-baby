@@ -38,6 +38,8 @@ minSdk 23 (Android 6), compileSdk/targetSdk 36.
 ## Features done
 Build 1 (0.1.0): role choice, Settings, App updates, Diagnostics, safe mode, settings backup. Installed and opened OK on Pixel 7 Pro and Galaxy J50 (Android 6.0.1).
 Build 2 (0.2.0): pairing, child listening + sound-triggered recording, parent recordings list + sliders, foreground service. In-app update from build 1 to build 2 worked on the Pixel (Android 17, API 37).
+Build 26 (0.6.8): launcher icon redrawn in a flat cute style (original): peach head, closed happy eyes, cheeks, curl, mint wrap with fold; light mint background (ic_launcher_bg solid #EAFBF9). Adaptive fg + PNG legacy.
+Build 25 (0.6.7): user saw the safe screen on build 24 showing a stale crash (SafeModeActivity calling screen(), from build 11). Cause: CrashGuard kept 'quick' count and 'lastCrash' across versions. Fix: CrashGuard resets quick + lastCrash when versionCode changes; crash text now starts with time and version.
 Build 24 (0.6.6): six themes removed. Themes.kt now = style (classic glass / minimal flat) x mode (system via Themes.systemDark set in screen() from uiMode, dark, light). Prefs themeMode/themeStyle. Settings > Appearance / Style buttons. Dialogs still use the dark AppTheme.
 Build 23 (0.6.5): new launcher icon: swaddled baby (filled white bundle, two crossed teal wrap lines, two sound arcs in light teal), adaptive foreground + PNG legacy icons (mipmap-*).
 Build 22 (0.6.4): Android 6/7 launcher icon is now PNG (mipmap-mdpi..xxxhdpi, drawn with PIL: gradient + heart + wave; round variant); mipmap-anydpi vector removed because launchers on API 23 ignore vector icons from mipmap. Tr: update screen, 'was updated' dialog, notifications. RELEASE_NOTES.md has an Arabic line.

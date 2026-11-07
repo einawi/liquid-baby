@@ -18,10 +18,18 @@ object CrashGuard {
 
     fun install(app: Application) {
         startMs = SystemClock.elapsedRealtime()
+        // A new app version starts with a clean crash record, so old crashes cannot keep the safe screen on.
+        val sp0 = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val cur = AppInfo.versionCode(app)
+        if (sp0.getInt("ver", -1) != cur) {
+            sp0.edit().putInt("ver", cur).putInt("quick", 0).remove("lastCrash").commit()
+        }
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, error ->
             try {
-                val text = Diag.stackTrace(error)
+                val text = "Time: " + java.text.DateFormat.getDateTimeInstance().format(java.util.Date()) +
+                    "\nVersion: " + AppInfo.versionName(app) + " (build " + AppInfo.versionCode(app) + ")\n" +
+                    Diag.stackTrace(error)
                 Diag.log("CRASH", "Thread " + thread.name + "\n" + text)
                 val sp = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                 val quick = SystemClock.elapsedRealtime() - startMs < QUICK_MS

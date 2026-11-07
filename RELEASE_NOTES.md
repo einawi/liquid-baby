@@ -1,7 +1,5 @@
-Appearance: dark, light or system; classic or minimal look.
+New app icon: a smiling baby wrapped in a mint blanket.
 
-- Settings > Appearance: Dark, Light or System (follows the phone)
-- Settings > Style: Classic (glass) or Minimal (flat colours, no blur, faster on older phones)
-- The six earlier themes are removed
+- New app icon: a smiling baby in a mint blanket, drawn in a soft, flat style (light background, Pixel adaptive style on Android 8 and newer, full square on Android 6 and 7)
 
-المظهر: داكن أو فاتح أو حسب الجوال، والشكل: كلاسيكي (زجاجي) أو بسيط (ألوان مسطحة بدون تمويه، أسرع على الجوالات القديمة). تم حذف الثيمات الستة السابقة.
+أيقونة جديدة للتطبيق: طفل مبتسم ملفوف ببطانية نعناعية، برسم ناعم وألوان هادئة.
