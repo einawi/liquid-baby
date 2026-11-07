@@ -46,6 +46,9 @@ object ChildEngine {
     val talking: Boolean get() = talkers.isNotEmpty()
 
     private val viewers = ConcurrentHashMap<String, Viewer>()
+    private val listeners = ConcurrentHashMap<String, Viewer>()
+    @Volatile
+    private var viewNight = false
     private var streamer: CameraStreamer? = null
 
     @Volatile
@@ -78,8 +81,11 @@ object ChildEngine {
 
     fun connectedCount(): Int = connected.size
 
-    fun viewLine(): String =
-        if (viewers.isEmpty()) "" else "Live view active: clip recording paused (" + viewers.size + " watching)"
+    fun viewLine(): String = when {
+        viewers.isNotEmpty() -> "Live view active: clip recording paused (" + viewers.size + " watching)"
+        listeners.isNotEmpty() -> "Live sound active: clip recording paused (" + listeners.size + " listening)"
+        else -> ""
+    }
 
     fun level(): String {
         val m = monitor ?: return ""
@@ -104,6 +110,7 @@ object ChildEngine {
             changed()
         })
         m.detector.sensitivity = sensitivity()
+        m.liveSink = { pcm -> fanOutAudio(pcm) }
         monitor = m
         m.start()
         Thread { watchdog() }.start()
@@ -117,6 +124,7 @@ object ChildEngine {
         status = "Stopped"
         stopAllTalk()
         stopAllViews()
+        stopAllListen()
         monitor?.stopFlag = true
         monitor = null
         try {
@@ -151,11 +159,20 @@ object ChildEngine {
                     stopView(v.id)
                 }
             }
+            for (v in listeners.values) {
+                if (now - v.startedAt > LIVE_LIMIT_MS) {
+                    try {
+                        v.conn.send(T.VIEW_ERROR, "Live sound ended after 15 minutes. Start it again if you need it.".toByteArray())
+                    } catch (_: Exception) {
+                    }
+                    stopListen(v.id)
+                }
+            }
             synchronized(this) {
                 if (viewFlash && flashOffAt > 0 && now > flashOffAt) {
                     viewFlash = false
                     flashOffAt = 0
-                    streamer?.apply(viewFront, viewQuality, false)
+                    streamer?.apply(viewFront, viewQuality, false, viewNight)
                     broadcastViewState()
                     Diag.i("Flash switched off automatically")
                 }
@@ -201,6 +218,7 @@ object ChildEngine {
             if (id != null) {
                 stopTalk(id)
                 if (viewers[id]?.conn === c) stopView(id)
+                if (listeners[id]?.conn === c) stopListen(id)
             }
             c.close()
             changed()
@@ -289,6 +307,8 @@ object ChildEngine {
                 T.TALK_STOP -> stopTalk(id)
                 T.VIEW_START -> startView(id, c, m.data)
                 T.VIEW_STOP -> stopView(id)
+                T.LISTEN_START -> startListen(id, c)
+                T.LISTEN_STOP -> stopListen(id)
                 T.VIEW_SET -> setView(m.data)
                 T.SYNC -> {
                     val after = if (m.data.size >= 8) Wire.bytesLong(m.data) else 0L
@@ -299,11 +319,46 @@ object ChildEngine {
         return id
     }
 
+    // ---- sound only: a parent listens to the room, no picture ----
+
+    private fun fanOutAudio(pcm: ByteArray) {
+        if (viewers.isEmpty() && listeners.isEmpty()) return
+        val ids = HashSet<String>()
+        ids.addAll(viewers.keys)
+        ids.addAll(listeners.keys)
+        for (id in ids) {
+            val v = viewers[id] ?: listeners[id]
+            v?.offerAudio(pcm)
+        }
+    }
+
+    @Synchronized
+    private fun startListen(id: String, c: Conn) {
+        listeners.remove(id)?.close()
+        listeners[id] = Viewer(id, c) { dead -> stopListen(dead.id) }
+        updateSuppression()
+        Diag.i("Listening started (" + listeners.size + " listening)")
+        changed()
+    }
+
+    @Synchronized
+    private fun stopListen(id: String) {
+        val v = listeners.remove(id) ?: return
+        v.close()
+        updateSuppression()
+        Diag.i("Listening ended (" + listeners.size + " still listening)")
+        changed()
+    }
+
+    private fun stopAllListen() {
+        for (id in listeners.keys.toList()) stopListen(id)
+    }
+
     // ---- walkie-talkie: every talking parent has its own speaker stream, Android mixes them ----
 
     private fun updateSuppression() {
         monitor?.suppressUntil =
-            if (viewers.isNotEmpty() || talkers.isNotEmpty()) Long.MAX_VALUE else System.currentTimeMillis() + 2500
+            if (viewers.isNotEmpty() || talkers.isNotEmpty() || listeners.isNotEmpty()) Long.MAX_VALUE else System.currentTimeMillis() + 2500
     }
 
     @Synchronized
@@ -341,7 +396,8 @@ object ChildEngine {
         (if (viewFront) 1 else 0).toByte(),
         (if (viewFlash) 1 else 0).toByte(),
         (if (streamer?.hasFlash == true) 1 else 0).toByte(),
-        viewers.size.toByte()
+        viewers.size.toByte(),
+        (if (viewNight) 1 else 0).toByte()
     )
 
     private fun broadcastViewState() {
@@ -364,6 +420,7 @@ object ChildEngine {
             viewQuality = if (data.isNotEmpty()) data[0].toInt().coerceIn(0, 1) else 1
             viewFront = data.size > 1 && data[1].toInt() == 1
             viewFlash = data.size > 2 && data[2].toInt() == 1
+            viewNight = data.size > 3 && data[3].toInt() == 1
             flashOffAt = if (viewFlash) System.currentTimeMillis() + FLASH_LIMIT_MS else 0L
             val s = CameraStreamer(
                 appCtx,
@@ -372,8 +429,7 @@ object ChildEngine {
                 { broadcastViewState() }
             )
             streamer = s
-            s.start(viewFront, viewQuality, viewFlash)
-            monitor?.liveSink = { pcm -> for (v in viewers.values) v.offerAudio(pcm) }
+            s.start(viewFront, viewQuality, viewFlash, viewNight)
         }
         updateSuppression()
         broadcastViewState()
@@ -388,7 +444,6 @@ object ChildEngine {
         if (viewers.isEmpty()) {
             streamer?.stop()
             streamer = null
-            monitor?.liveSink = null
             viewFlash = false
             flashOffAt = 0L
         }
@@ -420,12 +475,13 @@ object ChildEngine {
         val q = data[0].toInt().coerceIn(0, 1)
         val front = data[1].toInt() == 1
         val flip = front != viewFront
-        val flash = if (flip) false else (data[2].toInt() == 1 && s.hasFlash)
+        val flash = data[2].toInt() == 1
         viewQuality = q
         viewFront = front
         viewFlash = flash
         flashOffAt = if (flash) System.currentTimeMillis() + FLASH_LIMIT_MS else 0L
-        s.apply(front, q, flash)
+        viewNight = data.size > 3 && data[3].toInt() == 1
+        s.apply(front, q, flash, viewNight)
         broadcastViewState()
         changed()
     }

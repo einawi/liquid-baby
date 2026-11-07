@@ -37,6 +37,8 @@ object T {
     const val LIVE_AUDIO = 28
     const val VIEW_STATE = 29
     const val VIEW_ERROR = 30
+    const val LISTEN_START = 31
+    const val LISTEN_STOP = 32
 }
 
 class Msg(val type: Int, val data: ByteArray)

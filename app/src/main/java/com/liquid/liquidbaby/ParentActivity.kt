@@ -36,6 +36,22 @@ class ParentActivity : Activity() {
     private var lastClipCount = -1
     private var draggingLen = false
     private var draggingSens = false
+    private var listenBtn: Button? = null
+    private var waveView: WaveView? = null
+    private var waveBars = FloatArray(0)
+    private val waveTick = object : Runnable {
+        override fun run() {
+            val mp = player
+            val wv = waveView
+            if (mp != null && wv != null) {
+                val d = try { mp.duration } catch (e: Exception) { 0 }
+                val p = try { mp.currentPosition } catch (e: Exception) { 0 }
+                wv.progress = if (d > 0) p.toFloat() / d else 0f
+                wv.invalidate()
+                ui.postDelayed(this, 80)
+            }
+        }
+    }
 
     private val tick = object : Runnable {
         override fun run() {
@@ -74,6 +90,7 @@ class ParentActivity : Activity() {
                         .setNegativeButton("Cancel", null)
                         .show()
                 }
+                listenBtn = addButton("Listen to the room (sound only)") { toggleListen() }
                 addButton("Open the live camera") {
                     if (ParentEngine.connected) {
                         startActivity(Intent(this@ParentActivity, CameraActivity::class.java))
@@ -136,6 +153,7 @@ class ParentActivity : Activity() {
         ParentEngine.onChange = null
         ui.removeCallbacks(tick)
         onTalkUp()
+        ParentEngine.endListen()
         stopPlayer()
     }
 
@@ -167,6 +185,7 @@ class ParentActivity : Activity() {
         if (!ParentEngine.talking && talkBtn?.text?.startsWith("Talking") == true) talkBtn?.text = "Hold to talk to the child"
         vpnBtn?.visibility = if (Net.vpnBlocksLocal(this)) View.VISIBLE else View.GONE
         toggleBtn?.text = if (ParentEngine.running) "Stop listening" else "Start listening"
+        listenBtn?.text = if (ParentEngine.listening) "Stop listening to the room" else "Listen to the room (sound only)"
         if (!draggingLen) {
             lenLabel?.text = "Clip length: " + ParentEngine.childLength + " seconds"
             lenBar?.progress = ParentEngine.childLength - 15
@@ -194,6 +213,13 @@ class ParentActivity : Activity() {
             tv.text = fmt.format(Date(c.ts)) + "  (" + (c.durationMs / 1000) + " s)"
             tv.textSize = 15f
             row.addView(tv, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            if (playingTs == c.ts) {
+                val wv = WaveView(this)
+                wv.setBars(waveBars)
+                wv.playing = true
+                waveView = wv
+                row.addView(wv, LinearLayout.LayoutParams(0, dp(34), 1.2f))
+            }
             val play = Button(this)
             play.isAllCaps = false
             play.text = if (playingTs == c.ts) "Stop" else "Play"
@@ -224,9 +250,12 @@ class ParentActivity : Activity() {
                 stopPlayer()
                 fillList()
             }
+            waveBars = Wave.envelope(c.file)
             mp.start()
             player = mp
             playingTs = c.ts
+            ui.removeCallbacks(waveTick)
+            ui.post(waveTick)
         } catch (e: Exception) {
             Diag.e("Could not play clip", e)
             toast("Could not play this recording.")
@@ -240,6 +269,16 @@ class ParentActivity : Activity() {
         }
         player = null
         playingTs = 0L
+        waveView = null
+        ui.removeCallbacks(waveTick)
+    }
+
+    private fun toggleListen() {
+        if (ParentEngine.listening) {
+            ParentEngine.endListen()
+        } else if (!ParentEngine.beginListen(this)) {
+            toast(ParentEngine.listenNote)
+        }
     }
 
     private fun startPairFlow() {

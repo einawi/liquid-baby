@@ -40,28 +40,33 @@ class CameraStreamer(
     private var front = false
     private var quality = 1
     private var flash = false
+    private var night = false
+    private var exposureComp = 0
+    private var fpsRanges: Array<android.util.Range<Int>>? = null
     private var rotation = 1
     private var lastFrame = 0L
     private var closed = false
     private var generation = 0
 
-    fun start(front: Boolean, quality: Int, flash: Boolean) {
+    fun start(front: Boolean, quality: Int, flash: Boolean, night: Boolean = false) {
         thread.start()
         handler = Handler(thread.looper)
         handler?.post {
             this.front = front
             this.quality = quality
             this.flash = flash
+            this.night = night
             open()
         }
     }
 
-    fun apply(front: Boolean, quality: Int, flash: Boolean) {
+    fun apply(front: Boolean, quality: Int, flash: Boolean, night: Boolean = false) {
         handler?.post {
             val reopen = front != this.front || quality != this.quality
             this.front = front
             this.quality = quality
             this.flash = flash
+            this.night = night
             if (reopen) {
                 closeCamera()
                 open()
@@ -99,6 +104,8 @@ class CameraStreamer(
             rotation = ((ch.get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 90) / 90) % 4
             hasFlash = ch.get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
             afModes = ch.get(CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES)
+            fpsRanges = ch.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES)
+            exposureComp = ch.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_RANGE)?.upper ?: 0
             val map = ch.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
             val sizes = map?.getOutputSizes(ImageFormat.YUV_420_888)?.map { intArrayOf(it.width, it.height) } ?: emptyList()
             val size = Yuv.pickSize(sizes, quality)
@@ -170,9 +177,17 @@ class CameraStreamer(
             if (af != null && af.contains(CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)) {
                 b.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
             }
+            if (night) {
+                b.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+                val slow = fpsRanges?.minByOrNull { it.lower }
+                if (slow != null) b.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, slow)
+                b.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, exposureComp)
+                b.set(CaptureRequest.NOISE_REDUCTION_MODE, CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY)
+                b.set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_HIGH_QUALITY)
+            }
             b.set(
                 CaptureRequest.FLASH_MODE,
-                if (flash && hasFlash) CaptureRequest.FLASH_MODE_TORCH else CaptureRequest.FLASH_MODE_OFF
+                if (flash) CaptureRequest.FLASH_MODE_TORCH else CaptureRequest.FLASH_MODE_OFF
             )
             s.setRepeatingRequest(b.build(), null, handler)
         } catch (e: Exception) {

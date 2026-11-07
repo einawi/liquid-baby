@@ -5,6 +5,8 @@ import android.app.Activity
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -16,7 +18,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import java.util.concurrent.atomic.AtomicBoolean
 
-/** Parent unit: live camera, live sound, flash, and a hold-to-talk button. */
+/** Parent unit: live camera, live sound, flash, night mode, and a hold-to-talk button. */
 class CameraActivity : Activity() {
 
     private val ui = Handler(Looper.getMainLooper())
@@ -25,9 +27,11 @@ class CameraActivity : Activity() {
     private var flashBtn: Button? = null
     private var switchBtn: Button? = null
     private var qualityBtn: Button? = null
+    private var nightBtn: Button? = null
     private var soundBtn: Button? = null
     private var talkBtn: Button? = null
     private val pending = AtomicBoolean(false)
+    private var lastNight = false
 
     @Volatile
     private var latest: Bitmap? = null
@@ -68,6 +72,9 @@ class CameraActivity : Activity() {
             switchBtn = addButton("Switch camera") {
                 ParentEngine.setView(ParentEngine.viewQuality, !ParentEngine.viewFront, false)
             }
+            nightBtn = addButton("Night mode") {
+                ParentEngine.setView(ParentEngine.viewQuality, ParentEngine.viewFront, ParentEngine.viewFlash, !ParentEngine.viewNight)
+            }
             qualityBtn = addButton("Quality") {
                 ParentEngine.setView(1 - ParentEngine.viewQuality, ParentEngine.viewFront, ParentEngine.viewFlash)
             }
@@ -77,7 +84,7 @@ class CameraActivity : Activity() {
                 refresh()
             }
             addButton("Stop and close") { finish() }
-            addBody("While someone watches, the child phone does not record clips. The live view stops by itself after 15 minutes, and the flash after 2 minutes.")
+            addBody("Night mode: the picture is slower and brighter, which helps in a dark room but can blur fast movement. While someone watches, the child phone does not record clips. The live view stops by itself after 15 minutes, and the flash after 2 minutes.")
         }
         refresh()
     }
@@ -148,12 +155,28 @@ class CameraActivity : Activity() {
         sb.append(" - watching now: ").append(maxOf(ParentEngine.viewers, 1)).append("\n")
         if (ParentEngine.talkNote.isNotEmpty()) sb.append(ParentEngine.talkNote).append("\n")
         statusTv?.text = sb.toString()
-        flashBtn?.text = if (!ParentEngine.viewHasFlash) "Flash: this camera does not report a flash"
-        else "Flash: " + (if (ParentEngine.viewFlash) "ON (tap to turn off)" else "off (tap to turn on)")
-        flashBtn?.isEnabled = ParentEngine.viewHasFlash
+        val flashState = if (ParentEngine.viewFlash) "ON (tap to turn off)" else "off (tap to turn on)"
+        val flashNote = if (ParentEngine.viewHasFlash) "" else " - this camera does not report a flash, so it may not light"
+        flashBtn?.text = "Flash: $flashState$flashNote"
+        flashBtn?.isEnabled = true
         switchBtn?.text = "Camera: " + (if (ParentEngine.viewFront) "front" else "back") + " (tap to switch)"
+        nightBtn?.text = "Night mode: " + (if (ParentEngine.viewNight) "on (tap to turn off)" else "off (tap to turn on)")
         qualityBtn?.text = "Quality: " + (if (ParentEngine.viewQuality == 1) "Normal" else "Low") + " (tap to change)"
         soundBtn?.text = "Live sound: " + (if (ParentEngine.liveSound) "on" else "off") + " (tap to change)"
+        val night = ParentEngine.viewNight
+        if (night != lastNight) {
+            lastNight = night
+            picture?.colorFilter = if (night) ColorMatrixColorFilter(
+                ColorMatrix(
+                    floatArrayOf(
+                        1.35f, 0f, 0f, 0f, 22f,
+                        0f, 1.35f, 0f, 0f, 22f,
+                        0f, 0f, 1.35f, 0f, 22f,
+                        0f, 0f, 0f, 1f, 0f
+                    )
+                )
+            ) else null
+        }
         if (!ParentEngine.talking && talkBtn?.text?.startsWith("Talking") == true) {
             talkBtn?.text = "Hold to talk to the child"
         }

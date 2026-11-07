@@ -71,6 +71,16 @@ object ParentEngine {
     var viewNote = ""
 
     @Volatile
+    var viewNight = false
+
+    @Volatile
+    var listening = false
+        private set
+
+    @Volatile
+    var listenNote = ""
+
+    @Volatile
     var viewRotate = 0
 
     @Volatile
@@ -254,7 +264,7 @@ object ParentEngine {
                         rx = FileOutputStream(rxTmp)
                     }
                     T.VIDEO_FRAME -> if (viewing) showFrame(m.data)
-                    T.LIVE_AUDIO -> if (viewing && liveSound && !talking && System.currentTimeMillis() > muteLiveUntil) {
+                    T.LIVE_AUDIO -> if ((viewing || listening) && liveSound && !talking && System.currentTimeMillis() > muteLiveUntil) {
                         livePlayer?.write(m.data)
                     }
                     T.VIEW_STATE -> if (m.data.size >= 5) {
@@ -263,6 +273,7 @@ object ParentEngine {
                         viewFlash = m.data[2].toInt() == 1
                         viewHasFlash = m.data[3].toInt() == 1
                         viewers = m.data[4].toInt()
+                        viewNight = m.data.size > 5 && m.data[5].toInt() == 1
                         changed()
                     }
                     T.VIEW_ERROR -> {
@@ -348,7 +359,7 @@ object ParentEngine {
         }
         sendAsync(
             c, T.VIEW_START,
-            byteArrayOf(viewQuality.toByte(), (if (viewFront) 1 else 0).toByte(), (if (viewFlash) 1 else 0).toByte())
+            byteArrayOf(viewQuality.toByte(), (if (viewFront) 1 else 0).toByte(), (if (viewFlash) 1 else 0).toByte(), (if (viewNight) 1 else 0).toByte())
         )
         changed()
         return true
@@ -365,17 +376,55 @@ object ParentEngine {
     @Synchronized
     private fun dropView() {
         viewing = false
+        listening = false
         viewers = 0
         livePlayer?.stop()
         livePlayer = null
     }
 
-    fun setView(quality: Int, front: Boolean, flash: Boolean) {
+    /** Sound only: the child phone sends its live sound, no picture. */
+    @Synchronized
+    fun beginListen(ctx: Context): Boolean {
+        val c = conn
+        if (c == null || !connected) {
+            listenNote = "Not connected to the child phone yet"
+            changed()
+            return false
+        }
+        listenNote = ""
+        listening = true
+        if (livePlayer == null) {
+            try {
+                val pl = TalkPlayer()
+                pl.start(ctx.applicationContext, 0, false)
+                livePlayer = pl
+            } catch (e: Exception) {
+                Diag.e("Could not start the live sound", e)
+            }
+        }
+        sendAsync(c, T.LISTEN_START, ByteArray(0))
+        changed()
+        return true
+    }
+
+    @Synchronized
+    fun endListen() {
+        val c = conn
+        if (listening && c != null && connected) sendAsync(c, T.LISTEN_STOP, ByteArray(0))
+        listening = false
+        if (!viewing) {
+            livePlayer?.stop()
+            livePlayer = null
+        }
+        changed()
+    }
+
+    fun setView(quality: Int, front: Boolean, flash: Boolean, night: Boolean = viewNight) {
         val c = conn ?: return
         if (!connected || !viewing) return
         sendAsync(
             c, T.VIEW_SET,
-            byteArrayOf(quality.toByte(), (if (front) 1 else 0).toByte(), (if (flash) 1 else 0).toByte())
+            byteArrayOf(quality.toByte(), (if (front) 1 else 0).toByte(), (if (flash) 1 else 0).toByte(), (if (night) 1 else 0).toByte())
         )
     }
 
