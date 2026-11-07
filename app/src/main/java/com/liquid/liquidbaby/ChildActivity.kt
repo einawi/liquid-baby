@@ -115,6 +115,15 @@ class ChildActivity : Activity() {
 
     private var dark: android.view.View? = null
 
+    private fun ignoringBattery(): Boolean {
+        return try {
+            val pm = getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager
+            pm.isIgnoringBatteryOptimizations(packageName)
+        } catch (e: Exception) {
+            true
+        }
+    }
+
     /** Black screen over the app. The monitoring keeps running; touching the screen wakes it. */
     private fun showDark() {
         val v = android.view.View(this)
@@ -197,6 +206,7 @@ class ChildActivity : Activity() {
             val left = (ChildEngine.pairingUntil - System.currentTimeMillis()) / 1000
             if (left > 0) sb.append("Pairing is open for ").append(left).append(" more seconds\n")
         }
+        if (!ignoringBattery()) sb.append(Tr.t("Battery: restricted, the phone may stop monitoring")).append("\n")
         sb.append(Net.describe(this)).append("\n")
         vpnBtn?.visibility = if (Net.vpnBlocksLocal(this)) View.VISIBLE else View.GONE
         if (ChildEngine.running) setChip(chipTv, "Monitoring", 0xFF2E9E6A.toInt())

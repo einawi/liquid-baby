@@ -287,7 +287,7 @@ object ChildEngine {
         val ns = Crypto.random(16)
         c.send(T.AUTH_REPLY, ns)
         c.enableCrypto(Crypto.sessionKey(key, f[1], ns), false)
-        c.socket.soTimeout = 40_000
+        c.socket.soTimeout = 120_000
         connected[id]?.close()
         connected[id] = c
         c.send(T.SETTINGS, settingsBytes())

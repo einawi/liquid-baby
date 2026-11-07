@@ -236,7 +236,14 @@ object Updater {
                 part.delete()
                 throw IllegalStateException("Checksum mismatch. The download was damaged. Try again.")
             }
-            if (!part.renameTo(target)) throw IllegalStateException("Could not save the downloaded file.")
+            if (!part.renameTo(target)) {
+                try {
+                    part.copyTo(target, overwrite = true)
+                    part.delete()
+                } catch (e: Exception) {
+                    throw IllegalStateException("Could not save the downloaded file.", e)
+                }
+            }
             Diag.i("Downloaded update " + info.tag + " (" + VersionUtil.formatSize(target.length()) + ")")
             return target
         } finally {

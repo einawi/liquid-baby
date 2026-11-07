@@ -251,7 +251,7 @@ object ParentEngine {
         }
         if (ready.type != T.SETTINGS) throw IOException("Unexpected login reply")
         applySettings(ready.data)
-        c.socket.soTimeout = 40_000
+        c.socket.soTimeout = 90_000
         PairStore.setLastIp(ip)
         connected = true
         offlineAlerted = false

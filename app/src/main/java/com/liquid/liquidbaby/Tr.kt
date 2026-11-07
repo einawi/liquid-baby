@@ -71,6 +71,7 @@ object Tr {
         "Write a test line to Diagnostics" to "اكتب سطر تجربة في التشخيص",
         "Saved" to "تم الحفظ",
         "Remove" to "إزالة",
+        "Battery: restricted, the phone may stop monitoring" to "البطارية مقيّدة: قد يوقف الجوال المراقبة",
         "Connected" to "متصل",
         "Not connected" to "غير متصل",
         "Monitoring" to "المراقبة تعمل",
