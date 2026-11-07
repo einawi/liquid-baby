@@ -1,6 +1,6 @@
-Flash fix.
+Start-up crash fix.
 
-- The Flash button is always available on the parent camera screen
-- The child phone always tries the torch when Flash is on, even if Android does not report a flash for that camera (for example the front camera on some phones)
-- The flash setting is kept when switching between front and back camera
-- The 2-minute automatic flash-off still applies
+- Fixes "Liquid Baby keeps stopping" on newer phones at start-up
+- If a screen fails, the app now shows the error text on screen (with a Copy button) instead of closing
+- The window blur effect can no longer crash the app; if the phone does not support it, the normal look is used
+- Safe mode uses plain screens, so it still opens after two quick crashes

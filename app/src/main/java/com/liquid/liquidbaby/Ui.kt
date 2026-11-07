@@ -61,8 +61,12 @@ fun Activity.screen(build: LinearLayout.() -> Unit) {
     // Android 12+: the window blurs what is behind the app (frosted glass). Older phones get a solid gradient.
     sv.background = Look.background(if (blur) 210 else 255)
     if (blur) {
-        window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        window.setBackgroundBlurRadius(60)
+        try {
+            window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            window.setBackgroundBlurRadius(60)
+        } catch (t: Throwable) {
+            Diag.i("Window blur not available: " + t.message)
+        }
     }
     sv.addView(col)
     sv.setOnApplyWindowInsetsListener { v, insets ->

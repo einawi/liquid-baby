@@ -10,6 +10,14 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        try {
+            startMain()
+        } catch (t: Throwable) {
+            Safe.showCrash(this, t, "MainActivity.onCreate")
+        }
+    }
+
+    private fun startMain() {
         if (CrashGuard.shouldEnterSafeMode(this)) {
             startActivity(Intent(this, SafeModeActivity::class.java))
             finish()
@@ -55,6 +63,14 @@ class MainActivity : Activity() {
     }
 
     private fun render() {
+        try {
+            renderUnsafe()
+        } catch (t: Throwable) {
+            Safe.showCrash(this, t, "MainActivity.render")
+        }
+    }
+
+    private fun renderUnsafe() {
         val local = AppInfo.versionCode(this)
         val info = Updater.cached()
         screen {
