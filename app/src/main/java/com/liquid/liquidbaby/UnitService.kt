@@ -61,7 +61,7 @@ class UnitService : Service() {
             this, 2, Intent(this, target),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        val text = if (role == "child") "Child unit is listening" else "Parent unit is connected"
+        val text = Tr.t(if (role == "child") "Child unit is listening" else "Parent unit is connected")
         builder.setSmallIcon(R.drawable.ic_notify).setColor(0xFF7FE8FF.toInt())
             .setContentTitle("Liquid Baby")
             .setContentText(text)

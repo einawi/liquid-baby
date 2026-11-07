@@ -53,7 +53,9 @@ fun Context.dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 
 @Suppress("DEPRECATION")
 fun Activity.screen(build: LinearLayout.() -> Unit) {
-    val blur = Build.VERSION.SDK_INT >= 31
+    val nightBits = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+    Themes.systemDark = nightBits == android.content.res.Configuration.UI_MODE_NIGHT_YES
+    val blur = Build.VERSION.SDK_INT >= 31 && Themes.current().blur > 0
     val col = LinearLayout(this)
     col.orientation = LinearLayout.VERTICAL
     col.setPadding(dp(18), dp(18), dp(18), dp(28))

@@ -26,7 +26,7 @@ class UpdatesActivity : Activity() {
 
     private fun setStatus(text: String) {
         message = text
-        statusView?.text = text
+        statusView?.text = Tr.t(text)
     }
 
     private fun build() {

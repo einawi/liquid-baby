@@ -55,9 +55,9 @@ class MainActivity : Activity() {
             val info = Updater.cached()
             val notes = if (info != null && info.code == current) info.notes else ""
             AlertDialog.Builder(this)
-                .setTitle("Was updated to " + AppInfo.versionName(this))
-                .setMessage(if (notes.isBlank()) "The app was updated successfully." else notes)
-                .setPositiveButton("OK", null)
+                .setTitle(Tr.t("Was updated to ") + AppInfo.versionName(this))
+                .setMessage(if (notes.isBlank()) Tr.t("The app was updated successfully.") else Tr.t(notes))
+                .setPositiveButton(Tr.t("OK"), null)
                 .show()
         }
     }

@@ -80,8 +80,8 @@ object Notifier {
             val b = builder(ctx, alertChannel(ctx))
                 .setSmallIcon(R.drawable.ic_notify)
                 .setColor(COLOR)
-                .setContentTitle(title)
-                .setContentText(text)
+                .setContentTitle(Tr.t(title))
+                .setContentText(Tr.t(text))
                 .setContentIntent(openApp(ctx, 3, ParentActivity::class.java))
                 .setAutoCancel(true)
             if (canPost(ctx)) nm(ctx).notify(1002, b.build())
@@ -111,7 +111,7 @@ object Notifier {
             val b = builder(ctx, "clips")
                 .setSmallIcon(R.drawable.ic_notify)
                 .setColor(COLOR)
-                .setContentTitle("New recording")
+                .setContentTitle(Tr.t("New recording"))
                 .setContentText(when_ + "  \u00b7  " + (Wav.durationMs(file.length()) / 1000) + " s")
                 .setContentIntent(openApp(ctx, 4, ParentActivity::class.java))
                 .setDeleteIntent(gone)
@@ -119,7 +119,7 @@ object Notifier {
             val icon = android.graphics.drawable.Icon.createWithResource(
                 ctx, if (playing) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play
             )
-            b.addAction(Notification.Action.Builder(icon, if (playing) "Stop" else "Play", toggle).build())
+            b.addAction(Notification.Action.Builder(icon, Tr.t(if (playing) "Stop" else "Play"), toggle).build())
             if (canPost(ctx)) {
                 nm(ctx).notify(1004, b.build())
                 Diag.i("Recording notice posted: " + file.name)
@@ -136,11 +136,11 @@ object Notifier {
             if (Build.VERSION.SDK_INT >= 26) {
                 nm(ctx).createNotificationChannel(NotificationChannel("updates", "App updates", NotificationManager.IMPORTANCE_DEFAULT))
             }
-            val text = if (info.required) "Required update " + info.name + " is ready" else "Version " + info.name + " is ready"
+            val text = Tr.t(if (info.required) "Required update " + info.name + " is ready" else "Version " + info.name + " is ready")
             val b = builder(ctx, "updates")
                 .setSmallIcon(R.drawable.ic_notify)
                 .setColor(COLOR)
-                .setContentTitle("Liquid Baby update")
+                .setContentTitle(Tr.t("Liquid Baby update"))
                 .setContentText(text)
                 .setContentIntent(openApp(ctx, 1, UpdatesActivity::class.java))
                 .setAutoCancel(true)

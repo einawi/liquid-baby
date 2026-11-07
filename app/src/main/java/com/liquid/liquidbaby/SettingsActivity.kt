@@ -9,9 +9,7 @@ import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Bundle
 import android.text.InputType
-import android.widget.Button
 import android.widget.EditText
-import android.widget.LinearLayout
 
 class SettingsActivity : Activity() {
 
@@ -29,30 +27,25 @@ class SettingsActivity : Activity() {
             addButton("Notification sound") { pickTone() }
             addButton(if (Lock.pinSet()) "Change PIN" else "Set PIN (lock the parent phone)") { setPin() }
             if (Lock.pinSet()) addButton("Remove PIN") { removePin() }
-            addBody(if (Tr.isAr()) "المظهر" else "Theme")
-            val current = Themes.current().id
-            for (t in Themes.all) {
-                val row = addRow()
-                val swatch = android.view.View(context)
-                swatch.background = android.graphics.drawable.GradientDrawable(
-                    android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
-                    intArrayOf(t.top, t.mid, t.bottom)
-                ).apply {
-                    cornerRadius = dp(10).toFloat()
-                    setStroke(dp(2), t.accent)
+            addBody(Tr.t("Appearance"))
+            for (m in listOf("system", "dark", "light")) {
+                val label = when (m) {
+                    "dark" -> "Dark"
+                    "light" -> "Light"
+                    else -> "System"
                 }
-                row.addView(swatch, LinearLayout.LayoutParams(dp(44), dp(44)).apply { rightMargin = dp(10) })
-                val label = if (Tr.isAr()) t.nameAr else t.nameEn
-                val b = Button(context)
-                b.text = (if (t.id == current) "✓ " else "") + label
-                b.isAllCaps = false
-                b.setTextColor(Look.TEXT)
-                b.background = Look.glass(context, 22, Look.BUTTON)
-                b.setOnClickListener {
-                    Themes.select(t.id)
+                addButton((if (Themes.mode() == m) "✓ " else "") + label) {
+                    Themes.setMode(m)
                     recreate()
                 }
-                row.addView(b, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            }
+            addBody(Tr.t("Style"))
+            for (st in listOf("classic", "minimal")) {
+                val label = if (st == "minimal") "Minimal" else "Classic"
+                addButton((if (Themes.style() == st) "✓ " else "") + label) {
+                    Themes.setStyle(st)
+                    recreate()
+                }
             }
             addBody("Backup / Export of your settings")
             addButton("Export settings (share)") {

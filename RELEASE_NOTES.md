@@ -1,7 +1,7 @@
-Fixes and new icon.
+Appearance: dark, light or system; classic or minimal look.
 
-- New recording notification shows its Play / Stop button (with an icon), and the app logs when it is shown
-- Recordings list: Play and Delete are now round icon buttons instead of text
-- Battery and temperature are on separate rows, each with its colour dot; the dots are no longer in the middle of the text in Arabic
-- "Remove" on the child screen is translated
-- New app icon: a heart with a sound wave, in the Pixel style, and a full-square version for Android 6 and 7
+- Settings > Appearance: Dark, Light or System (follows the phone)
+- Settings > Style: Classic (glass) or Minimal (flat colours, no blur, faster on older phones)
+- The six earlier themes are removed
+
+المظهر: داكن أو فاتح أو حسب الجوال، والشكل: كلاسيكي (زجاجي) أو بسيط (ألوان مسطحة بدون تمويه، أسرع على الجوالات القديمة). تم حذف الثيمات الستة السابقة.
