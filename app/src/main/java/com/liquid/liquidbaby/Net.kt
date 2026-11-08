@@ -239,11 +239,18 @@ object Net {
     fun describe(ctx: Context): String {
         val ip = wifiIp(ctx)
         val wifi = if (ip == null) "Wi-Fi: not found" else "Wi-Fi IP: $ip"
+        val wifiNoInternet = try {
+            val w = wifiNetwork(ctx)
+            w != null && cm(ctx).getNetworkCapabilities(w)?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) == false
+        } catch (e: Exception) {
+            false
+        }
         val vpn = when {
             !vpnActive(ctx) -> "VPN: off"
             canUseWifiDirectly(ctx) -> "VPN: ON (the app goes around it over Wi-Fi)"
             else -> "VPN: ON - it BLOCKS local connections. Turn the VPN off on this phone."
         }
-        return "$wifi\n$vpn"
+        val extra = if (wifiNoInternet) "\nThe Wi-Fi has no internet. Keep mobile data off on this phone for a steadier connection." else ""
+        return "$wifi\n$vpn$extra"
     }
 }

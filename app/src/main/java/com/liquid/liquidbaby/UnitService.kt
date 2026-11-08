@@ -41,6 +41,7 @@ class UnitService : Service() {
             return START_NOT_STICKY
         }
         acquireLocks()
+        WifiKeeper.start(this)
         Prefs.putBool("serviceWanted", true)
         if (role == "child") ChildEngine.start(this) else ParentEngine.start(this)
         return START_STICKY
@@ -109,6 +110,7 @@ class UnitService : Service() {
     }
 
     override fun onDestroy() {
+        WifiKeeper.stop(this)
         ChildEngine.stop()
         ParentEngine.stop()
         try {

@@ -71,6 +71,7 @@ object Tr {
         "Write a test line to Diagnostics" to "اكتب سطر تجربة في التشخيص",
         "Saved" to "تم الحفظ",
         "Remove" to "إزالة",
+        "The Wi-Fi has no internet. Keep mobile data off on this phone for a steadier connection." to "الـ Wi-Fi بدون إنترنت. أبقِ بيانات الجوال مطفية على هذا الجوال لاتصال أثبت.",
         "Battery: restricted, the phone may stop monitoring" to "البطارية مقيّدة: قد يوقف الجوال المراقبة",
         "Connected" to "متصل",
         "Not connected" to "غير متصل",
