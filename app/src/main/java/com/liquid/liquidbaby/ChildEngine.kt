@@ -136,6 +136,7 @@ object ChildEngine {
         } catch (_: Exception) {
         }
         server = null
+        Discovery.stopResponder()
         udp?.close()
         udp = null
         for (c in connected.values) c.close()

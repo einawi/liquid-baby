@@ -1,8 +1,6 @@
-Stability on older phones, simpler notification icon.
+Child phone finds the parent after Wi-Fi reconnects.
 
-- Notification icon simplified: a bold white silhouette of the baby, readable in the status bar
-- Connection tolerates short quiet periods (less dropping on older phones)
-- Child screen warns when battery restrictions may stop monitoring
-- Update download: saving the file no longer fails on some phones
+- The child phone's search responder re-creates its socket after a Wi-Fi change, so the parent can find it again without restarting monitoring
+- Less repeated log noise
 
-استقرار أعلى على الجوالات القديمة، وأيقونة إشعارات أوضح. تحذير على شاشة وحدة الطفل إذا كانت البطارية مقيّدة.
+إصلاح: وحدة الطفل تعود تُكتشف بعد إعادة اتصال الـ Wi-Fi من غير ما توقف المراقبة.

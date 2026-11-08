@@ -16,6 +16,12 @@ object Discovery {
 
     class Found(val id: String, val name: String, val ip: String)
 
+    @Volatile
+    private var responderRunning = false
+
+    @Volatile
+    private var lastLogMs = 0L
+
     /** Parent side. Blocking, about 2.5 seconds. */
     fun scan(ctx: Context): List<Found> {
         val found = LinkedHashMap<String, Found>()
@@ -63,27 +69,62 @@ object Discovery {
         return found.values.toList()
     }
 
-    /** Child side. Runs until the socket is closed. */
-    fun startResponder(ctx: Context, id: String, name: String): DatagramSocket {
-        val ds = DatagramSocket(null)
-        ds.reuseAddress = true
-        Net.bind(ctx, ds)
-        ds.bind(InetSocketAddress(UDP_PORT))
+    /**
+     * Child side. Answers scans. The socket is re-created every few seconds and after any error,
+     * so a Wi-Fi reconnect (new network, new address) never leaves it silently stuck.
+     */
+    fun startResponder(ctx: Context, id: String, name: String): DatagramSocket? {
+        responderRunning = true
         Thread {
             val buf = ByteArray(512)
-            while (!ds.isClosed) {
+            var ds: DatagramSocket? = null
+            while (responderRunning) {
                 try {
+                    val s = ds ?: openResponder(ctx).also { ds = it }
                     val p = DatagramPacket(buf, buf.size)
-                    ds.receive(p)
+                    s.receive(p)
                     if (String(p.data, 0, p.length) == ASK) {
                         val reply = (ANSWER + "|" + id + "|" + name.replace("|", " ") + "|" + TCP_PORT).toByteArray()
-                        ds.send(DatagramPacket(reply, reply.size, p.address, p.port))
+                        s.send(DatagramPacket(reply, reply.size, p.address, p.port))
                     }
+                } catch (e: SocketTimeoutException) {
+                    // quiet period: re-create the socket so it follows the current Wi-Fi network
+                    ds?.close()
+                    ds = null
                 } catch (e: Exception) {
-                    if (!ds.isClosed) Diag.i("Responder: " + e.message)
+                    if (!responderRunning) break
+                    ds?.close()
+                    ds = null
+                    logThrottled("Responder restarted: " + e.message)
+                    try {
+                        Thread.sleep(1500)
+                    } catch (_: InterruptedException) {
+                    }
                 }
             }
+            ds?.close()
         }.start()
+        return null
+    }
+
+    fun stopResponder() {
+        responderRunning = false
+    }
+
+    private fun openResponder(ctx: Context): DatagramSocket {
+        val ds = DatagramSocket(null)
+        ds.reuseAddress = true
+        ds.soTimeout = 8000
+        Net.bind(ctx, ds)
+        ds.bind(InetSocketAddress(UDP_PORT))
         return ds
+    }
+
+    private fun logThrottled(msg: String) {
+        val now = System.currentTimeMillis()
+        if (now - lastLogMs > 60_000L) {
+            lastLogMs = now
+            Diag.i(msg)
+        }
     }
 }
