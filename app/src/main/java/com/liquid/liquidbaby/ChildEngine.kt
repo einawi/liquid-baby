@@ -509,6 +509,7 @@ object ChildEngine {
     // ---- deleted clips, cleanup, status and live level ----
 
     private val DELETED_MAX = 500
+    private val MAX_STORED = 3
     private val KEEP_MS = 8L * 60 * 60 * 1000
 
     private fun deletedFile(): File = File(appCtx.filesDir, "deleted.bin")
@@ -683,9 +684,13 @@ object ChildEngine {
     private fun onClip(f: File, ts: Long) {
         lastClipMs = ts
         Diag.i("Clip recorded: " + f.name)
+        // Keep only the newest MAX_STORED clips on the child phone. Older ones are removed
+        // without being marked as deleted, so a parent that already received them keeps its copy.
         val files = clipsDir().listFiles { x -> x.name.endsWith(".wav") }
-        if (files != null && files.size > 30) {
-            files.sortedBy { it.name }.take(files.size - 30).forEach { it.delete() }
+        if (files != null && files.size > MAX_STORED) {
+            files.sortedBy { it.name.removeSuffix(".wav").toLongOrNull() ?: 0L }
+                .take(files.size - MAX_STORED)
+                .forEach { it.delete() }
         }
         val targets = connected.values.toList()
         if (targets.isNotEmpty()) {
