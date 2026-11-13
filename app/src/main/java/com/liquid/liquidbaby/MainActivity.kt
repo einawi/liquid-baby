@@ -93,8 +93,6 @@ class MainActivity : Activity() {
             }
             if (role == "child") {
                 addButton("Open the child screen") { startActivity(Intent(this@MainActivity, ChildActivity::class.java)) }
-            } else if (role == "parent") {
-                addButton("Open the parent screen") { startActivity(Intent(this@MainActivity, ParentActivity::class.java)) }
             }
             addButton("Settings") { startActivity(Intent(this@MainActivity, SettingsActivity::class.java)) }
         }
