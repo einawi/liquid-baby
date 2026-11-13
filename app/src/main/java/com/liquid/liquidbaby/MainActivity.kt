@@ -87,10 +87,8 @@ class MainActivity : Activity() {
                 "parent" -> addBody("This phone is a PARENT unit.")
                 else -> addBody("Choose what this phone will be:")
             }
-            if (role != "child") {
+            if (role == null) {
                 addButton("Use this phone as the child unit") { setRole("child") }
-            }
-            if (role != "parent") {
                 addButton("Use this phone as a parent unit") { setRole("parent") }
             }
             if (role == "child") {
