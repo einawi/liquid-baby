@@ -1,0 +1,27 @@
+name: AIy quick check
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: aiy-check-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v5
+      - name: Compile the code
+        run: |
+          if [ -f ./gradlew ]; then chmod +x ./gradlew; G=./gradlew; else G=gradle; fi
+          $G --no-daemon compileDebugKotlin --stacktrace || $G --no-daemon compileDebugJavaWithJavac --stacktrace
