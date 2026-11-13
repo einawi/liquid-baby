@@ -1,6 +1,10 @@
 name: AIy quick check
+# aiy-workflow v2
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - '.aiy/check-request.txt'
 
 concurrency:
   group: aiy-check-${{ github.ref }}
