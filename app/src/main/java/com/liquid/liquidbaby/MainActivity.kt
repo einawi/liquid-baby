@@ -94,7 +94,6 @@ class MainActivity : Activity() {
             } else if (role == "parent") {
                 addButton("Open the parent screen") { startActivity(Intent(this@MainActivity, ParentActivity::class.java)) }
             }
-            addBody("Walkie-talkie and live camera come in the next deliveries.")
             addButton("Settings") { startActivity(Intent(this@MainActivity, SettingsActivity::class.java)) }
         }
     }
