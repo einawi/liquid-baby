@@ -87,8 +87,12 @@ class MainActivity : Activity() {
                 "parent" -> addBody("This phone is a PARENT unit.")
                 else -> addBody("Choose what this phone will be:")
             }
-            addButton("Use this phone as the child unit") { setRole("child") }
-            addButton("Use this phone as a parent unit") { setRole("parent") }
+            if (role != "child") {
+                addButton("Use this phone as the child unit") { setRole("child") }
+            }
+            if (role != "parent") {
+                addButton("Use this phone as a parent unit") { setRole("parent") }
+            }
             if (role == "child") {
                 addButton("Open the child screen") { startActivity(Intent(this@MainActivity, ChildActivity::class.java)) }
             } else if (role == "parent") {
