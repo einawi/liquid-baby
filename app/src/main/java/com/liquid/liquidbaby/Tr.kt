@@ -5,6 +5,10 @@ package com.liquid.liquidbaby
  * is shown as it is. Set in Settings > Language. Default: Arabic.
  */
 object Tr {
+    private val removedMessages = setOf(
+        "Walkie-talkie and live camera come in the next deliveries."
+    )
+
     fun isAr(): Boolean = Prefs.getString("lang", "ar") != "en"
 
     fun toggle() {
@@ -170,6 +174,7 @@ object Tr {
     )
 
     fun t(s: String): String {
+        if (s in removedMessages) return ""
         if (!isAr()) return s
         exact[s]?.let { return it }
         for ((en, ar) in prefixes) {
