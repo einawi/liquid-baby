@@ -5,7 +5,7 @@ package com.liquid.liquidbaby
  * is shown as it is. Set in Settings > Language. Default: Arabic.
  */
 object Tr {
-    private val removedMessages = setOf()
+    private val removedMessages = setOf<String>()
 
     fun isAr(): Boolean = Prefs.getString("lang", "ar") != "en"
 
