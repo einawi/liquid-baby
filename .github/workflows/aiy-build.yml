@@ -1,5 +1,5 @@
 name: AIy build
-# aiy-workflow v3
+# aiy-workflow v4
 on:
   workflow_dispatch:
   push:
@@ -27,6 +27,9 @@ jobs:
         continue-on-error: true
       - uses: gradle/actions/setup-gradle@v5
       - name: Use one fixed signing key
+        # A helper step: it must NEVER stop the build. Without it Gradle makes its own debug key (the app builds, it just
+        # may not install over an older build).
+        continue-on-error: true
         run: |
           mkdir -p ~/.android
           if [ -f .aiy/debug.keystore ]; then
@@ -35,11 +38,8 @@ jobs:
             keytool -genkeypair -keystore ~/.android/debug.keystore -storepass android -keypass android -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
             mkdir -p .aiy
             cp ~/.android/debug.keystore .aiy/debug.keystore
-            git config user.name "AIy"
-            git config user.email "aiy@users.noreply.github.com"
-            git add .aiy/debug.keystore
-            git commit -m "AIy: fixed signing key so builds can update each other"
-            if ! git push origin "HEAD:${GITHUB_REF_NAME}"; then
+            # "add -f": many Android projects ignore *.keystore / *.jks, and a plain "git add" then fails.
+            if ! ( git config user.name "AIy" && git config user.email "aiy@users.noreply.github.com" && git add -f .aiy/debug.keystore && git commit -q -m "AIy: fixed signing key so builds can update each other" && git push origin "HEAD:${GITHUB_REF_NAME}" ); then
               echo "::warning::The signing key could not be saved in the repository, so the next build may not install over this one."
             fi
           fi
