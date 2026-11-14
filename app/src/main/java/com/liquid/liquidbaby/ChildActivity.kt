@@ -25,6 +25,7 @@ class ChildActivity : Activity() {
     private var dialogShown = false
     private var dark: View? = null
     private var lastParentCount = -1
+    private var entered = false
 
     private var statusPill: TextView? = null
     private var mainBtn: Button? = null
@@ -54,6 +55,7 @@ class ChildActivity : Activity() {
     }
 
     private fun build() {
+        val t0 = System.nanoTime()
         builtAr = Tr.isAr()
         pulse?.cancel()
         pulse = null
@@ -117,10 +119,13 @@ class ChildActivity : Activity() {
         }
         fillParents()
         refresh()
+        entered = true
+        Diag.limited("buildChild", "Child screen built in ${(System.nanoTime() - t0) / 1_000_000} ms", 60_000L)
     }
 
     override fun onResume() {
         super.onResume()
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
         if (builtAr != Tr.isAr()) build()
         ChildEngine.onChange = { runOnUiThread { refresh() } }
         if (Prefs.getBool("serviceWanted", false) && !ChildEngine.running &&
@@ -246,19 +251,19 @@ class ChildActivity : Activity() {
                 }
                 row.addView(b)
             }
-            Fx.enter(c, index.coerceAtMost(6))
+            if (!entered) Fx.enter(c, index.coerceAtMost(6))
         }
     }
 
     private fun refresh() {
         val running = ChildEngine.running
         val connected = ChildEngine.connectedCount()
-        val paired = PairStore.parents().size
+        val paired = lastParentCount.coerceAtLeast(0)
 
         when {
-            !running -> setChip(statusPill, t("Stopped", "متوقف"), 0xFF6B7785.toInt())
-            connected > 0 -> setChip(statusPill, t("Connected", "متصل"), 0xFF2E9E6A.toInt())
-            else -> setChip(statusPill, t("Searching", "جارٍ البحث"), 0xFFB7791F.toInt())
+            !running -> Fx.animateChip(statusPill, t("Stopped", "متوقف"), 0xFF6B7785.toInt())
+            connected > 0 -> Fx.animateChip(statusPill, t("Connected", "متصل"), 0xFF2E9E6A.toInt())
+            else -> Fx.animateChip(statusPill, t("Searching", "جارٍ البحث"), 0xFFB7791F.toInt())
         }
         if (running) {
             if (pulse == null) statusPill?.let { pulse = Fx.breathe(it) }
@@ -301,7 +306,6 @@ class ChildActivity : Activity() {
         else t("Battery is restricted: the phone may stop monitoring. Tap 'Keep running' below.",
             "البطارية مقيّدة: قد يتوقف الجوال عن المراقبة. اضغط 'البقاء في الخلفية' بالأسفل.")
 
-        if (paired != lastParentCount) fillParents()
 
         val req = ChildEngine.pendingPair
         if (req != null && !dialogShown) {

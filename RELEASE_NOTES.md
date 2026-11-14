@@ -1,3 +1,23 @@
+0.8.2: faster screen changes and more visual effects.
+- Pairing data is read once when a screen opens, not every second (no repeated key decryption).
+- The recordings list updates only when a recording is added or deleted.
+- Returning to a screen no longer rebuilds it unless the language, theme or role changed.
+- Settings re-draws in place instead of restarting the activity.
+- Screens fade in and out.
+- Entrance animation plays once per screen, not on every rebuild.
+- Status colour cross-fades; the talk button glows while talking.
+- Build time is logged in Diagnostics.
+
+0.8.2: تنقّل أسرع وتأثيرات بصرية أكثر.
+- بيانات الاقتران تُقرأ مرة عند فتح الشاشة، وليس كل ثانية.
+- قائمة التسجيلات تتحدّث فقط عند إضافة أو حذف تسجيل.
+- الرجوع للشاشة ما يعيد بناءها إلا إذا تغيّرت اللغة أو المظهر أو الدور.
+- الإعدادات تتحدّث في مكانها بدل إعادة تشغيل الشاشة.
+- الشاشات تظهر وتختفي بتلاشٍ ناعم.
+- التأثير المتدرج للبطاقات يعمل مرة واحدة لكل شاشة.
+- لون الحالة يتحول بسلاسة، وزر التحدث يتوهج أثناء الحديث.
+- زمن بناء الشاشة يُسجَّل في التشخيص.
+
 0.8.1: tap-to-talk switch inside the talk button, smoother visuals, faster connection status.
 - The tap/hold switch sits inside the talk button (top end).
 - Dots and the sound meter glide between values. Buttons show a touch ripple.

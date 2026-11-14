@@ -81,6 +81,25 @@ object Fx {
         }
     }
 
+    private val chipColour = java.util.WeakHashMap<View, Int>()
+
+    /** Status pill: text changes at once, its colour cross-fades over 400 ms. */
+    fun animateChip(tv: android.widget.TextView?, text: String, color: Int) {
+        tv ?: return
+        tv.text = Tr.t(text)
+        val from = chipColour[tv] ?: color
+        chipColour[tv] = color
+        if (from == color) {
+            tv.background = Look.pill(color)
+            return
+        }
+        android.animation.ValueAnimator.ofObject(android.animation.ArgbEvaluator(), from, color).apply {
+            duration = 400
+            addUpdateListener { tv.background = Look.pill(it.animatedValue as Int) }
+            start()
+        }
+    }
+
     /** Standard Android touch ripple drawn over the glass background. */
     fun ripple(v: View) {
         val tv = android.util.TypedValue()
