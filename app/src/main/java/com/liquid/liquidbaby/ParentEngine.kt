@@ -113,6 +113,10 @@ object ParentEngine {
     @Volatile
     var lastStatusMs = 0L
 
+    /** Goes up when a recording is added or deleted, so screens refresh their list only when needed. */
+    @Volatile
+    var clipsVersion = 0
+
     @Volatile
     private var lastPongMs = 0L
 
@@ -370,6 +374,7 @@ object ParentEngine {
         if (isNew) {
             tmp.renameTo(done)
             ClipCrypt.encryptInPlace(done)
+            clipsVersion++
         } else {
             tmp.delete()
         }
@@ -654,6 +659,7 @@ object ParentEngine {
     /** Deletes a recording here and on the child phone; if the child is not reachable, it is done on reconnect. */
     fun deleteClip(ctx: Context, ts: Long) {
         File(clipsDir(ctx), "$ts.wav").delete()
+        clipsVersion++
         val c = conn
         if (connected && c != null) {
             sendAsync(c, T.DELETE_CLIP, Wire.longBytes(ts))

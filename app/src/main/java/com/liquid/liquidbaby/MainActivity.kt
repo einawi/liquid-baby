@@ -40,10 +40,16 @@ class MainActivity : Activity() {
         render()
     }
 
+    private var renderedKey = ""
+
     override fun onResume() {
         super.onResume()
         if (CrashGuard.shouldEnterSafeMode(this)) return
-        render()
+        val key = Prefs.getString("role", "") + "|" + Tr.isAr() + "|" + Themes.mode() + "|" + Themes.style()
+        if (key != renderedKey) {
+            renderedKey = key
+            render()
+        }
         showUpdatedMessageOnce()
     }
 

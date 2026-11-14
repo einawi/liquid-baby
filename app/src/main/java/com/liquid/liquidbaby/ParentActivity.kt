@@ -29,6 +29,9 @@ class ParentActivity : Activity() {
 
     private val ui = Handler(Looper.getMainLooper())
     private var builtAr: Boolean? = null
+    private var pairedCache: PairStore.Paired? = null
+    private var lastClipsVersion = -1
+    private var entered = false
     private var pulse: ObjectAnimator? = null
 
     private var statusPill: TextView? = null
@@ -44,6 +47,7 @@ class ParentActivity : Activity() {
     private var listenBtn: Button? = null
     private var talkBtn: Button? = null
     private var talkSwitch: android.widget.Switch? = null
+    private var talkPulse: ObjectAnimator? = null
     private val talkLimit = Runnable {
         onTalkUp()
         toast(t("Talk stopped after 60 seconds.", "توقف الحديث بعد 60 ثانية."))
@@ -98,10 +102,12 @@ class ParentActivity : Activity() {
     }
 
     private fun build() {
+        val t0 = System.nanoTime()
         builtAr = Tr.isAr()
         pulse?.cancel()
         pulse = null
         val paired = PairStore.paired()
+        pairedCache = paired
         screen {
             addTitle(t("Parent", "وحدة الأبوين"))
             statusPill = addChip("")
@@ -283,6 +289,8 @@ class ParentActivity : Activity() {
         }
         refresh()
         fillList()
+        lastClipsVersion = ParentEngine.clipsVersion
+        Diag.limited("buildParent", "Parent screen built in ${(System.nanoTime() - t0) / 1_000_000} ms", 60_000L)
     }
 
     /** A square tile in a two-column grid. Returns the button so it can be styled later. */
@@ -342,7 +350,11 @@ class ParentActivity : Activity() {
             warnedVault = true
             toast("تحذير: تشفير المفاتيح غير متاح على هذا الجوال")
         }
-        if (Prefs.getBool("serviceWanted", false) && !ParentEngine.running && PairStore.paired() != null) {
+        if (!entered) {
+            entered = true
+            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+        }
+        if (Prefs.getBool("serviceWanted", false) && !ParentEngine.running && pairedCache != null) {
             UnitService.start(this)
         }
         ui.post(tick)
@@ -390,6 +402,8 @@ class ParentActivity : Activity() {
         if (ParentEngine.beginTalk()) {
             talkBtn?.text = talkingText()
             talkBtn?.background = Look.glass(this, 26, Fx.tint(Themes.current().accent, 0x66))
+            talkPulse?.cancel()
+            talkBtn?.let { talkPulse = Fx.breathe(it) }
             talkBtn?.animate()?.scaleX(1.02f)?.scaleY(1.02f)?.setDuration(200)?.start()
         } else {
             toast(ParentEngine.talkNote)
@@ -398,6 +412,9 @@ class ParentActivity : Activity() {
 
     private fun onTalkUp() {
         ui.removeCallbacks(talkLimit)
+        talkPulse?.cancel()
+        talkPulse = null
+        talkBtn?.alpha = 1f
         ParentEngine.endTalk()
         talkBtn?.text = idleTalkText()
         talkBtn?.background = Look.glass(this, 26, Look.BUTTON)
@@ -417,7 +434,7 @@ class ParentActivity : Activity() {
 
     private fun refresh() {
         val (label, color) = stateLabel()
-        setChip(statusPill, label, color)
+        Fx.animateChip(statusPill, label, color)
         runBtn?.text = t(if (ParentEngine.running) "Stop monitoring" else "Start monitoring",
             if (ParentEngine.running) "أوقف المراقبة" else "ابدأ المراقبة")
         runBtn?.background = Look.glass(this, 22,
@@ -432,7 +449,7 @@ class ParentActivity : Activity() {
             statusPill?.alpha = 1f
         }
 
-        val childIp = PairStore.paired()?.lastIp?.ifBlank { null } ?: "--"
+        val childIp = pairedCache?.lastIp?.ifBlank { null } ?: "--"
         val ago = (System.currentTimeMillis() - ParentEngine.lastContact) / 1000
         detailLine?.text = t(
             "Child address: $childIp" + if (ParentEngine.connected) "  ·  last contact ${ago}s ago" else "",
@@ -480,9 +497,9 @@ class ParentActivity : Activity() {
         walkieLabel?.text = t("Talk volume on the child phone: ${ParentEngine.childTalkVol} of 10",
             "صوت المحادثة على جوال الطفل: ${ParentEngine.childTalkVol} من 10")
 
-        if (listBox != null) {
-            val count = ParentEngine.clips(this).size
-            if (count != lastClipCount) fillList()
+        if (listBox != null && ParentEngine.clipsVersion != lastClipsVersion) {
+            lastClipsVersion = ParentEngine.clipsVersion
+            fillList()
         }
     }
 
@@ -596,7 +613,7 @@ class ParentActivity : Activity() {
                     })
                 }
             }
-            Fx.enter(card, index.coerceAtMost(6))
+            if (!entered) Fx.enter(card, index.coerceAtMost(6))
         }
     }
 

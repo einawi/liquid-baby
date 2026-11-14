@@ -16,6 +16,7 @@ class SettingsActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
         build()
     }
 
@@ -29,7 +30,7 @@ class SettingsActivity : Activity() {
             card(14) {
                 addButton(if (Tr.isAr()) "اللغة: العربية (اضغط للتغيير)" else "Language: English (tap to change)") {
                     Tr.toggle()
-                    recreate()
+                    build()
                 }
                 addBody(t("Mode", "الوضع"))
                 for (m in listOf("system", "dark", "light")) {
@@ -40,7 +41,7 @@ class SettingsActivity : Activity() {
                     }
                     addButton((if (Themes.mode() == m) "✓ " else "") + label) {
                         Themes.setMode(m)
-                        recreate()
+                        build()
                     }
                 }
                 addBody(t("Style", "النمط"))
@@ -48,7 +49,7 @@ class SettingsActivity : Activity() {
                     val label = if (st == "minimal") t("Flat", "مسطّح") else t("Glass", "زجاجي")
                     addButton((if (Themes.style() == st) "✓ " else "") + label) {
                         Themes.setStyle(st)
-                        recreate()
+                        build()
                     }
                 }
             }
@@ -61,7 +62,7 @@ class SettingsActivity : Activity() {
                 for (sec in listOf(60, 100, 180)) {
                     addButton((if (cur == sec) "✓ " else "") + "$sec s") {
                         Prefs.putInt("offlineSec", sec)
-                        recreate()
+                        build()
                     }
                 }
                 line(t("Each kind of alert has its own channel. You can mute one in Android settings.",
