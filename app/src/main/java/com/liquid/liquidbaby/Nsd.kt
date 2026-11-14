@@ -78,7 +78,10 @@ object Nsd {
             mgr.discoverServices(TYPE, NsdManager.PROTOCOL_DNS_SD, listener)
             done.await(timeoutMs, TimeUnit.MILLISECONDS)
             try { mgr.stopServiceDiscovery(listener) } catch (_: Exception) {}
-            found.get()
+            val result = found.get()
+            Diag.i(if (result != null) "Network announcement found the child phone at $result"
+                   else "Network announcement: child phone not announced (search time ${timeoutMs} ms)")
+            result
         } catch (e: Exception) {
             Diag.i("Network search problem: " + e.message)
             null

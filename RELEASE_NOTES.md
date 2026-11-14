@@ -1,3 +1,9 @@
+0.9.2 (build 67): the parent logs the result of the network announcement search.
+- Diagnostics shows "Network announcement found the child phone at ..." or "not announced", so we can confirm it works.
+
+0.9.2 (build 67): الأب يسجّل نتيجة البحث بإعلان الشبكة.
+- التشخيص يعرض "وجد جوال الطفل عند ..." أو "غير معلن"، للتأكد أنه يشتغل.
+
 0.9.2 (build 66): the most reliable way to find the child phone after its address changes.
 - The child phone announces itself on the network under its identity (Android's built-in service discovery).
 - The parent looks it up by that identity and gets its current address. Order: last known addresses, then the network announcement, then the broadcast search. Every device is verified by its key before it is used.
