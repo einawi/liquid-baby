@@ -46,7 +46,7 @@ class ParentActivity : Activity() {
     private var meter: ProgressBar? = null
     private var listenBtn: Button? = null
     private var talkBtn: Button? = null
-    private var talkSwitch: android.widget.Switch? = null
+    private var talkModePill: TextView? = null
     private var talkPulse: ObjectAnimator? = null
     private val talkLimit = Runnable {
         onTalkUp()
@@ -198,24 +198,24 @@ class ParentActivity : Activity() {
                 talkFrame.addView(talkBtn, android.widget.FrameLayout.LayoutParams(
                     android.widget.FrameLayout.LayoutParams.MATCH_PARENT, dp(104)))
                 Fx.ripple(talkBtn!!)
-                talkSwitch = android.widget.Switch(context).apply {
-                    text = t("Tap", "اضغط")
+                talkModePill = TextView(context).apply {
                     textSize = 12f
-                    setTextColor(Look.SUB)
-                    isChecked = talkMode() == "press"
-                    setOnCheckedChangeListener { _, checked ->
-                        Prefs.putString("talkMode", if (checked) "press" else "hold")
-                        if (ParentEngine.talking) onTalkUp()
-                        talkBtn?.text = idleTalkText()
-                    }
+                    setTextColor(Look.TEXT)
+                    setPadding(dp(12), dp(6), dp(12), dp(6))
+                    background = Look.pill(Fx.tint(Themes.current().accent, 0x55))
+                    isClickable = true
+                    isFocusable = true
+                    text = modePillText()
+                    setOnClickListener { toggleTalkMode() }
                 }
-                talkFrame.addView(talkSwitch, android.widget.FrameLayout.LayoutParams(
+                talkFrame.addView(talkModePill, android.widget.FrameLayout.LayoutParams(
                     android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
                     android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
                     Gravity.TOP or Gravity.END).apply {
                     topMargin = dp(10)
                     marginEnd = dp(14)
                 })
+                talkModePill?.bringToFront()
                 addView(talkFrame, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
                     topMargin = dp(12)
                 })
@@ -371,6 +371,18 @@ class ParentActivity : Activity() {
     }
 
     private fun talkMode(): String = Prefs.getString("talkMode", "hold")
+
+    /** Short label on the pill inside the talk button. */
+    private fun modePillText(): String =
+        if (talkMode() == "press") t("Tap", "نقرة") else t("Hold", "ضغط")
+
+    /** Switches between hold and tap. Works from the pill, and stops any talk that is running. */
+    private fun toggleTalkMode() {
+        Prefs.putString("talkMode", if (talkMode() == "press") "hold" else "press")
+        if (ParentEngine.talking) onTalkUp()
+        talkModePill?.text = modePillText()
+        talkBtn?.text = idleTalkText()
+    }
 
     private fun modeLabel(): String =
         if (talkMode() == "press") t("Mode: tap to talk (tap again to stop)", "الوضع: اضغط للتحدث (اضغط مرة أخرى للإيقاف)")
