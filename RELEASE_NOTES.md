@@ -1,3 +1,11 @@
+0.9.2 (build 61): correct video sizes and recording diagnostics.
+- Video sizes show kilobytes under 1 MB (previously a 5-second video showed 0 MB).
+- Diagnostics now records frames written, sound packets, file size, video dimensions, and playback errors.
+
+0.9.2 (build 61): حجم الفيديو يظهر بشكل صحيح، وتشخيص أدق للتسجيل.
+- الأحجام أقل من 1 MB تظهر بالكيلوبايت (كان فيديو 5 ثوانٍ يظهر 0 MB).
+- التشخيص يسجّل الفريمات المكتوبة، وحزم الصوت، وحجم الملف، وأبعاد الفيديو، وأخطاء التشغيل.
+
 0.9.2 (build 60): fixes empty recordings, adds sharing.
 - Fixed: a recording could be saved empty (0 MB, black picture) when the stop ran out of time. Video and sound now finish together, and an empty file is never saved.
 - New: each video has a share button. Share it (for example to WhatsApp), or save it to the gallery as a normal MP4 in Movies/LiquidBaby.

@@ -612,7 +612,9 @@ class ParentActivity : Activity() {
                 val card = box.card(12) {
                     val row = addRow()
                     val info = TextView(context)
-                    info.text = fmt.format(Date(f.lastModified())) + "  ·  " + (f.length() / 1024 / 1024) + " MB"
+                    val kb = f.length() / 1024.0
+                    val size = if (kb < 1024) String.format(java.util.Locale.US, "%.0f KB", kb) else String.format(java.util.Locale.US, "%.1f MB", kb / 1024.0)
+                    info.text = fmt.format(Date(f.lastModified())) + "  ·  " + size
                     info.textSize = 15f
                     info.setTextColor(Look.TEXT)
                     row.addView(info, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))

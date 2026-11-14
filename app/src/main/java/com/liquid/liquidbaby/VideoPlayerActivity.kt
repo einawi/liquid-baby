@@ -68,12 +68,14 @@ class VideoPlayerActivity : Activity() {
                             mp.setDataSource(out.absolutePath)
                             mp.setDisplay(holder)
                             mp.setOnPreparedListener {
+                                Diag.i("Video playing: " + it.videoWidth + "x" + it.videoHeight + ", " + it.duration + " ms")
                                 ready = true
                                 status?.text = ""
                                 it.start()
                             }
                             mp.setOnCompletionListener { status?.text = Tr.pick("Finished", "انتهى") }
-                            mp.setOnErrorListener { _, _, _ ->
+                            mp.setOnErrorListener { _, what, extra ->
+                                Diag.i("Video playback error: what=" + what + ", extra=" + extra)
                                 status?.text = Tr.pick("Playback error.", "خطأ في التشغيل.")
                                 true
                             }

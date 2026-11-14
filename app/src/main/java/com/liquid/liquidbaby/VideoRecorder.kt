@@ -32,6 +32,8 @@ class VideoRecorder(private val outFile: File, private val maxMs: Long = 600_000
     private var startNs = 0L
     private var audioEos = false
     private var eosDeadline = 0L
+    private var framesWritten = 0
+    private var audioWritten = 0
     private var videoEos = false
 
     private var nv12 = ByteArray(0)
@@ -149,6 +151,7 @@ class VideoRecorder(private val outFile: File, private val maxMs: Long = 600_000
             releaseCodecs()
             // an empty file is never reported as saved
             val ok = started && outFile.exists() && outFile.length() > 1024
+            Diag.i("Recorder finished: video frames=" + framesWritten + ", audio packets=" + audioWritten + ", file=" + (if (outFile.exists()) outFile.length() else 0) + " bytes, started=" + started)
             if (!ok) {
                 outFile.delete()
                 Diag.i("Recorder: no picture was written (started=" + started + ", video end=" + videoEos + ", audio end=" + audioEos + ")")
@@ -182,6 +185,7 @@ class VideoRecorder(private val outFile: File, private val maxMs: Long = 600_000
                         buf.position(info.offset)
                         buf.limit(info.offset + info.size)
                         muxer?.writeSampleData(vTrack, buf, info)
+                        framesWritten++
                     }
                     v.releaseOutputBuffer(idx, false)
                     if ((info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
@@ -249,6 +253,7 @@ class VideoRecorder(private val outFile: File, private val maxMs: Long = 600_000
                         buf.position(info.offset)
                         buf.limit(info.offset + info.size)
                         muxer?.writeSampleData(aTrack, buf, info)
+                        audioWritten++
                     }
                     a.releaseOutputBuffer(idx, false)
                     if ((info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
