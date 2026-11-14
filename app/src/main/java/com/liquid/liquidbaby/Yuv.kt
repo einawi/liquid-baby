@@ -37,8 +37,12 @@ object Yuv {
      * preferring 4:3 and landscape sizes. Each size is [width, height].
      */
     fun pickSize(sizes: List<IntArray>, quality: Int): IntArray? {
-        val tw = if (quality == 0) 320 else 640
-        val th = if (quality == 0) 240 else 480
+        val (tw, th) = when (quality) {
+            0 -> Pair(320, 240)
+            1 -> Pair(640, 480)
+            2 -> Pair(960, 540)
+            else -> Pair(1280, 720)
+        }
         val target = tw.toLong() * th
         var best: IntArray? = null
         var bestScore = Long.MAX_VALUE
