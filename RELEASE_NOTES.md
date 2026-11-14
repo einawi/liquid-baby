@@ -1,3 +1,17 @@
+0.9.0: all current features in one build (no video recording yet).
+- Parent: status Stopped, Connecting, Connected, Disconnected; Hold/Tap talk button shared with the camera screen.
+- Live camera: quality Low, Normal, 960×540, 720p; frame rate 10 to 30 fps chosen by the parent; night mode icon; room sound mute; flash; switch camera; rotate picture.
+- Full screen: separate layer, two-finger zoom (1x to 4x), icon bar for flash, quality, room sound, talk, night mode, frame rate, and record (record shows a message; not built yet).
+- Child: 3 most recent clips kept, backlog sent one at a time, encrypted clips on the phone, low-battery mode, Wi-Fi address shown.
+- Test build type (assembleTest) is included for the recorder work; it does not auto-update.
+
+0.9.0: كل المميزات الحالية في بناء واحد (بدون تسجيل الفيديو بعد).
+- الأب: حالات متوقف، جارٍ الاتصال، متصل، انقطع الاتصال؛ زر التحدث بمفتاح ضغط/نقرة مشترك مع شاشة الكاميرا.
+- الكاميرا: جودة منخفضة، عادية، 960×540، 720p؛ معدل فريمات من 10 إلى 30 يختاره الأب؛ أيقونة الوضع الليلي؛ كتم صوت الغرفة؛ فلاش؛ تبديل الكاميرا؛ تدوير الصورة.
+- ملء الشاشة: طبقة مستقلة، تكبير بإصبعين (من 1x إلى 4x)، وشريط أيقونات للفلاش والجودة وصوت الغرفة والتحدث والوضع الليلي ومعدل الفريمات والتسجيل (التسجيل يعرض رسالة، ولم يُبنَ بعد).
+- الطفل: يحتفظ بآخر 3 تسجيلات، يرسل المتراكم واحداً واحداً، وتسجيلات مشفّرة على الجوال، ووضع توفير البطارية، وعرض عنوان الواي فاي.
+- نوع البناء التجريبي (assembleTest) موجود للعمل على المسجّل، ولا يتحقق من التحديثات.
+
 0.8.15: separate test app for the video recorder (set up; the recorder itself comes next).
 - New build type "test": installs as "Liquid Baby Test" next to the main app (package com.liquid.liquidbaby.test), with the same signing key.
 - The test app does not check for updates from the main releases.
