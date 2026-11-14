@@ -2,8 +2,8 @@ plugins {
     id("com.android.application")
 }
 
-val appVersionName = "0.8.14"
-val appVersionCode = 52
+val appVersionName = "0.8.15"
+val appVersionCode = 53
 
 val keystoreFile: String? = System.getenv("KEYSTORE_FILE")
 
@@ -39,11 +39,20 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
+            buildConfigField("boolean", "IS_TEST", "false")
             signingConfig = if (keystoreFile != null) {
                 signingConfigs.getByName("release")
             } else {
                 signingConfigs.getByName("debug")
             }
+        }
+        // Separate test app: installs next to the main app, has its own name and does not auto-update.
+        create("test") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".test"
+            resValue("string", "app_name", "Liquid Baby Test")
+            buildConfigField("boolean", "IS_TEST", "true")
+            matchingFallbacks += listOf("release")
         }
     }
 

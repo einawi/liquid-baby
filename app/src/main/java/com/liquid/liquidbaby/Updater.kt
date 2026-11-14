@@ -279,6 +279,7 @@ object Updater {
 
     /** Blocking. Used by the app start and by the background job. */
     fun backgroundCheck(ctx: Context, force: Boolean): Info? {
+        if (BuildConfig.IS_TEST) return null   // the test app does not auto-update from the main releases
         val now = System.currentTimeMillis()
         if (!force && now - Prefs.getLong("lastCheckMs") < CHECK_EVERY_MS) return cached()
         val info = fetchLatest()

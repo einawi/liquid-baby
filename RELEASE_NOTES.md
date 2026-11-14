@@ -1,3 +1,13 @@
+0.8.15: separate test app for the video recorder (set up; the recorder itself comes next).
+- New build type "test": installs as "Liquid Baby Test" next to the main app (package com.liquid.liquidbaby.test), with the same signing key.
+- The test app does not check for updates from the main releases.
+- Build it with: gradlew assembleTest  (output in app/build/outputs/apk/test/).
+
+0.8.15: تطبيق تجريبي منفصل لمسجّل الفيديو (الإعداد جاهز، والمسجّل نفسه هو الخطوة القادمة).
+- نوع بناء "test": يتثبّت باسم "Liquid Baby Test" بجانب التطبيق الأصلي، بنفس مفتاح التوقيع.
+- التطبيق التجريبي ما يتحقق من تحديثات الإصدارات الرسمية.
+- البناء: gradlew assembleTest.
+
 0.8.14: full-screen bar fits the screen, Full screen button styled, frame rate up to 30.
 - Full-screen icons share the width evenly and are round; none is cut off.
 - The Full screen button has the same colour and style as the other buttons.
