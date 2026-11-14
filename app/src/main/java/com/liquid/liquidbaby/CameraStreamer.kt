@@ -52,6 +52,10 @@ class CameraStreamer(
     @Volatile
     var slowMode = false
 
+    /** Target pictures per second (10 to 20), set by the parent. */
+    @Volatile
+    var fps = 15
+
     fun start(front: Boolean, quality: Int, flash: Boolean, night: Boolean = false) {
         thread.start()
         handler = Handler(thread.looper)
@@ -208,12 +212,9 @@ class CameraStreamer(
         } ?: return
         try {
             val now = SystemClock.elapsedRealtime()
-            val gap = if (slowMode) 400 else when (quality) {
-                0 -> 140
-                1 -> 90
-                2 -> 110
-                else -> 130
-            }
+            // the pause between pictures = one second / target, minus the time the picture itself takes
+            val cost = when (quality) { 0 -> 10; 1 -> 15; 2 -> 20; else -> 25 }
+            val gap = if (slowMode) 400 else maxOf(10, 1000 / fps.coerceIn(10, 20) - cost)
             if (now - lastFrame < gap) return
             lastFrame = now
             val w = img.width

@@ -47,6 +47,7 @@ class ParentActivity : Activity() {
     private var listenBtn: Button? = null
     private var talkBtn: Button? = null
     private var talkModeLabel: TextView? = null
+    private var talkControl: TalkControl? = null
     private var talkModeToggle: ModeToggle? = null
     private var modeRowView: View? = null
     private var talkPulse: ObjectAnimator? = null
@@ -177,64 +178,10 @@ class ParentActivity : Activity() {
                 val listenTile = tile(grid, t("Listen", "استماع"), t("Sound only", "صوت فقط")) { toggleListen() }
                 listenBtn = listenTile
 
-                val talkFrame = android.widget.FrameLayout(context)
-                talkFrame.isClickable = true
-                talkFrame.setOnTouchListener { _, ev ->
-                    // the Hold/Tap toggle sits on top of this button: touches inside its bounds belong to it
-                    val hit = android.graphics.Rect()
-                    modeRowView?.getHitRect(hit)
-                    if (hit.contains(ev.x.toInt(), ev.y.toInt())) return@setOnTouchListener false
-                    if (talkMode() == "press") {
-                        if (ev.actionMasked == MotionEvent.ACTION_UP) togglePressTalk()
-                    } else {
-                        when (ev.actionMasked) {
-                            MotionEvent.ACTION_DOWN -> onTalkDown()
-                            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> onTalkUp()
-                        }
-                    }
-                    true
-                }
-                talkBtn = Button(context).apply {
-                    text = idleTalkText()
-                    isAllCaps = false
-                    textSize = 18f
-                    setTextColor(Look.TEXT)
-                    background = Look.glass(context, 26, Look.BUTTON)
-                    minHeight = dp(88)
-                    // touch is handled by talkFrame, so the Hold/Tap toggle (a child) gets its own touches first
-                    isClickable = false
-                    isFocusable = false
-                }
-                talkFrame.addView(talkBtn, android.widget.FrameLayout.LayoutParams(
-                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT, dp(104)))
-                Fx.ripple(talkBtn!!)
-                val modeRow = LinearLayout(context).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.CENTER_VERTICAL
-                }
-                talkModeLabel = TextView(context).apply {
-                    textSize = 12f
-                    setTextColor(Look.TEXT)
-                    text = modePillText()
-                    setPadding(0, 0, dp(8), 0)
-                }
-                modeRow.addView(talkModeLabel)
-                talkModeToggle = ModeToggle(context).apply {
-                    tapMode = talkMode() == "press"
-                    onToggle = { press -> applyTalkMode(press) }
-                    contentDescription = t("Talk mode: hold or tap", "وضع التحدث: ضغط أو نقرة")
-                }
-                modeRow.addView(talkModeToggle)
-                talkFrame.addView(modeRow, android.widget.FrameLayout.LayoutParams(
-                    android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
-                    android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
-                    Gravity.TOP or Gravity.END).apply {
-                    topMargin = dp(8)
-                    marginEnd = dp(12)
-                })
-                modeRow.bringToFront()
-                modeRowView = modeRow
-                addView(talkFrame, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                // the shared talk control, the same one the camera screen uses
+                val tc = TalkControl(this@ParentActivity)
+                talkControl = tc
+                addView(tc.view, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
                     topMargin = dp(12)
                 })
 
@@ -382,6 +329,7 @@ class ParentActivity : Activity() {
         super.onPause()
         ParentEngine.onChange = null
         ui.removeCallbacks(tick)
+        talkControl?.up()
         onTalkUp()
         ParentEngine.endListen()
         ParentEngine.setLevelSub(false)

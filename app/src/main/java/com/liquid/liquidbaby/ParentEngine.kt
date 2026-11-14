@@ -55,6 +55,9 @@ object ParentEngine {
     @Volatile
     var viewQuality = 1
 
+    /** Target pictures per second, 10 to 20. Saved on the parent phone and sent to the child. */
+    var viewFps = Prefs.getInt("viewFps", 15).coerceIn(10, 20)
+
     @Volatile
     var viewFront = false
 
@@ -495,6 +498,13 @@ object ParentEngine {
         changed()
     }
 
+    /** Target frame rate from the dropdown (10 to 20). Applies at once while watching. */
+    fun setFps(fps: Int) {
+        viewFps = fps.coerceIn(10, 20)
+        Prefs.putInt("viewFps", viewFps)
+        if (viewing && connected) sendView(viewQuality, viewFront, viewFlash, viewNight)
+    }
+
     /** The user changed the picture settings: this wins over the automatic quality. */
     fun setView(quality: Int, front: Boolean, flash: Boolean, night: Boolean = viewNight) {
         userQuality = quality
@@ -507,7 +517,7 @@ object ParentEngine {
         if (!connected || !viewing) return
         sendAsync(
             c, T.VIEW_SET,
-            byteArrayOf(quality.toByte(), (if (front) 1 else 0).toByte(), (if (flash) 1 else 0).toByte(), (if (night) 1 else 0).toByte())
+            byteArrayOf(quality.toByte(), (if (front) 1 else 0).toByte(), (if (flash) 1 else 0).toByte(), (if (night) 1 else 0).toByte(), viewFps.toByte())
         )
     }
 

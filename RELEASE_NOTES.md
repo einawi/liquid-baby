@@ -1,3 +1,21 @@
+0.8.13: frame rate chosen by the parent (10 to 20, default 15).
+- A dropdown on the camera screen and an icon in full screen set the target pictures per second.
+- The child phone paces its pictures from that target. Both phones should run 0.8.13; an older child ignores the setting.
+
+0.8.13: معدل الفريمات يختاره الأب (من 10 إلى 20، والافتراضي 15).
+- قائمة منسدلة في شاشة الكاميرا، وأيقونة في ملء الشاشة، لتحديد عدد الصور في الثانية.
+- جوال الطفل يضبط الصور حسب هذا الهدف. الجوالان لازم يكونان على 0.8.13؛ الطفل القديم يتجاهل الإعداد.
+
+0.8.12: night-mode icon, shared talk button on the main screen, frame rate targets, measured picture rate.
+- Night mode icon next to the camera buttons and in the full-screen bar.
+- The main screen uses the same talk control as the camera screen.
+- Frame rate targets raised: about 20 fps (Low), 15 fps (Normal and 960×540), 14 fps (720p). The camera screen shows the measured rate in the status line.
+
+0.8.12: أيقونة الوضع الليلي، وزر التحدث المشترك في الشاشة الرئيسية، ومعدل إطارات أعلى.
+- أيقونة الوضع الليلي بجانب أزرار الكاميرا وفي شريط ملء الشاشة.
+- الشاشة الرئيسية تستخدم نفس زر التحدث في شاشة الكاميرا.
+- الأهداف: حوالي 20 إطاراً (منخفضة)، و15 (عادية و960×540)، و14 (720p). شاشة الكاميرا تعرض المعدل الفعلي.
+
 0.8.11: status words, shared talk button, full-screen layer with pinch zoom and icons.
 - Parent status: Stopped, Connecting, Connected, Disconnected (with seconds since the drop).
 - The talk button on the camera screen is the same control as the main screen (Hold/Tap toggle, glow, labels).

@@ -15,7 +15,10 @@ import android.view.ScaleGestureDetector
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.widget.ArrayAdapter
+import android.widget.AdapterView
 import android.widget.Button
+import android.widget.Spinner
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
@@ -36,11 +39,16 @@ class CameraActivity : android.app.Activity() {
     private var flashBtn: Button? = null
     private var switchBtn: Button? = null
     private var nightBtn: Button? = null
+    private var nightIcon: ImageButton? = null
+    private var fpsSpinner: Spinner? = null
+    private var frames = 0
+    private var fps = 0
     private val qualityBtns = arrayOfNulls<Button>(4)
     private var overlay: FrameLayout? = null
     private var fullFlash: ImageButton? = null
     private var fullSound: ImageButton? = null
     private var fullTalk: ImageButton? = null
+    private var fullNight: ImageButton? = null
     private var zoom = 1f
     private var fullTurn = 0
     private val pending = AtomicBoolean(false)
@@ -106,7 +114,39 @@ class CameraActivity : android.app.Activity() {
             nightBtn = addButton(t("Night mode", "وضع الليل")) {
                 ParentEngine.setView(ParentEngine.viewQuality, ParentEngine.viewFront, ParentEngine.viewFlash, !ParentEngine.viewNight)
             }
-            addButton(t("Full screen", "ملء الشاشة")) { enterFull() }
+            val controls = LinearLayout(context)
+            controls.orientation = LinearLayout.HORIZONTAL
+            controls.gravity = Gravity.CENTER
+            nightIcon = ImageButton(context).apply {
+                setImageResource(R.drawable.ic_night)
+                setColorFilter(Look.TEXT)
+                background = Look.glass(context, 18, Look.BUTTON)
+                setPadding(dp(12), dp(12), dp(12), dp(12))
+                contentDescription = t("Night mode", "وضع الليل")
+                setOnClickListener {
+                    ParentEngine.setView(ParentEngine.viewQuality, ParentEngine.viewFront, ParentEngine.viewFlash, !ParentEngine.viewNight)
+                    refresh()
+                }
+            }
+            controls.addView(nightIcon, LinearLayout.LayoutParams(dp(52), dp(52)).apply { marginEnd = dp(8) })
+            fpsSpinner = Spinner(context).apply {
+                adapter = ArrayAdapter(context, android.R.layout.simple_spinner_dropdown_item, (10..20).map { "$it fps" })
+                setSelection(ParentEngine.viewFps - 10, false)
+                onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                    override fun onItemSelected(p: AdapterView<*>?, v: View?, pos: Int, id: Long) {
+                        val fps = pos + 10
+                        if (fps != ParentEngine.viewFps) ParentEngine.setFps(fps)
+                    }
+                    override fun onNothingSelected(p: AdapterView<*>?) {}
+                }
+            }
+            controls.addView(fpsSpinner, LinearLayout.LayoutParams(dp(96), dp(52)).apply { marginEnd = dp(8) })
+            controls.addView(Button(context).apply {
+                isAllCaps = false
+                text = t("Full screen", "ملء الشاشة")
+                setOnClickListener { enterFull() }
+            }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            addView(controls)
             addButton(t("Rotate the picture", "تدوير الصورة")) { ParentEngine.viewRotate = (ParentEngine.viewRotate + 1) and 3 }
             soundBtn = addButton(t("Room sound", "صوت الغرفة")) {
                 ParentEngine.liveSound = !ParentEngine.liveSound
@@ -123,6 +163,7 @@ class CameraActivity : android.app.Activity() {
         super.onResume()
         ParentEngine.frameListener = { bmp ->
             latest = bmp
+            frames++
             if (pending.compareAndSet(false, true)) {
                 runOnUiThread {
                     pending.set(false)
@@ -235,6 +276,12 @@ class CameraActivity : android.app.Activity() {
         bar.addView(fullSound, barParams())
         fullTalk = iconButton(R.drawable.ic_mic, t("Talk to the child", "التحدث مع الطفل")) { talk?.tap() }
         bar.addView(fullTalk, barParams())
+        fullNight = iconButton(R.drawable.ic_night, t("Night mode", "وضع الليل")) {
+            ParentEngine.setView(ParentEngine.viewQuality, ParentEngine.viewFront, ParentEngine.viewFlash, !ParentEngine.viewNight)
+            refreshFull()
+        }
+        bar.addView(fullNight, barParams())
+        bar.addView(iconButton(R.drawable.ic_fps, t("Frame rate", "معدل الفريمات")) { chooseFps() }, barParams())
         bar.addView(iconButton(R.drawable.ic_record, t("Record video", "تسجيل فيديو")) {
             Toast.makeText(this, t("Video recording is the next step.", "تسجيل الفيديو هو الخطوة القادمة."), Toast.LENGTH_SHORT).show()
         }, barParams())
@@ -255,6 +302,17 @@ class CameraActivity : android.app.Activity() {
     private fun barParams() = LinearLayout.LayoutParams(dp(56), dp(56)).apply {
         marginStart = dp(5)
         marginEnd = dp(5)
+    }
+
+    private fun chooseFps() {
+        AlertDialog.Builder(this)
+            .setTitle(t("Frame rate", "معدل الفريمات"))
+            .setItems((10..20).map { "$it fps" }.toTypedArray()) { _, which ->
+                ParentEngine.setFps(which + 10)
+                fpsSpinner?.setSelection(which, false)
+            }
+            .setNegativeButton(t("Cancel", "تراجع"), null)
+            .show()
     }
 
     private fun chooseQuality() {
@@ -279,6 +337,7 @@ class CameraActivity : android.app.Activity() {
         fullFlash = null
         fullSound = null
         fullTalk = null
+        fullNight = null
         zoom = 1f
         window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
@@ -290,6 +349,7 @@ class CameraActivity : android.app.Activity() {
         fullSound?.setImageResource(if (ParentEngine.liveSound) R.drawable.ic_speaker else R.drawable.ic_speaker_off)
         fullSound?.background = Look.glass(this, 18, if (ParentEngine.liveSound) Look.BUTTON else Fx.tint(accent, 0x88))
         fullTalk?.background = Look.glass(this, 18, if (ParentEngine.talking) Fx.tint(accent, 0xAA) else Look.BUTTON)
+        fullNight?.background = Look.glass(this, 18, if (ParentEngine.viewNight) Fx.tint(accent, 0x88) else Look.BUTTON)
     }
 
     // ---------- refresh ----------
@@ -311,7 +371,9 @@ class CameraActivity : android.app.Activity() {
         sb.append(if (ParentEngine.viewing) t("Live", "مباشر") else t("Starting...", "جارٍ البدء..."))
         sb.append(" - ").append(t("watching now: ", "يشاهد الآن: ")).append(maxOf(ParentEngine.viewers, 1)).append("\n")
         if (ParentEngine.talkNote.isNotEmpty()) sb.append(ParentEngine.talkNote).append("\n")
+        frames = 0
         statusTv?.text = sb.toString()
+        nightIcon?.background = Look.glass(this, 18, if (ParentEngine.viewNight) Fx.tint(Themes.current().accent, 0x88) else Look.BUTTON)
 
         val flashState = if (ParentEngine.viewFlash) t("on (tap to turn off)", "مشغّل (اضغط للإطفاء)")
         else t("off (tap to turn on)", "مطفأ (اضغط للتشغيل)")
