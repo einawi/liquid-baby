@@ -1,3 +1,11 @@
+0.9.2 (build 57): the recorder stop no longer freezes the app.
+- Stopping the recording runs in the background, with a 4-second limit on every wait.
+- Build 56 was published before this fix; please update to build 57.
+
+0.9.2 (build 57): إيقاف التسجيل ما يعود يجمّد التطبيق.
+- الإيقاف يصير في الخلفية، وكل انتظار بحد أقصى 4 ثوانٍ.
+- نسخة 56 نُشرت قبل هذا الإصلاح، فحدّث إلى 57.
+
 0.9.2: video recorder (new, starts only when you press the record button).
 - Record button in the camera screen and in full screen. It turns red and shows a stop icon while recording.
 - Records the picture as shown (zoom and quality included), room sound while you hear it, and your microphone while you talk.
