@@ -243,38 +243,62 @@ object ParentEngine {
         return Conn(s)
     }
 
-    private fun find(p: PairStore.Paired): Pair<Conn, String> {
-        // Addresses remembered from earlier connections, most recent first (short timeout each).
+    /**
+     * Tries the addresses the child phone had recently, then searches the network by its id.
+     * A device is accepted only after it proves it holds our key, so another phone on a reused
+     * address is skipped and the search continues. Nothing has to be re-paired after a network change.
+     */
+    private fun connectToChild(p: PairStore.Paired): Pair<Conn, String> {
+        var last: IOException? = null
         for (ip in PairStore.rememberedIps()) {
             try {
-                return Pair(open(ip, 1500), ip)
+                return Pair(handshake(p, ip, 1500), ip)
             } catch (e: IOException) {
-                Diag.limited("addr-$ip", "Address $ip did not answer", 30_000L)
+                last = e
+                Diag.limited("addr-$ip", "Address $ip is not our child phone: " + e.message, 30_000L)
+                PairStore.forgetIp(ip)
             }
         }
         for (d in Discovery.scan(appCtx)) {
-            if (d.id == p.childId) return Pair(open(d.ip), d.ip)
+            if (d.id != p.childId) continue
+            try {
+                return Pair(handshake(p, d.ip, 5000), d.ip)
+            } catch (e: IOException) {
+                last = e
+            }
         }
-        throw IOException("Child phone not found on this Wi-Fi")
+        throw last ?: IOException("Child phone not found on this Wi-Fi")
+    }
+
+    /** Opens a connection and proves the key. Throws if the device at that address is not this child. */
+    private fun handshake(p: PairStore.Paired, ip: String, timeoutMs: Int): Conn {
+        val c = open(ip, timeoutMs)
+        try {
+            c.socket.soTimeout = 5000
+            val key = Hex.decode(p.key)
+            val nc = Crypto.random(16)
+            c.send(T.HELLO_AUTH, Wire.pack(Hex.decode(p.parentId), nc))
+            val r = c.read()
+            if (r.type == T.ERROR) throw IOException(String(r.data))
+            if (r.type != T.AUTH_REPLY) throw IOException("Unexpected reply")
+            c.enableCrypto(Crypto.sessionKey(key, nc, r.data), true)
+            val ready = try {
+                c.read()
+            } catch (e: IOException) {
+                throw IOException("login refused")
+            }
+            if (ready.type != T.SETTINGS) throw IOException("Unexpected login reply")
+            applySettings(ready.data)
+            return c
+        } catch (e: Exception) {
+            try { c.close() } catch (_: Exception) {}
+            throw if (e is IOException) e else IOException(e.message ?: "login failed")
+        }
     }
 
     private fun run(p: PairStore.Paired) {
-        val (c, ip) = find(p)
+        val (c, ip) = connectToChild(p)
         conn = c
-        val key = Hex.decode(p.key)
-        val nc = Crypto.random(16)
-        c.send(T.HELLO_AUTH, Wire.pack(Hex.decode(p.parentId), nc))
-        val r = c.read()
-        if (r.type == T.ERROR) throw IOException(String(r.data))
-        if (r.type != T.AUTH_REPLY) throw IOException("Unexpected reply")
-        c.enableCrypto(Crypto.sessionKey(key, nc, r.data), true)
-        val ready = try {
-            c.read()
-        } catch (e: IOException) {
-            throw IOException("Pairing is no longer valid. Remove the pairing and pair again.")
-        }
-        if (ready.type != T.SETTINGS) throw IOException("Unexpected login reply")
-        applySettings(ready.data)
         c.socket.soTimeout = 90_000
         PairStore.setLastIp(ip)
         connected = true

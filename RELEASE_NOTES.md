@@ -1,3 +1,13 @@
+0.9.2 (build 65): reconnects after the child phone's address or network changes, without re-pairing.
+- The parent tries the child's last addresses, but accepts a device only if it proves it is the paired child. Any other device at a reused address is skipped and forgotten.
+- If none of the addresses match, the parent searches the network for the paired child by its identity.
+- Re-pairing is needed only if the pairing keys themselves were removed.
+
+0.9.2 (build 65): إعادة الاتصال بعد تغيّر عنوان جوال الطفل أو الشبكة، بدون إعادة الاقتران.
+- الأب يجرّب آخر عناوين الطفل، ويقبل الجهاز فقط إذا أثبت أنه الطفل المقترن. أي جهاز آخر على عنوان مُعاد استخدامه يُتجاوز وينحذف.
+- إذا ما تطابقت العناوين، يبحث الأب عن الطفل المقترن في الشبكة بمعرّفه.
+- الاقتران يحتاج إعادة فقط إذا انحذفت مفاتيح الاقتران نفسها.
+
 0.9.2 (build 64): recorded video keeps the live picture's shape.
 - Recording uses the same size and proportions as the live picture, so the saved video, the gallery and shared copies match the live view.
 - If the picture changes shape during recording, it is fitted inside the frame (black edges), never stretched.

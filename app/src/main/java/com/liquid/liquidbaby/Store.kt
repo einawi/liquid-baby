@@ -107,6 +107,12 @@ object PairStore {
         return if (one.isNotEmpty()) listOf(one) else emptyList()
     }
 
+    /** Removes one address that turned out to belong to another device. */
+    fun forgetIp(ip: String) {
+        val list = (sp.getString("childIps", "") ?: "").split(",").filter { it.isNotBlank() && it != ip }
+        sp.edit().putString("childIps", list.joinToString(",")).apply()
+    }
+
     fun clearPaired() {
         sp.edit().remove("childId").remove("childName").remove("childKey").remove("childIp").remove("childIps").remove("lastSyncTs").commit()
     }
