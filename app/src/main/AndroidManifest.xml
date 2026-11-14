@@ -62,5 +62,8 @@
             android:exported="false" />
         <activity android:name=".LockActivity" android:exported="false" />
         <receiver android:name=".PlayReceiver" android:exported="false" />
+            <activity
+            android:name=".VideoPlayerActivity"
+            android:exported="false" />
     </application>
 </manifest>

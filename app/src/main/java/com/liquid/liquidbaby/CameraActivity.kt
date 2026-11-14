@@ -269,6 +269,7 @@ class CameraActivity : android.app.Activity() {
         val out = File(File(filesDir, "videos").apply { mkdirs() }, "video-${System.currentTimeMillis()}.lbv")
         Thread {
             val saved = VideoVault.encryptFile(tmp, out)
+            if (saved) ParentEngine.clipsVersion++
             runOnUiThread {
                 toast(if (saved) t("Video saved (encrypted).", "تم حفظ الفيديو (مشفّر).")
                 else t("The video could not be saved.", "تعذّر حفظ الفيديو."))

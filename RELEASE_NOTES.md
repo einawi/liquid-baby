@@ -1,3 +1,11 @@
+0.9.2 (build 59): you can see and play your saved videos.
+- Recordings screen: a new "Videos (encrypted)" section lists saved videos, with play and delete.
+- The video plays inside the app. The decrypted copy is kept only while playing and is deleted afterwards.
+
+0.9.2 (build 59): تقدر تشوف وتشغّل الفيديوهات المحفوظة.
+- شاشة التسجيلات: قسم جديد "الفيديوهات (مشفّرة)" يعرض الفيديوهات المحفوظة مع تشغيل وحذف.
+- الفيديو يشتغل داخل التطبيق. النسخة المفكوكة تبقى فقط أثناء التشغيل وتُحذف بعده.
+
 0.9.2 (build 58): videos are saved encrypted.
 - Fixed: recordings stopped before saving because the phone's key does not accept an app-chosen IV. The key now creates it, as intended.
 - An unencrypted recording is deleted if encryption fails, so none is left on the phone.

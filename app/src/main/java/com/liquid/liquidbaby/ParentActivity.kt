@@ -21,6 +21,7 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.SeekBar
 import android.widget.TextView
+import java.io.File
 import java.text.DateFormat
 import java.util.Date
 
@@ -544,7 +545,8 @@ class ParentActivity : Activity() {
         box.removeAllViews()
         val clips = ParentEngine.clips(this)
         lastClipCount = clips.size
-        if (clips.isEmpty()) {
+        val videos = videoFiles()
+        if (clips.isEmpty() && videos.isEmpty()) {
             box.card(14) {
                 addBody(t("No recordings yet.", "لا توجد تسجيلات بعد."))
                 line(t("The child phone sends a clip when it hears sound, and only while this phone is connected.",
@@ -604,7 +606,52 @@ class ParentActivity : Activity() {
             }
             if (!entered) Fx.enter(card, index.coerceAtMost(6))
         }
+        if (videos.isNotEmpty()) {
+            box.sectionLabel(t("Videos (encrypted)", "الفيديوهات (مشفّرة)"))
+            for (f in videos) {
+                val card = box.card(12) {
+                    val row = addRow()
+                    val info = TextView(context)
+                    info.text = fmt.format(Date(f.lastModified())) + "  ·  " + (f.length() / 1024 / 1024) + " MB"
+                    info.textSize = 15f
+                    info.setTextColor(Look.TEXT)
+                    row.addView(info, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+                    val playBtn = ImageButton(context)
+                    playBtn.setImageResource(R.drawable.ic_btn_play)
+                    playBtn.background = Look.glass(context, 18, Look.BUTTON)
+                    playBtn.setColorFilter(Look.TEXT)
+                    playBtn.setPadding(dp(10), dp(10), dp(10), dp(10))
+                    playBtn.contentDescription = t("Play video", "تشغيل الفيديو")
+                    playBtn.setOnClickListener {
+                        startActivity(Intent(this@ParentActivity, VideoPlayerActivity::class.java).putExtra("path", f.absolutePath))
+                    }
+                    row.addView(playBtn, LinearLayout.LayoutParams(dp(48), dp(48)).apply { marginStart = dp(8) })
+                    val del = ImageButton(context)
+                    del.setImageResource(R.drawable.ic_btn_delete)
+                    del.background = Look.glass(context, 18, Look.BUTTON)
+                    del.setColorFilter(Look.TEXT)
+                    del.setPadding(dp(10), dp(10), dp(10), dp(10))
+                    del.contentDescription = t("Delete video", "حذف الفيديو")
+                    del.setOnClickListener {
+                        AlertDialog.Builder(this@ParentActivity)
+                            .setTitle(t("Delete this video?", "حذف هذا الفيديو؟"))
+                            .setPositiveButton(t("Delete", "حذف")) { _, _ ->
+                                f.delete()
+                                fillList()
+                            }
+                            .setNegativeButton(t("Cancel", "تراجع"), null)
+                            .show()
+                    }
+                    row.addView(del, LinearLayout.LayoutParams(dp(48), dp(48)).apply { marginStart = dp(8) })
+                }
+                Fx.enter(card, 0)
+            }
+        }
     }
+
+    /** Encrypted videos saved by the recorder, newest first. */
+    private fun videoFiles(): List<File> =
+        File(filesDir, "videos").listFiles { f -> f.name.endsWith(".lbv") }?.sortedByDescending { it.lastModified() } ?: emptyList()
 
     private fun play(c: ParentEngine.ClipItem) {
         stopPlayer()
