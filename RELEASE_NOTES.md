@@ -1,3 +1,9 @@
+0.8.4: the Hold/Tap switch works.
+- The switch inside the talk button is now a tappable pill labelled Hold or Tap. Tapping it switches the mode.
+
+0.8.4: مفتاح الضغط/النقرة يعمل.
+- المفتاح داخل زر التحدث صار زراً صغيراً قابلاً للنقر، مكتوب عليه ضغط أو نقرة، ويبدّل الوضع عند الضغط عليه.
+
 0.8.3: new Wi-Fi help.
 - Child screen shows its Wi-Fi address, so you can type it on the parent phone if discovery is blocked.
 - When the child phone is not found, the parent shows the likely causes (Guest mode, AP/client isolation, VPN) and a button to type the address.
