@@ -662,8 +662,22 @@ class ParentActivity : Activity() {
         toast(t("Searching for the child phone...", "جارٍ البحث عن جوال الطفل..."))
         Thread {
             val found = Discovery.scan(applicationContext)
-            runOnUiThread { showPicker(found) }
+            Diag.i("Scan from ${Net.wifiIp(this) ?: "no Wi-Fi"}: found ${found.size} child phone(s)")
+            runOnUiThread { if (found.isEmpty()) showNotFound() else showPicker(found) }
         }.start()
+    }
+
+    private fun showNotFound() {
+        val own = Net.wifiIp(this) ?: "--"
+        AlertDialog.Builder(this)
+            .setTitle(t("Child phone not found", "لم نجد جوال الطفل"))
+            .setMessage(t(
+                "This phone: $own\n\nCheck:\n- The child phone is monitoring and on the same Wi-Fi.\n- The router is not in Guest mode.\n- 'AP isolation' or 'Client isolation' is OFF in the router. If it is ON, phones on the same Wi-Fi cannot see each other.\n- The VPN is off on both phones.",
+                "هذا الجوال: $own\n\nتأكد من:\n- جوال الطفل شغّال على نفس الواي فاي.\n- الراوتر ليس في وضع الضيوف (Guest).\n- خاصية 'AP isolation' أو 'Client isolation' مطفية في الراوتر. إذا كانت شغّالة، الجوالات على نفس الواي فاي ما تشوف بعض.\n- الـ VPN مطفي على الجوالين."
+            ))
+            .setPositiveButton(t("Type the address", "اكتب العنوان")) { _, _ -> askIp() }
+            .setNegativeButton(t("Cancel", "تراجع"), null)
+            .show()
     }
 
     private fun showPicker(found: List<Discovery.Found>) {

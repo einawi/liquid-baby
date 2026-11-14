@@ -33,6 +33,7 @@ class ChildActivity : Activity() {
     private var camBtn: Button? = null
     private var hero: TextView? = null
     private var heroSub: TextView? = null
+    private var addressLine: TextView? = null
     private var meter: ProgressBar? = null
     private var pairBtn: Button? = null
     private var pairNote: TextView? = null
@@ -75,6 +76,7 @@ class ChildActivity : Activity() {
                 }
                 addView(hero)
                 heroSub = line("")
+                addressLine = line("")
                 meter = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
                     max = 100
                 }
@@ -286,6 +288,7 @@ class ChildActivity : Activity() {
             "الأبوين المتصلين: $connected من $paired  ·  آخر مقطع $last"
         ) else t("Tap Start monitoring to begin.", "اضغط ابدأ المراقبة للبدء.")
         meter?.progress = ChildEngine.soundPercent()
+        addressLine?.text = t("Wi-Fi address: ", "عنوان الواي فاي: ") + (Net.wifiIp(this) ?: "--")
 
         mainBtn?.text = if (running) t("Stop monitoring", "أوقف المراقبة") else t("Start monitoring", "ابدأ المراقبة")
         mainBtn?.background = Look.glass(this, 22,
