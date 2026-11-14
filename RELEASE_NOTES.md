@@ -1,3 +1,11 @@
+0.9.2 (build 64): recorded video keeps the live picture's shape.
+- Recording uses the same size and proportions as the live picture, so the saved video, the gallery and shared copies match the live view.
+- If the picture changes shape during recording, it is fitted inside the frame (black edges), never stretched.
+
+0.9.2 (build 64): الفيديو المسجّل يحافظ على شكل الصورة المباشرة.
+- التسجيل يأخذ نفس الحجم والنسب الظاهرة في البث المباشر، فيتطابق الفيديو المحفوظ والمعرض والمشاركة.
+- إذا تغيّر شكل الصورة أثناء التسجيل، تُوضع داخل الإطار بأطراف سوداء بدل التمدد.
+
 0.9.2 (build 63): fixes black, empty videos.
 - Cause: the sound encoder's output was only read at the end, so the video file could not start during recording, and the pictures were dropped (log: 332 pictures in, 1 written).
 - Fixed: sound output is read during recording too, so every picture is written.

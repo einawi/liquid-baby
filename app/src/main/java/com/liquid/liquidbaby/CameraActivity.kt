@@ -233,7 +233,9 @@ class CameraActivity : android.app.Activity() {
 
     private fun startRecording() {
         if (ParentEngine.viewQuality < 0) return
-        val (w, h) = when (ParentEngine.viewQuality) {
+        // same size and shape as the live picture on screen (no stretching)
+        val live = latest
+        val (w, h) = if (live != null) Pair(live.width, live.height) else when (ParentEngine.viewQuality) {
             0 -> Pair(320, 240)
             1 -> Pair(640, 480)
             2 -> Pair(960, 540)

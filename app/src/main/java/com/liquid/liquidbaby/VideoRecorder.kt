@@ -1,6 +1,9 @@
 package com.liquid.liquidbaby
 
 import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.RectF
 import android.media.MediaCodec
 import android.media.MediaCodecInfo
 import android.media.MediaFormat
@@ -96,8 +99,7 @@ class VideoRecorder(private val outFile: File, private val maxMs: Long = 600_000
             return
         }
         framesIn++
-        val bmp = if (src.width == width && src.height == height) src
-        else Bitmap.createScaledBitmap(src, width, height, true)
+        val bmp = if (src.width == width && src.height == height) src else fitIntoFrame(src)
         bmp.getPixels(pixels, 0, width, 0, 0, width, height)
         toNv12(pixels, width, height, nv12)
         val idx = v.dequeueInputBuffer(0)
@@ -113,6 +115,22 @@ class VideoRecorder(private val outFile: File, private val maxMs: Long = 600_000
         drainVideo(false)
         drainAudioOut(false)
         drainAudio()
+    }
+
+    private var fitBmp: Bitmap? = null
+
+    /** Fits a picture of another shape inside the frame: same proportions, black edges where needed. */
+    private fun fitIntoFrame(src: Bitmap): Bitmap {
+        val out = fitBmp ?: Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).also { fitBmp = it }
+        val c = Canvas(out)
+        c.drawColor(Color.BLACK)
+        val s = minOf(width.toFloat() / src.width, height.toFloat() / src.height)
+        val dw = src.width * s
+        val dh = src.height * s
+        val l = (width - dw) / 2f
+        val t = (height - dh) / 2f
+        c.drawBitmap(src, null, RectF(l, t, l + dw, t + dh), null)
+        return out
     }
 
     /** Room sound or the parent's microphone, 16 kHz mono. Both are added into the same mix by time. */
