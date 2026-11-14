@@ -104,9 +104,16 @@ class VideoRecorder(private val outFile: File, private val maxMs: Long = 600_000
         toNv12(pixels, width, height, nv12)
         val idx = v.dequeueInputBuffer(0)
         if (idx >= 0) {
-            val buf = v.getInputBuffer(idx) ?: return
-            buf.clear()
-            buf.put(nv12)
+            val img = try { v.getInputImage(idx) } catch (e: Exception) { null }
+            if (img != null) {
+                // write each row where the encoder's own layout expects it (its row stride can be wider than the picture)
+                writePlanes(img)
+                img.close()
+            } else {
+                val buf = v.getInputBuffer(idx) ?: return
+                buf.clear()
+                buf.put(nv12)
+            }
             v.queueInputBuffer(idx, 0, nv12.size, elapsedUs(), 0)
             framesQueued++
         } else {
@@ -323,6 +330,30 @@ class VideoRecorder(private val outFile: File, private val maxMs: Long = 600_000
         releaseCodecs()
         try { muxer?.release() } catch (_: Exception) {}
         muxer = null
+    }
+
+    /** Copies the NV12 picture into the encoder's planes, row by row, using the encoder's stride. */
+    private fun writePlanes(img: android.media.Image) {
+        val yPlane = img.planes[0]
+        val uvPlane = img.planes[1]
+        val yBuf = yPlane.buffer
+        val uvBuf = uvPlane.buffer
+        for (row in 0 until height) {
+            val base = yPlane.rowStride * row
+            for (col in 0 until width) {
+                yBuf.put(base + col * yPlane.pixelStride, nv12[row * width + col])
+            }
+        }
+        val uvOffset = width * height
+        for (row in 0 until height / 2) {
+            val base = uvPlane.rowStride * row
+            for (col in 0 until width / 2) {
+                val src = uvOffset + row * width + col * 2
+                val dst = base + col * uvPlane.pixelStride
+                uvBuf.put(dst, nv12[src])
+                uvBuf.put(dst + 1, nv12[src + 1])
+            }
+        }
     }
 
     /** ARGB pixels to NV12 (Y plane, then interleaved U and V at half resolution). */

@@ -1,3 +1,11 @@
+0.9.2 (build 69): fixes the striped, distorted recorded video.
+- Cause: the recorder wrote each frame as one block, but the encoder's rows can be wider than the picture, so every row slid into the next.
+- Fixed: each row is written at the encoder's own row layout.
+
+0.9.2 (build 69): إصلاح الفيديو المسجّل المقطّع والمشوّه.
+- السبب: كان المسجّل يكتب الصورة كتلة واحدة، لكن صفوف المرمّز أعرض من الصورة، فتتراكب الصفوف.
+- الإصلاح: كل صف يُكتب حسب تخطيط المرمّز نفسه.
+
 0.9.2 (build 68): pairing also finds the child through the network announcement.
 - The pairing screen lists child phones found by the broadcast search and by the network announcement, and logs both results.
 
