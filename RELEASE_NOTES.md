@@ -1,3 +1,13 @@
+0.8.3: new Wi-Fi help.
+- Child screen shows its Wi-Fi address, so you can type it on the parent phone if discovery is blocked.
+- When the child phone is not found, the parent shows the likely causes (Guest mode, AP/client isolation, VPN) and a button to type the address.
+- Each scan writes its result to Diagnostics.
+
+0.8.3: مساعدة عند تغيير الواي فاي.
+- شاشة الطفل تعرض عنوان الواي فاي، فتقدر تكتبه في جوال الأب إذا كان الاكتشاف محجوباً.
+- إذا ما لقى الأب جوال الطفل، يعرض الأسباب المحتملة (وضع الضيوف، عزل الأجهزة AP/Client isolation، الـ VPN) وزر لكتابة العنوان.
+- كل بحث يُسجَّل نتيجته في التشخيص.
+
 0.8.2: faster screen changes and more visual effects.
 - Pairing data is read once when a screen opens, not every second (no repeated key decryption).
 - The recordings list updates only when a recording is added or deleted.
