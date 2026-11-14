@@ -2,8 +2,8 @@ plugins {
     id("com.android.application")
 }
 
-val appVersionName = "0.8.5"
-val appVersionCode = 43
+val appVersionName = "0.8.7"
+val appVersionCode = 45
 
 val keystoreFile: String? = System.getenv("KEYSTORE_FILE")
 

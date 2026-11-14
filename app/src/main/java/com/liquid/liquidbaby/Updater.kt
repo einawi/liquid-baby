@@ -99,7 +99,7 @@ object Updater {
             val tag = o.getString("tag_name")
             val parsed = VersionUtil.parseTag(tag)
                 ?: throw IllegalStateException("Release tag '$tag' is not in the form v<version>-build<number>.")
-            val notes = o.optString("body", "")
+            val notes = latestReleaseNotes(o.optString("body", ""))
             val assets: JSONArray = o.optJSONArray("assets") ?: JSONArray()
             var apkUrl = ""
             var apkSize = 0L
@@ -149,7 +149,7 @@ object Updater {
                 ?: throw IllegalStateException("Release tag '$tag' is not in the form v<version>-build<number>.")
             val apk = VersionUtil.apkFileName("LiquidBaby", parsed.name, parsed.code)
             val base = "https://github.com/$repo/releases/download/$tag/$apk"
-            val notes = fetchText("https://raw.githubusercontent.com/$repo/main/RELEASE_NOTES.md") ?: ""
+            val notes = latestReleaseNotes(fetchText("https://raw.githubusercontent.com/$repo/main/RELEASE_NOTES.md") ?: "")
             Diag.i("Update info read through the web redirect (API limit)")
             return Info(tag, parsed.name, parsed.code, notes, VersionUtil.isRequired(notes), base, 0L, "$base.sha256")
         } finally {

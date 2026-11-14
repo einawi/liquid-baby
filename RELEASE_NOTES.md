@@ -1,3 +1,19 @@
+0.8.7: the Hold/Tap toggle no longer triggers the talk button; smoother screen changes.
+- Touches on the small toggle stay with the toggle; the big talk button ignores them.
+- Each mode change is logged in Diagnostics.
+- Screens slide up and fade in (300 ms), and fade out (220 ms).
+
+0.8.7: المفتاح الصغير ما يشغّل زر التحدث الكبير، وانتقال أنعم بين الشاشات.
+- اللمس على المفتاح الصغير يبقى له، وزر التحدث الكبير يتجاهله.
+- كل تبديل للوضع يُسجَّل في التشخيص.
+- الشاشات تصعد وتظهر بتلاشٍ (300 ملّي ثانية)، وتختفي بتلاشٍ (220 ملّي ثانية).
+
+0.8.6: the update screen shows only the newest release notes.
+- Notes are cut to the newest version's section, in both languages, when they are shown.
+
+0.8.6: شاشة التحديث تعرض ملاحظات آخر إصدار فقط.
+- الملاحظات تُقتطع إلى قسم آخر إصدار (بالإنجليزي والعربي) قبل عرضها.
+
 0.8.5: small Hold/Tap toggle in the corner of the talk button.
 - A small slider switch with the label Hold or Tap sits in the top corner of the talk button. The knob slides and the track takes the accent colour in Tap mode.
 

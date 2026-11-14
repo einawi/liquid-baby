@@ -23,3 +23,22 @@ class RateGate {
         return true
     }
 }
+
+/**
+ * Keeps only the newest version's section of RELEASE_NOTES.md (its English and Arabic lines).
+ * The file lists every version, newest first; the update screen should show just the latest one.
+ */
+fun latestReleaseNotes(text: String): String {
+    val header = Regex("^\\s*(\\d+\\.\\d+\\.\\d+)[:\\s]")
+    var version: String? = null
+    val out = ArrayList<String>()
+    for (line in text.lines()) {
+        val m = header.find(line)
+        if (m != null) {
+            if (version == null) version = m.groupValues[1]
+            else if (m.groupValues[1] != version) break
+        }
+        if (version != null) out.add(line)
+    }
+    return if (out.isEmpty()) text.trim() else out.joinToString("\n").trim()
+}
