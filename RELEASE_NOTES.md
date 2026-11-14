@@ -1,3 +1,9 @@
+0.9.2 (build 62): recording diagnostics (pictures counted at each stage).
+- Diagnostics now shows how many pictures arrived during recording, how many reached the video encoder, and how many were dropped.
+
+0.9.2 (build 62): تشخيص التسجيل (عدّ الصور في كل مرحلة).
+- التشخيص يعرض عدد الصور التي وصلت أثناء التسجيل، وكم منها دخل المرمّز، وكم سقط.
+
 0.9.2 (build 61): correct video sizes and recording diagnostics.
 - Video sizes show kilobytes under 1 MB (previously a 5-second video showed 0 MB).
 - Diagnostics now records frames written, sound packets, file size, video dimensions, and playback errors.

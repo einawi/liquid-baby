@@ -43,6 +43,9 @@ class CameraActivity : android.app.Activity() {
     private var nightIcon: ImageButton? = null
     private var fpsSpinner: Spinner? = null
     private var recorder: VideoRecorder? = null
+    @Volatile
+    private var picturesTotal = 0
+    private var picturesAtRecordStart = 0
     private var recordIcon: ImageButton? = null
     private var fullRecord: ImageButton? = null
     private var frames = 0
@@ -178,6 +181,7 @@ class CameraActivity : android.app.Activity() {
         ParentEngine.frameListener = { bmp ->
             latest = bmp
             frames++
+            picturesTotal++
             try { recorder?.onFrame(bmp) } catch (e: Throwable) { Diag.i("Recorder frame problem: " + e.message) }
             if (pending.compareAndSet(false, true)) {
                 runOnUiThread {
@@ -245,6 +249,8 @@ class CameraActivity : android.app.Activity() {
             return
         }
         recorder = rec
+        picturesAtRecordStart = picturesTotal
+        Diag.i("Recorder started: " + w + "x" + h + " at " + fps + " fps, bitrate " + bitrate)
         ParentEngine.roomSink = { s, n -> try { rec.onSound(s, n) } catch (e: Throwable) { Diag.i("Recorder sound problem: " + e.message) } }
         ParentEngine.micSink = { s, n -> try { rec.onSound(s, n) } catch (e: Throwable) { Diag.i("Recorder mic problem: " + e.message) } }
         updateRecordIcons()
@@ -258,6 +264,7 @@ class CameraActivity : android.app.Activity() {
     /** Runs when the recording stops, by the button, by leaving, or by the 10-minute limit. */
     private fun finishRecording(rec: VideoRecorder, tmp: File, ok: Boolean) {
         if (recorder !== rec) return
+        Diag.i("Pictures received during recording: " + (picturesTotal - picturesAtRecordStart))
         recorder = null
         ParentEngine.roomSink = null
         ParentEngine.micSink = null

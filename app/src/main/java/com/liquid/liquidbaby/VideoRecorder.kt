@@ -33,6 +33,9 @@ class VideoRecorder(private val outFile: File, private val maxMs: Long = 600_000
     private var audioEos = false
     private var eosDeadline = 0L
     private var framesWritten = 0
+    private var framesIn = 0
+    private var framesQueued = 0
+    private var framesDropped = 0
     private var audioWritten = 0
     private var videoEos = false
 
@@ -92,6 +95,7 @@ class VideoRecorder(private val outFile: File, private val maxMs: Long = 600_000
             finish(true)
             return
         }
+        framesIn++
         val bmp = if (src.width == width && src.height == height) src
         else Bitmap.createScaledBitmap(src, width, height, true)
         bmp.getPixels(pixels, 0, width, 0, 0, width, height)
@@ -102,6 +106,9 @@ class VideoRecorder(private val outFile: File, private val maxMs: Long = 600_000
             buf.clear()
             buf.put(nv12)
             v.queueInputBuffer(idx, 0, nv12.size, elapsedUs(), 0)
+            framesQueued++
+        } else {
+            framesDropped++
         }
         drainVideo(false)
         drainAudio()
@@ -151,6 +158,7 @@ class VideoRecorder(private val outFile: File, private val maxMs: Long = 600_000
             releaseCodecs()
             // an empty file is never reported as saved
             val ok = started && outFile.exists() && outFile.length() > 1024
+            Diag.i("Recorder pictures: in=" + framesIn + ", queued=" + framesQueued + ", dropped=" + framesDropped + ", encoded=" + framesWritten)
             Diag.i("Recorder finished: video frames=" + framesWritten + ", audio packets=" + audioWritten + ", file=" + (if (outFile.exists()) outFile.length() else 0) + " bytes, started=" + started)
             if (!ok) {
                 outFile.delete()
