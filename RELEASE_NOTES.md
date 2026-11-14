@@ -3,6 +3,7 @@
 - Records the picture as shown (zoom and quality included), room sound while you hear it, and your microphone while you talk.
 - Stops when you press the button, when you leave the camera screen (you are asked first), or after 10 minutes. Saved encrypted on the parent phone.
 - Recording problems are logged in Diagnostics and do not stop the live view or the connection.
+- Fixed: pressing stop no longer freezes the app. Stopping runs in the background, with a 4-second limit.
 - New feature, tested on a phone only as far as the build compiles: if you see lag or a crash while recording, tell us in Diagnostics.
 - Video list and playback: next version.
 
@@ -11,6 +12,7 @@
 - يسجّل الصورة كما تظهر (مع الزوم والجودة)، وصوت الغرفة عندما تسمعه، وميكروفونك أثناء التحدث.
 - يتوقف عند الضغط عليه، أو عند الخروج من شاشة الكاميرا (يسألك أولاً)، أو بعد 10 دقائق. يُحفظ مشفّراً على جوال الأب.
 - مشاكل التسجيل تُسجَّل في التشخيص ولا توقف البث المباشر ولا الاتصال.
+- تم إصلاح: الضغط على إيقاف التسجيل ما يعود يجمّد التطبيق. الإيقاف يصير في الخلفية بحد أقصى 4 ثوانٍ.
 - ميزة جديدة: إذا لاحظت تأخيراً أو توقفاً أثناء التسجيل، اكتب لنا ما صار ومعه سطر التشخيص.
 - قائمة الفيديوهات والتشغيل: الإصدار القادم.
 

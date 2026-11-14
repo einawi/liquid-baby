@@ -31,6 +31,7 @@ class VideoRecorder(private val outFile: File, private val maxMs: Long = 600_000
     private var height = 0
     private var startNs = 0L
     private var audioEos = false
+    private var eosDeadline = 0L
     private var videoEos = false
 
     private var nv12 = ByteArray(0)
@@ -119,15 +120,19 @@ class VideoRecorder(private val outFile: File, private val maxMs: Long = 600_000
     }
 
     /** Stops and saves. The caller then encrypts the result with VideoVault. */
-    @Synchronized
+    /** Returns at once. The encoders are drained on a background thread, so the screen never freezes. */
     fun stop() {
-        if (stopping) return
-        finish(false)
+        Thread({
+            synchronized(this) {
+                if (!stopping) finish(false)
+            }
+        }, "LiquidBaby-rec-stop").start()
     }
 
     private fun finish(byLimit: Boolean) {
         stopping = true
         try {
+            eosDeadline = System.currentTimeMillis() + 4000
             drainAudio(true)
             signalEos()
             drainVideo(true)
@@ -152,9 +157,10 @@ class VideoRecorder(private val outFile: File, private val maxMs: Long = 600_000
         val v = venc ?: return
         val info = MediaCodec.BufferInfo()
         while (true) {
-            val idx = v.dequeueOutputBuffer(info, if (untilEos) 10_000 else 0)
+            if (untilEos && System.currentTimeMillis() > eosDeadline) return
+            val idx = v.dequeueOutputBuffer(info, if (untilEos) 200 else 0)
             when {
-                idx == MediaCodec.INFO_TRY_AGAIN_LATER -> if (!untilEos) return
+                idx == MediaCodec.INFO_TRY_AGAIN_LATER -> if (!untilEos || System.currentTimeMillis() > eosDeadline) return
                 idx == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
                     vFormat = v.outputFormat
                     tryStartMuxer()
@@ -179,11 +185,11 @@ class VideoRecorder(private val outFile: File, private val maxMs: Long = 600_000
 
     private fun signalEos() {
         venc?.let { v ->
-            val idx = v.dequeueInputBuffer(10_000)
+            val idx = v.dequeueInputBuffer(200)
             if (idx >= 0) v.queueInputBuffer(idx, 0, 0, elapsedUs(), MediaCodec.BUFFER_FLAG_END_OF_STREAM)
         }
         aenc?.let { a ->
-            val idx = a.dequeueInputBuffer(10_000)
+            val idx = a.dequeueInputBuffer(200)
             if (idx >= 0) a.queueInputBuffer(idx, 0, 0, audioUs(), MediaCodec.BUFFER_FLAG_END_OF_STREAM)
         }
     }
@@ -218,9 +224,10 @@ class VideoRecorder(private val outFile: File, private val maxMs: Long = 600_000
         val a = aenc ?: return
         val info = MediaCodec.BufferInfo()
         while (true) {
-            val idx = a.dequeueOutputBuffer(info, if (untilEos) 10_000 else 0)
+            if (untilEos && System.currentTimeMillis() > eosDeadline) return
+            val idx = a.dequeueOutputBuffer(info, if (untilEos) 200 else 0)
             when {
-                idx == MediaCodec.INFO_TRY_AGAIN_LATER -> if (!untilEos) return
+                idx == MediaCodec.INFO_TRY_AGAIN_LATER -> if (!untilEos || System.currentTimeMillis() > eosDeadline) return
                 idx == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
                     aFormat = a.outputFormat
                     tryStartMuxer()
