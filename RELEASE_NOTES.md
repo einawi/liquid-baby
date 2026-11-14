@@ -1,3 +1,9 @@
+0.8.10: full-screen picture no longer upside down.
+- The Rotate button in full screen turns only the picture, in 90-degree steps. The phone's own orientation is not changed.
+
+0.8.10: الصورة في ملء الشاشة ما تنقلب.
+- زر التدوير في ملء الشاشة يدوّر الصورة فقط، بخطوات 90 درجة، ولا يغيّر اتجاه الجوال.
+
 0.8.9: live camera quality levels, full screen with microphone, manual rotation.
 - Quality: Low, Normal, 960×540, 720p, shown side by side. The chosen one has a tick.
 - Full screen button: black screen with the picture, a Back button (top left), a Rotate button (top right), and a microphone (bottom right) that works like the talk button (hold or tap, as set).
