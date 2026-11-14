@@ -48,6 +48,7 @@ class ParentActivity : Activity() {
     private var talkBtn: Button? = null
     private var talkModeLabel: TextView? = null
     private var talkModeToggle: ModeToggle? = null
+    private var modeRowView: View? = null
     private var talkPulse: ObjectAnimator? = null
     private val talkLimit = Runnable {
         onTalkUp()
@@ -185,6 +186,10 @@ class ParentActivity : Activity() {
                     background = Look.glass(context, 26, Look.BUTTON)
                     minHeight = dp(88)
                     setOnTouchListener { _, ev ->
+                        // the Hold/Tap toggle sits on top of this button: touches inside its bounds belong to it
+                        val hit = android.graphics.Rect()
+                        modeRowView?.getHitRect(hit)
+                        if (hit.contains(ev.x.toInt(), ev.y.toInt())) return@setOnTouchListener false
                         if (talkMode() == "press") {
                             if (ev.actionMasked == MotionEvent.ACTION_UP) togglePressTalk()
                         } else {
@@ -224,6 +229,7 @@ class ParentActivity : Activity() {
                     marginEnd = dp(12)
                 })
                 modeRow.bringToFront()
+                modeRowView = modeRow
                 addView(talkFrame, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
                     topMargin = dp(12)
                 })
@@ -360,7 +366,7 @@ class ParentActivity : Activity() {
         }
         if (!entered) {
             entered = true
-            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+            overridePendingTransition(R.anim.screen_in, R.anim.screen_out)
         }
         if (Prefs.getBool("serviceWanted", false) && !ParentEngine.running && pairedCache != null) {
             UnitService.start(this)
@@ -386,6 +392,7 @@ class ParentActivity : Activity() {
 
     /** Applies hold or tap mode from the toggle. Stops any talk that is running. */
     private fun applyTalkMode(press: Boolean) {
+        Diag.i("Talk mode changed to " + (if (press) "tap" else "hold"))
         Prefs.putString("talkMode", if (press) "press" else "hold")
         if (ParentEngine.talking) onTalkUp()
         talkModeLabel?.text = modePillText()

@@ -39,4 +39,14 @@ class LogicTest {
         assertEquals(1000L, Wav.durationMs(44 + 32000L))
         assertEquals(0L, Wav.durationMs(10L))
     }
+
+    @Test
+    fun latestNotesKeepsOnlyTheNewestVersion() {
+        val text = "Release notes:\n0.8.5: new thing\n- a\n\n0.8.5: arabic line\n\n0.8.4: old thing\n- b\n"
+        val got = latestReleaseNotes(text)
+        assertTrue(got.contains("0.8.5: new thing"))
+        assertTrue(got.contains("0.8.5: arabic line"))
+        assertFalse(got.contains("0.8.4"))
+        assertFalse(got.contains("Release notes:"))
+    }
 }

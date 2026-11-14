@@ -127,7 +127,7 @@ class ChildActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
-        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+        overridePendingTransition(R.anim.screen_in, R.anim.screen_out)
         if (builtAr != Tr.isAr()) build()
         ChildEngine.onChange = { runOnUiThread { refresh() } }
         if (Prefs.getBool("serviceWanted", false) && !ChildEngine.running &&
