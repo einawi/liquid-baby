@@ -36,6 +36,13 @@ object Diag {
 
     fun i(msg: String) = log("INFO", msg)
 
+    private val gate = RateGate()
+
+    /** Writes the line at most once per [everyMs] for this key, so repeated errors do not fill the log. */
+    fun limited(key: String, msg: String, everyMs: Long = 10_000L) {
+        if (gate.allow(key, System.currentTimeMillis(), everyMs)) i(msg)
+    }
+
     fun e(msg: String, t: Throwable? = null) =
         log("ERROR", if (t == null) msg else msg + "\n" + stackTrace(t))
 

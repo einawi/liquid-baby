@@ -180,11 +180,10 @@ class AudioMonitor(
         }
         try {
             if (!dir.exists()) dir.mkdirs()
+            val wav = Wav.header(data.size) + data
+            val stored = ClipCrypt.seal(wav) ?: wav
             val tmp = File(dir, "$startMs.tmp")
-            FileOutputStream(tmp).use {
-                it.write(Wav.header(data.size))
-                it.write(data)
-            }
+            FileOutputStream(tmp).use { it.write(stored) }
             val done = File(dir, "$startMs.wav")
             if (tmp.renameTo(done)) onClip(done, startMs)
         } catch (e: Exception) {

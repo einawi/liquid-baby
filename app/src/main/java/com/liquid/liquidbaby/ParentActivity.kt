@@ -1,54 +1,66 @@
 package com.liquid.liquidbaby
 
-import android.app.Activity
 import android.Manifest
+import android.animation.ObjectAnimator
+import android.app.Activity
 import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.view.MotionEvent
 import android.media.MediaPlayer
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.text.InputType
+import android.view.MotionEvent
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.LinearLayout
+import android.widget.ProgressBar
+import android.widget.SeekBar
 import android.widget.TextView
 import java.text.DateFormat
 import java.util.Date
 
+/** Parent screen: status first, then monitoring, then recordings, with settings folded away. */
 class ParentActivity : Activity() {
 
     private val ui = Handler(Looper.getMainLooper())
-    private var statusTv: TextView? = null
-    private var toggleBtn: Button? = null
+    private var builtAr: Boolean? = null
+    private var pulse: ObjectAnimator? = null
+
+    private var statusPill: TextView? = null
+    private var runBtn: Button? = null
     private var vpnBtn: Button? = null
+    private var childLine: TextView? = null
+    private var detailLine: TextView? = null
+    private var batteryDot: View? = null
+    private var batteryTv: TextView? = null
+    private var tempDot: View? = null
+    private var tempTv: TextView? = null
+    private var meter: ProgressBar? = null
+    private var listenBtn: Button? = null
     private var talkBtn: Button? = null
-    private var listBox: LinearLayout? = null
+    private var settingsHead: TextView? = null
+    private var settingsBox: LinearLayout? = null
+    private var settingsOpen = false
     private var lenLabel: TextView? = null
+    private var lenBar: SeekBar? = null
     private var sensLabel: TextView? = null
-    private var lenBar: android.widget.SeekBar? = null
-    private var sensBar: android.widget.SeekBar? = null
-    private var player: MediaPlayer? = null
-    private var playingTs = 0L
+    private var sensBar: SeekBar? = null
+    private var intervalLabel: TextView? = null
+    private var intervalBar: SeekBar? = null
+    private var walkieLabel: TextView? = null
+    private var walkieBar: SeekBar? = null
+    private var listBox: LinearLayout? = null
     private var lastClipCount = -1
     private var draggingLen = false
     private var draggingSens = false
-    private var intervalLabel: TextView? = null
-    private var intervalBar: android.widget.SeekBar? = null
-    private var walkieLabel: TextView? = null
-    private var statusLine: TextView? = null
-    private var meter: android.widget.ProgressBar? = null
-    private var statusDot: View? = null
-    private var tempDot: View? = null
-    private var tempLine: TextView? = null
     private var warnedVault = false
-    private var chipTv: TextView? = null
-    private fun intervalText(v: Int): String =
-        if (v == 0) "Listening: continuously" else "Checking every $v seconds (listens 5 s each time)"
-    private var listenBtn: Button? = null
+
+    private var player: MediaPlayer? = null
+    private var playingTs = 0L
     private var waveView: WaveView? = null
     private var waveBars = FloatArray(0)
     private val waveTick = object : Runnable {
@@ -72,123 +84,218 @@ class ParentActivity : Activity() {
         }
     }
 
+    private fun t(en: String, ar: String): String = Tr.pick(en, ar)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         build()
     }
 
     private fun build() {
+        builtAr = Tr.isAr()
+        pulse?.cancel()
+        pulse = null
+        val paired = PairStore.paired()
         screen {
-            addTitle("Parent unit")
-            chipTv = addChip("")
-            statusTv = addBody("")
-            val vb = addButton("A VPN is blocking local connections: open VPN settings") { openVpnSettings() }
-            vb.visibility = View.GONE
-            vpnBtn = vb
-            val paired = PairStore.paired()
+            addTitle(t("Parent", "وحدة الأبوين"))
+            statusPill = addChip("")
+            runBtn = addButton(t("Start monitoring", "ابدأ المراقبة")) { toggle() }
+            Fx.press(runBtn!!)
+            vpnBtn = addButton(t("VPN is blocking the connection: open VPN settings", "الـ VPN يمنع الاتصال: افتح إعدادات الـ VPN")) {
+                openVpnSettings()
+            }
+            vpnBtn?.visibility = View.GONE
+
             if (paired == null) {
-                addButton("Pair with the child phone") { startPairFlow() }
-                addBody("First, on the child phone tap 'Allow a new parent phone to pair'.")
-            } else {
-                addBody("Paired with: " + paired.childName.ifBlank { "child phone" })
-                toggleBtn = addButton("Start listening") { toggle() }
-                addButton("Remove pairing") {
-                    AlertDialog.Builder(this@ParentActivity)
-                        .setTitle("Remove pairing with the child phone?")
-                        .setPositiveButton("Remove") { _, _ ->
-                            UnitService.stop(this@ParentActivity)
-                            PairStore.clearPaired()
-                            build()
-                        }
-                        .setNegativeButton("Cancel", null)
-                        .show()
+                card {
+                    addBody(t("No child phone yet", "لم يتم اقتران جوال طفل بعد"))
+                    addButton(t("Pair with the child phone", "اقرن مع جوال الطفل")) { startPairFlow() }
+                    line(t("On the child phone, tap 'Allow a new parent phone to pair'.",
+                        "على جوال الطفل، اضغط 'السماح بإقران جوال أبوين جديد'."))
                 }
-                listenBtn = addIconButton("Listen to the room (sound only)", R.drawable.ic_listen) { toggleListen() }
-                addIconButton("Open the live camera", R.drawable.ic_camera) {
+            } else {
+                card {
+                    val row = addRow()
+                    batteryDot = Fx.dot(context, 0xFF8899AA.toInt())
+                    row.addView(batteryDot)
+                    childLine = TextView(context).apply {
+                        textSize = 17f
+                        setTextColor(Look.TEXT)
+                        setTypeface(typeface, android.graphics.Typeface.BOLD)
+                    }
+                    childLine?.text = paired.childName.ifBlank { t("Child phone", "جوال الطفل") }
+                    row.addView(childLine)
+                    detailLine = line("")
+                    batteryTv = line("", 15f)
+                    val tRow = addRow()
+                    tempDot = Fx.dot(context, 0xFF8899AA.toInt())
+                    tRow.addView(tempDot)
+                    tempTv = TextView(context).apply { textSize = 15f; setTextColor(Look.SUB) }
+                    tRow.addView(tempTv)
+                    meter = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
+                        max = 100
+                        progress = ParentEngine.level
+                    }
+                    addView(meter, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(8)).apply {
+                        topMargin = dp(10)
+                    })
+                    line(t("Sound in the room", "صوت الغرفة"), 13f)
+                }
+
+                sectionLabel(t("Monitor", "المراقبة"))
+                val grid = LinearLayout(context)
+                grid.orientation = LinearLayout.HORIZONTAL
+                addView(grid)
+                tile(grid, t("Live camera", "الكاميرا المباشرة"), t("See the room", "شاهد الغرفة")) {
                     if (ParentEngine.connected) {
                         startActivity(Intent(this@ParentActivity, CameraActivity::class.java))
                     } else {
-                        toast("Not connected to the child phone yet.")
+                        toast(t("Not connected to the child phone yet.", "غير متصل بجوال الطفل بعد."))
                     }
                 }
-                val tb = addIconButton("Hold to talk to the child", R.drawable.ic_mic) { }
-                tb.textSize = 20f
-                tb.minHeight = dp(96)
-                tb.setOnTouchListener { _, ev ->
-                    when (ev.action) {
-                        MotionEvent.ACTION_DOWN -> onTalkDown()
-                        MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> onTalkUp()
+                val listenTile = tile(grid, t("Listen", "استماع"), t("Sound only", "صوت فقط")) { toggleListen() }
+                listenBtn = listenTile
+
+                talkBtn = Button(context).apply {
+                    text = t("Hold to talk", "اضغط مع الاستمرار للتحدث")
+                    isAllCaps = false
+                    textSize = 18f
+                    setTextColor(Look.TEXT)
+                    background = Look.glass(context, 26, Look.BUTTON)
+                    minHeight = dp(88)
+                    setOnTouchListener { _, ev ->
+                        when (ev.actionMasked) {
+                            MotionEvent.ACTION_DOWN -> onTalkDown()
+                            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> onTalkUp()
+                        }
+                        true
                     }
-                    true
                 }
-                talkBtn = tb
-                lenLabel = addBody("")
-                lenBar = addSlider(5, 60, ParentEngine.childLength, { v ->
-                    draggingLen = true
-                    lenLabel?.text = Tr.t("Clip length: $v seconds")
-                }, { v ->
-                    draggingLen = false
-                    Prefs.putInt("clipSeconds", v)
-                    ParentEngine.childLength = v
-                    ParentEngine.sendSettings(v, ParentEngine.childSens)
+                addView(talkBtn, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                    topMargin = dp(12)
                 })
-                sensLabel = addBody("")
-                sensBar = addSlider(1, 5, ParentEngine.childSens, { v ->
-                    draggingSens = true
-                    sensLabel?.text = Tr.t("Sensitivity: $v of 5 (5 = hears quieter sounds)")
-                }, { v ->
-                    draggingSens = false
-                    ParentEngine.childSens = v
-                    ParentEngine.sendSettings(ParentEngine.childLength, v)
-                })
-                intervalLabel = addBody("")
-                intervalBar = addSlider(0, 15, ParentEngine.childInterval, { v ->
-                    intervalLabel?.text = Tr.t(intervalText(v))
-                }, { v ->
-                    ParentEngine.setInterval(v)
-                })
-                walkieLabel = addBody("")
-                addSlider(1, 10, ParentEngine.childTalkVol, { v ->
-                    walkieLabel?.text = Tr.t("Walkie-talkie volume on the child phone: $v of 10")
-                }, { v ->
-                    ParentEngine.setTalkVolume(v)
-                })
-                val batteryRow = addRow()
-                statusDot = View(context)
-                batteryRow.addView(statusDot, LinearLayout.LayoutParams(dp(14), dp(14)).apply {
-                    leftMargin = dp(8)
-                    rightMargin = dp(8)
-                })
-                statusLine = TextView(context)
-                statusLine?.textSize = 16f
-                statusLine?.setTextColor(Look.SUB)
-                batteryRow.addView(statusLine, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-                val tempRow = addRow()
-                tempDot = View(context)
-                tempRow.addView(tempDot, LinearLayout.LayoutParams(dp(14), dp(14)).apply {
-                    leftMargin = dp(8)
-                    rightMargin = dp(8)
-                })
-                tempLine = TextView(context)
-                tempLine?.textSize = 16f
-                tempLine?.setTextColor(Look.SUB)
-                tempRow.addView(tempLine, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-                meter = android.widget.ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal)
-                meter?.max = 100
-                addView(meter, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(10)))
-                addBody("Recordings")
+
+                sectionLabel(t("Recordings", "التسجيلات"))
                 val box = LinearLayout(context)
                 box.orientation = LinearLayout.VERTICAL
                 addView(box)
                 listBox = box
+
+                sectionLabel(t("Settings", "الإعدادات"))
+                settingsHead = TextView(context).apply {
+                    textSize = 16f
+                    setTextColor(Look.TEXT)
+                    setPadding(dp(4), dp(10), dp(4), dp(10))
+                    setOnClickListener { toggleSettings() }
+                }
+                addView(settingsHead)
+                val sBox = LinearLayout(context)
+                sBox.orientation = LinearLayout.VERTICAL
+                sBox.visibility = if (settingsOpen) View.VISIBLE else View.GONE
+                addView(sBox)
+                settingsBox = sBox
+                sBox.card(14) {
+                    lenLabel = line("")
+                    lenBar = addSlider(5, 60, ParentEngine.childLength, { v ->
+                        draggingLen = true
+                        lenLabel?.text = t("Clip length: $v seconds", "طول المقطع: $v ثوانٍ")
+                    }, { v ->
+                        draggingLen = false
+                        Prefs.putInt("clipSeconds", v)
+                        ParentEngine.childLength = v
+                        ParentEngine.sendSettings(v, ParentEngine.childSens)
+                    })
+                    sensLabel = line("")
+                    sensBar = addSlider(1, 5, ParentEngine.childSens, { v ->
+                        draggingSens = true
+                        sensLabel?.text = t("Sensitivity: $v of 5", "الحساسية: $v من 5")
+                    }, { v ->
+                        draggingSens = false
+                        ParentEngine.childSens = v
+                        ParentEngine.sendSettings(ParentEngine.childLength, v)
+                    })
+                    intervalLabel = line("")
+                    intervalBar = addSlider(0, 15, ParentEngine.childInterval, { v ->
+                        intervalLabel?.text = intervalText(v)
+                    }, { v ->
+                        ParentEngine.setInterval(v)
+                    })
+                    walkieLabel = line("")
+                    walkieBar = addSlider(1, 10, ParentEngine.childTalkVol, { v ->
+                        walkieLabel?.text = t("Talk volume on the child phone: $v of 10", "صوت المحادثة على جوال الطفل: $v من 10")
+                    }, { v ->
+                        ParentEngine.setTalkVolume(v)
+                    })
+                }
+
+                Button(context).apply {
+                    text = t("Remove pairing", "إلغاء الاقتران")
+                    isAllCaps = false
+                    setTextColor(0xFFFF8A8A.toInt())
+                    background = Look.glass(context, 22, 0x22FF5252)
+                    setOnClickListener { confirmRemove() }
+                    Fx.press(this)
+                }.let { b ->
+                    addView(b, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                        topMargin = dp(28)
+                    })
+                }
             }
         }
         refresh()
         fillList()
     }
 
+    /** A square tile in a two-column grid. Returns the button so it can be styled later. */
+    private fun LinearLayout.tile(grid: LinearLayout, title: String, sub: String, onClick: () -> Unit): Button {
+        val b = Button(context)
+        b.isAllCaps = false
+        b.setTextColor(Look.TEXT)
+        b.background = Look.glass(context, 22, Look.BUTTON)
+        b.text = "$title\n$sub"
+        b.textSize = 16f
+        b.minHeight = dp(104)
+        b.setOnClickListener { onClick() }
+        Fx.press(b)
+        val lp = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        lp.marginEnd = dp(6)
+        lp.marginStart = dp(6)
+        grid.addView(b, lp)
+        return b
+    }
+
+    private fun intervalText(v: Int): String =
+        if (v == 0) t("Listening: continuously", "الاستماع: متواصل")
+        else t("Checks every $v seconds (listens 5 s each time)", "يفحص كل $v ثوانٍ (يستمع 5 ثوانٍ في كل مرة)")
+
+    private fun toggleSettings() {
+        settingsOpen = !settingsOpen
+        val box = settingsBox ?: return
+        if (settingsOpen) {
+            box.alpha = 0f
+            box.visibility = View.VISIBLE
+            box.animate().alpha(1f).setDuration(250).start()
+        } else {
+            box.visibility = View.GONE
+        }
+        refresh()
+    }
+
+    private fun confirmRemove() {
+        AlertDialog.Builder(this)
+            .setTitle(t("Remove pairing with the child phone?", "هل تريد إلغاء الاقتران مع جوال الطفل؟"))
+            .setPositiveButton(t("Remove", "إلغاء الاقتران")) { _, _ ->
+                UnitService.stop(this)
+                PairStore.clearPaired()
+                build()
+            }
+            .setNegativeButton(t("Cancel", "تراجع"), null)
+            .show()
+    }
+
     override fun onResume() {
         super.onResume()
+        if (builtAr != Tr.isAr()) build()
         ParentEngine.onChange = { runOnUiThread { refresh() } }
         ParentEngine.setLevelSub(true)
         if (Vault.failed && !warnedVault) {
@@ -214,11 +321,13 @@ class ParentActivity : Activity() {
     private fun onTalkDown() {
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), 30)
-            toast("Allow the microphone, then hold the button again.")
+            toast(t("Allow the microphone, then hold the button again.", "اسمح بالميكروفون ثم اضغط الزر مرة أخرى."))
             return
         }
         if (ParentEngine.beginTalk()) {
-            talkBtn?.text = Tr.t("Talking...  release to stop")
+            talkBtn?.text = t("Talking… release to stop", "تتحدث… ارفع إصبعك للإيقاف")
+            talkBtn?.background = Look.glass(this, 26, Fx.tint(Themes.current().accent, 0x66))
+            talkBtn?.animate()?.scaleX(1.02f)?.scaleY(1.02f)?.setDuration(200)?.start()
         } else {
             toast(ParentEngine.talkNote)
         }
@@ -226,66 +335,86 @@ class ParentActivity : Activity() {
 
     private fun onTalkUp() {
         ParentEngine.endTalk()
-        talkBtn?.text = Tr.t("Hold to talk to the child")
+        talkBtn?.text = t("Hold to talk", "اضغط مع الاستمرار للتحدث")
+        talkBtn?.background = Look.glass(this, 26, Look.BUTTON)
+        talkBtn?.animate()?.scaleX(1f)?.scaleY(1f)?.setDuration(200)?.start()
     }
 
     private fun toggle() {
         if (ParentEngine.running) UnitService.stop(this) else UnitService.start(this)
     }
 
-    private fun paintDot(v: View?, color: Int) {
-        v?.background = android.graphics.drawable.GradientDrawable().apply {
-            shape = android.graphics.drawable.GradientDrawable.OVAL
-            setColor(color)
-        }
+    /** One label for the whole connection state. Engine details stay in Diagnostics. */
+    private fun stateLabel(): Pair<String, Int> = when {
+        ParentEngine.connected -> Pair(t("Connected", "متصل"), 0xFF2E9E6A.toInt())
+        ParentEngine.running -> Pair(t("Searching for the child", "جارٍ البحث عن الطفل"), 0xFFB7791F.toInt())
+        else -> Pair(t("Stopped", "متوقف"), 0xFF6B7785.toInt())
     }
 
-    private fun refreshExtra() {
-        if (ParentEngine.connected) setChip(chipTv, "Connected", 0xFF2E9E6A.toInt())
-        else setChip(chipTv, "Not connected", 0xFF6B7785.toInt())
-        intervalLabel?.text = Tr.t(intervalText(ParentEngine.childInterval))
-        walkieLabel?.text = Tr.t("Walkie-talkie volume on the child phone: " + ParentEngine.childTalkVol + " of 10")
+    private fun refresh() {
+        val (label, color) = stateLabel()
+        setChip(statusPill, label, color)
+        runBtn?.text = t(if (ParentEngine.running) "Stop monitoring" else "Start monitoring",
+            if (ParentEngine.running) "أوقف المراقبة" else "ابدأ المراقبة")
+        runBtn?.background = Look.glass(this, 22,
+            if (ParentEngine.running) Fx.tint(Themes.current().accent, 0x40) else Look.BUTTON)
+        vpnBtn?.visibility = if (Net.vpnBlocksLocal(this)) View.VISIBLE else View.GONE
+
+        if (ParentEngine.connected) {
+            if (pulse == null) pulse = Fx.breathe(statusPill ?: return)
+        } else {
+            pulse?.cancel()
+            pulse = null
+            statusPill?.alpha = 1f
+        }
+
+        val wifi = Net.wifiIp(this)
+        val ago = (System.currentTimeMillis() - ParentEngine.lastContact) / 1000
+        detailLine?.text = t(
+            "Wi-Fi: ${wifi ?: "--"}" + if (ParentEngine.connected) "  ·  last contact ${ago}s ago" else "",
+            "الواي فاي: ${wifi ?: "--"}" + if (ParentEngine.connected) "  ·  آخر اتصال منذ ${ago} ثانية" else ""
+        )
         val pct = ParentEngine.batteryPct
         val tc = ParentEngine.tempC
-        statusLine?.text = Tr.t(
-            if (pct < 0) "Child unit battery: --"
-            else "Child unit battery: " + pct + "%" + (if (ParentEngine.charging) " (charging)" else "")
-        )
-        tempLine?.text = Tr.t(
-            if (pct < 0) "Temperature: --"
-            else "Temperature: " + String.format(java.util.Locale.US, "%.1f", tc) + " °C"
-        )
-        paintDot(statusDot, when {
+        batteryTv?.text = if (pct < 0) t("Battery: --", "البطارية: --")
+        else t("Battery ", "البطارية ") + pct + "%" +
+            (if (ParentEngine.charging) t(" (charging)", " (تشحن)") else "")
+        tempTv?.text = if (pct < 0) t("Temperature: --", "الحرارة: --")
+        else t("Temperature ", "الحرارة ") + String.format(java.util.Locale.US, "%.1f", tc) + " °C"
+        Fx.paintDot(batteryDot, when {
             pct < 0 -> 0xFF8899AA.toInt()
             !ParentEngine.charging && pct < 20 -> 0xFFE53935.toInt()
             !ParentEngine.charging && pct < 40 -> 0xFFFFA726.toInt()
             else -> 0xFF66BB6A.toInt()
         })
-        paintDot(tempDot, when {
+        Fx.paintDot(tempDot, when {
             pct < 0 -> 0xFF8899AA.toInt()
             tc >= 42.0 -> 0xFFE53935.toInt()
             tc >= 38.0 -> 0xFFFFA726.toInt()
             else -> 0xFF66BB6A.toInt()
         })
         meter?.progress = ParentEngine.level
-    }
 
-    private fun refresh() {
-        refreshExtra()
-        val note = if (ParentEngine.talkNote.isEmpty()) "" else ParentEngine.talkNote + "\n"
-        statusTv?.text = Tr.t("Status: " + ParentEngine.status + "\n" + note + Net.describe(this))
-        if (!ParentEngine.talking && talkBtn?.text?.startsWith("Talking") == true) talkBtn?.text = "Hold to talk to the child"
-        vpnBtn?.visibility = if (Net.vpnBlocksLocal(this)) View.VISIBLE else View.GONE
-        toggleBtn?.text = Tr.t(if (ParentEngine.running) "Stop listening" else "Start listening")
-        listenBtn?.text = Tr.t(if (ParentEngine.listening) "Stop listening to the room" else "Listen to the room (sound only)")
+        listenBtn?.text = t(if (ParentEngine.listening) "Stop" else "Listen",
+            if (ParentEngine.listening) "أوقف" else "استماع") + "\n" +
+            t(if (ParentEngine.listening) "Listening to the room" else "Sound only",
+                if (ParentEngine.listening) "يستمع للغرفة الآن" else "صوت فقط")
+        listenBtn?.background = Look.glass(this, 22,
+            if (ParentEngine.listening) Fx.tint(Themes.current().accent, 0x40) else Look.BUTTON)
+
+        settingsHead?.text = (if (settingsOpen) "▾  " else "▸  ") + t("Clip length, sensitivity, volume", "طول المقطع والحساسية والصوت")
         if (!draggingLen) {
-            lenLabel?.text = Tr.t("Clip length: " + ParentEngine.childLength + " seconds")
+            lenLabel?.text = t("Clip length: ${ParentEngine.childLength} seconds", "طول المقطع: ${ParentEngine.childLength} ثوانٍ")
             lenBar?.progress = ParentEngine.childLength - 5
         }
         if (!draggingSens) {
-            sensLabel?.text = Tr.t("Sensitivity: " + ParentEngine.childSens + " of 5 (5 = hears quieter sounds)")
+            sensLabel?.text = t("Sensitivity: ${ParentEngine.childSens} of 5", "الحساسية: ${ParentEngine.childSens} من 5")
             sensBar?.progress = ParentEngine.childSens - 1
         }
+        intervalLabel?.text = intervalText(ParentEngine.childInterval)
+        walkieLabel?.text = t("Talk volume on the child phone: ${ParentEngine.childTalkVol} of 10",
+            "صوت المحادثة على جوال الطفل: ${ParentEngine.childTalkVol} من 10")
+
         if (listBox != null) {
             val count = ParentEngine.clips(this).size
             if (count != lastClipCount) fillList()
@@ -297,44 +426,53 @@ class ParentActivity : Activity() {
         box.removeAllViews()
         val clips = ParentEngine.clips(this)
         lastClipCount = clips.size
-        if (clips.isEmpty()) box.addBody("(no recordings yet)")
+        if (clips.isEmpty()) {
+            box.line(t("No recordings yet", "لا توجد تسجيلات بعد"))
+            return
+        }
         val fmt = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.MEDIUM)
-        for (c in clips) {
-            val row = box.addRow()
-            val tv = TextView(this)
-            tv.text = fmt.format(Date(c.ts)) + "  (" + (c.durationMs / 1000) + " s)"
-            tv.textSize = 15f
-            row.addView(tv, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-            if (playingTs == c.ts) {
-                val wv = WaveView(this)
-                wv.setBars(waveBars)
-                wv.playing = true
-                waveView = wv
-                row.addView(wv, LinearLayout.LayoutParams(0, dp(34), 1.2f))
+        for ((index, c) in clips.withIndex()) {
+            val card = box.card(12) {
+                val row = addRow()
+                val info = TextView(context)
+                info.text = fmt.format(Date(c.ts)) + "  ·  " + (c.durationMs / 1000) + " s"
+                info.textSize = 15f
+                info.setTextColor(Look.TEXT)
+                row.addView(info, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+                val playBtn = ImageButton(context)
+                playBtn.setImageResource(if (playingTs == c.ts) R.drawable.ic_btn_pause else R.drawable.ic_btn_play)
+                playBtn.background = Look.glass(context, 18, Look.BUTTON)
+                playBtn.setColorFilter(Look.TEXT)
+                playBtn.setPadding(dp(10), dp(10), dp(10), dp(10))
+                playBtn.contentDescription = t("Play", "تشغيل")
+                playBtn.setOnClickListener {
+                    if (playingTs == c.ts) stopPlayer() else play(c)
+                    fillList()
+                }
+                row.addView(playBtn, LinearLayout.LayoutParams(dp(46), dp(46)).apply { marginStart = dp(8) })
+                val del = ImageButton(context)
+                del.setImageResource(R.drawable.ic_btn_delete)
+                del.background = Look.glass(context, 18, Look.BUTTON)
+                del.setColorFilter(Look.TEXT)
+                del.setPadding(dp(10), dp(10), dp(10), dp(10))
+                del.contentDescription = t("Delete", "حذف")
+                del.setOnClickListener {
+                    if (playingTs == c.ts) stopPlayer()
+                    ParentEngine.deleteClip(this@ParentActivity, c.ts)
+                    fillList()
+                }
+                row.addView(del, LinearLayout.LayoutParams(dp(46), dp(46)).apply { marginStart = dp(8) })
+                if (playingTs == c.ts) {
+                    val wv = WaveView(context)
+                    wv.setBars(waveBars)
+                    wv.playing = true
+                    waveView = wv
+                    addView(wv, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(34)).apply {
+                        topMargin = dp(8)
+                    })
+                }
             }
-            val play = android.widget.ImageButton(this)
-            play.setImageResource(if (playingTs == c.ts) R.drawable.ic_btn_pause else R.drawable.ic_btn_play)
-            play.background = Look.glass(this, 18, Look.BUTTON)
-            play.setColorFilter(Look.TEXT)
-            play.setPadding(dp(10), dp(10), dp(10), dp(10))
-            play.contentDescription = "Play"
-            play.setOnClickListener {
-                if (playingTs == c.ts) stopPlayer() else play(c)
-                fillList()
-            }
-            row.addView(play, LinearLayout.LayoutParams(dp(46), dp(46)).apply { leftMargin = dp(8) })
-            val del = android.widget.ImageButton(this)
-            del.setImageResource(R.drawable.ic_btn_delete)
-            del.background = Look.glass(this, 18, Look.BUTTON)
-            del.setColorFilter(Look.TEXT)
-            del.setPadding(dp(10), dp(10), dp(10), dp(10))
-            del.contentDescription = "Delete"
-            del.setOnClickListener {
-                if (playingTs == c.ts) stopPlayer()
-                ParentEngine.deleteClip(this, c.ts)
-                fillList()
-            }
-            row.addView(del, LinearLayout.LayoutParams(dp(46), dp(46)).apply { leftMargin = dp(8) })
+            Fx.enter(card, index.coerceAtMost(6))
         }
     }
 
@@ -342,7 +480,7 @@ class ParentActivity : Activity() {
         stopPlayer()
         try {
             val mp = MediaPlayer()
-            mp.setDataSource(c.file.absolutePath)
+            mp.setDataSource(ClipCrypt.playablePath(this, c.file))
             mp.prepare()
             mp.setOnCompletionListener {
                 stopPlayer()
@@ -356,7 +494,7 @@ class ParentActivity : Activity() {
             ui.post(waveTick)
         } catch (e: Exception) {
             Diag.e("Could not play clip", e)
-            toast("Could not play this recording.")
+            toast(t("Could not play this recording.", "تعذّر تشغيل هذا التسجيل."))
         }
     }
 
@@ -380,7 +518,7 @@ class ParentActivity : Activity() {
     }
 
     private fun startPairFlow() {
-        toast("Searching for the child phone...")
+        toast(t("Searching for the child phone...", "جارٍ البحث عن جوال الطفل..."))
         Thread {
             val found = Discovery.scan(applicationContext)
             runOnUiThread { showPicker(found) }
@@ -390,13 +528,14 @@ class ParentActivity : Activity() {
     private fun showPicker(found: List<Discovery.Found>) {
         val items = ArrayList<String>()
         for (f in found) items.add(f.name + " (" + f.ip + ")")
-        items.add("Type an IP address...")
+        items.add(t("Type an IP address...", "اكتب عنوان IP..."))
         AlertDialog.Builder(this)
-            .setTitle(if (found.isEmpty()) "Child phone not found automatically" else "Choose the child phone")
+            .setTitle(if (found.isEmpty()) t("Child phone not found automatically", "لم نجد جوال الطفل تلقائياً")
+            else t("Choose the child phone", "اختر جوال الطفل"))
             .setItems(items.toTypedArray()) { _, which ->
                 if (which < found.size) pair(found[which].ip) else askIp()
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(t("Cancel", "تراجع"), null)
             .show()
     }
 
@@ -404,34 +543,34 @@ class ParentActivity : Activity() {
         val own = Net.wifiIp(this) ?: ""
         val input = EditText(this)
         input.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
-        input.hint = "For example 192.168.1.101"
+        input.hint = t("For example 192.168.1.101", "مثال: 192.168.1.101")
         if (own.contains('.')) {
             input.setText(own.substringBeforeLast('.') + ".")
             input.setSelection(input.text.length)
         }
         AlertDialog.Builder(this)
-            .setTitle("IP address shown on the child phone")
+            .setTitle(t("IP address shown on the child phone", "عنوان IP الظاهر على جوال الطفل"))
             .setView(input)
-            .setPositiveButton("Pair") { _, _ ->
-                val ip = input.text.toString().trim()
-                checkAndPair(ip, own)
+            .setPositiveButton(t("Pair", "اقرن")) { _, _ ->
+                checkAndPair(input.text.toString().trim(), own)
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(t("Cancel", "تراجع"), null)
             .show()
     }
 
     private fun checkAndPair(ip: String, own: String) {
         if (!Ip.isValid(ip)) {
-            toast("That is not a valid address. It looks like 192.168.1.101 (four numbers with dots).")
+            toast(t("That is not a valid address. It looks like 192.168.1.101.", "هذا العنوان غير صحيح. مثال: 192.168.1.101"))
             askIp()
             return
         }
         if (own.isNotEmpty() && !Ip.sameSubnet24(ip, own)) {
             AlertDialog.Builder(this)
-                .setTitle("Different network?")
-                .setMessage("This phone is $own but you typed $ip. Both phones must start with the same first three numbers. Check the digits.")
-                .setPositiveButton("Try anyway") { _, _ -> pair(ip) }
-                .setNegativeButton("Fix it") { _, _ -> askIp() }
+                .setTitle(t("Different network?", "شبكة مختلفة؟"))
+                .setMessage(t("This phone is on $own but you typed $ip. Both phones must start with the same first three numbers.",
+                    "هذا الجوال على $own وكتبت $ip. لازم الجوالين يبدأون بنفس الأرقام الثلاثة الأولى."))
+                .setPositiveButton(t("Try anyway", "جرّب على أي حال")) { _, _ -> pair(ip) }
+                .setNegativeButton(t("Fix it", "صحّحه")) { _, _ -> askIp() }
                 .show()
             return
         }
@@ -439,16 +578,17 @@ class ParentActivity : Activity() {
     }
 
     private fun pair(ip: String) {
-        toast("Connecting...")
+        toast(t("Connecting...", "جارٍ الاتصال..."))
         ParentEngine.pair(this, ip, object : ParentEngine.PairListener {
             override fun onSas(sas: String, childName: String, decide: (Boolean) -> Unit) {
                 runOnUiThread {
                     AlertDialog.Builder(this@ParentActivity)
-                        .setTitle("Check the code")
-                        .setMessage("The child phone ($childName) must show the same number:\n\n$sas\n\nIs it the same number?")
+                        .setTitle(t("Check the code", "تحقق من الرمز"))
+                        .setMessage(t("The child phone ($childName) must show the same number:\n\n$sas\n\nIs it the same?",
+                            "جوال الطفل ($childName) لازم يُظهر نفس الرقم:\n\n$sas\n\nهل هو نفسه؟"))
                         .setCancelable(false)
-                        .setPositiveButton("Yes, same") { _, _ -> decide(true) }
-                        .setNegativeButton("No") { _, _ -> decide(false) }
+                        .setPositiveButton(t("Yes, same", "نعم، نفسه")) { _, _ -> decide(true) }
+                        .setNegativeButton(t("No", "لا")) { _, _ -> decide(false) }
                         .show()
                 }
             }

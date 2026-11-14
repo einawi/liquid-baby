@@ -17,7 +17,7 @@ object Discovery {
     class Found(val id: String, val name: String, val ip: String)
 
     @Volatile
-    private var responderRunning = false
+    private var responderGen = 0
 
     @Volatile
     private var lastLogMs = 0L
@@ -40,7 +40,7 @@ object Discovery {
                     try {
                         ds.send(DatagramPacket(data, data.size, InetAddress.getByName(t), UDP_PORT))
                     } catch (e: Exception) {
-                        Diag.i("Broadcast to $t failed: " + e.message)
+                        Diag.limited("bcast-$t", "Broadcast to $t failed: " + e.message, 30_000L)
                     }
                 }
                 val until = System.currentTimeMillis() + 800
@@ -74,11 +74,11 @@ object Discovery {
      * so a Wi-Fi reconnect (new network, new address) never leaves it silently stuck.
      */
     fun startResponder(ctx: Context, id: String, name: String): DatagramSocket? {
-        responderRunning = true
+        val gen = ++responderGen
         Thread {
             val buf = ByteArray(512)
             var ds: DatagramSocket? = null
-            while (responderRunning) {
+            while (gen == responderGen) {
                 try {
                     val s = ds ?: openResponder(ctx).also { ds = it }
                     val p = DatagramPacket(buf, buf.size)
@@ -92,7 +92,7 @@ object Discovery {
                     ds?.close()
                     ds = null
                 } catch (e: Exception) {
-                    if (!responderRunning) break
+                    if (gen != responderGen) break
                     ds?.close()
                     ds = null
                     logThrottled("Responder restarted: " + e.message)
@@ -108,7 +108,7 @@ object Discovery {
     }
 
     fun stopResponder() {
-        responderRunning = false
+        responderGen++
     }
 
     private fun openResponder(ctx: Context): DatagramSocket {

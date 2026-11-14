@@ -141,7 +141,7 @@ object ParentEngine {
         val files = clipsDir(ctx).listFiles { f -> f.name.endsWith(".wav") } ?: return emptyList()
         return files.mapNotNull { f ->
             val ts = f.name.removeSuffix(".wav").toLongOrNull()
-            if (ts == null) null else ClipItem(ts, f, Wav.durationMs(f.length()))
+            if (ts == null) null else ClipItem(ts, f, Wav.durationMs(ClipCrypt.plainSize(f)))
         }.sortedByDescending { it.ts }
     }
 
@@ -212,7 +212,7 @@ object ParentEngine {
 
     private fun open(ip: String, timeoutMs: Int = 4000): Conn {
         val s = Socket()
-        Net.bind(appCtx, s)
+        if (!Net.bind(appCtx, s)) Diag.i("No Wi-Fi network found: connecting to $ip without pinning to Wi-Fi")
         s.connect(InetSocketAddress(ip, Discovery.TCP_PORT), timeoutMs)
         s.tcpNoDelay = true
         s.soTimeout = 10_000
@@ -225,7 +225,7 @@ object ParentEngine {
             try {
                 return Pair(open(ip, 1500), ip)
             } catch (e: IOException) {
-                Diag.i("Address $ip did not answer")
+                Diag.limited("addr-$ip", "Address $ip did not answer", 30_000L)
             }
         }
         for (d in Discovery.scan(appCtx)) {
@@ -296,7 +296,10 @@ object ParentEngine {
                         rxTmp = File(dir, "$rxTs.part")
                         rx = FileOutputStream(rxTmp)
                     }
-                    T.VIDEO_FRAME -> if (viewing) showFrame(m.data)
+                    T.VIDEO_FRAME -> if (viewing) {
+                        lastFrameMs = System.currentTimeMillis()
+                        showFrame(m.data)
+                    }
                     T.LIVE_AUDIO -> if ((viewing || listening) && liveSound && !talking && System.currentTimeMillis() > muteLiveUntil) {
                         livePlayer?.write(m.data)
                     }
@@ -346,7 +349,12 @@ object ParentEngine {
         PairStore.raiseLastSyncTs(ts)
         val done = File(tmp.parentFile, "$ts.wav")
         val isNew = !done.exists()
-        if (isNew) tmp.renameTo(done) else tmp.delete()
+        if (isNew) {
+            tmp.renameTo(done)
+            ClipCrypt.encryptInPlace(done)
+        } else {
+            tmp.delete()
+        }
         val all = clips(appCtx)
         if (all.size > 100) all.drop(100).forEach { it.file.delete() }
         if (isNew) {
@@ -389,6 +397,9 @@ object ParentEngine {
         }
         viewNote = ""
         viewing = true
+        // a few seconds of grace: the first picture can take a while to start
+        lastFrameMs = System.currentTimeMillis() + 6000L
+        lowQuality = false
         if (livePlayer == null) {
             try {
                 val pl = TalkPlayer()
@@ -417,6 +428,7 @@ object ParentEngine {
     @Synchronized
     private fun dropView() {
         viewing = false
+        lowQuality = false
         listening = false
         viewers = 0
         livePlayer?.stop()
@@ -460,7 +472,13 @@ object ParentEngine {
         changed()
     }
 
+    /** The user changed the picture settings: this wins over the automatic quality. */
     fun setView(quality: Int, front: Boolean, flash: Boolean, night: Boolean = viewNight) {
+        lowQuality = false
+        sendView(quality, front, flash, night)
+    }
+
+    private fun sendView(quality: Int, front: Boolean, flash: Boolean, night: Boolean) {
         val c = conn ?: return
         if (!connected || !viewing) return
         sendAsync(
@@ -469,8 +487,91 @@ object ParentEngine {
         )
     }
 
+    @Volatile
+    private var lastFrameMs = 0L
+
+    @Volatile
+    private var lowQuality = false
+
+    private var goodSince = 0L
+
+    /**
+     * Pictures too slow for 4 seconds: ask the child phone for low quality. After 20 seconds of
+     * good pictures, normal quality is requested again.
+     */
+    private fun adaptQuality() {
+        if (!viewing || !connected) {
+            goodSince = 0L
+            return
+        }
+        val now = System.currentTimeMillis()
+        val age = now - lastFrameMs
+        if (!lowQuality && viewQuality == 1 && age > 4000L) {
+            lowQuality = true
+            goodSince = 0L
+            Diag.i("Pictures are slow: asking for low quality")
+            sendView(0, viewFront, viewFlash, viewNight)
+        } else if (lowQuality) {
+            if (age < 1500L) {
+                if (goodSince == 0L) goodSince = now
+                if (now - goodSince > 20_000L) {
+                    lowQuality = false
+                    goodSince = 0L
+                    Diag.i("Pictures are good again: asking for normal quality")
+                    sendView(1, viewFront, viewFlash, viewNight)
+                }
+            } else {
+                goodSince = 0L
+            }
+        }
+    }
+
+    // Pictures are decoded on their own thread, so the network reader never waits for the decoder.
+    // Only the newest picture is kept: if the phone is slow, older pictures are dropped.
+    private val frameLock = Object()
+    private var pendingFrame: ByteArray? = null
+    private var frameWorker: Thread? = null
+
     private fun showFrame(d: ByteArray) {
         if (d.size < 100) return
+        synchronized(frameLock) {
+            pendingFrame = d
+            frameLock.notifyAll()
+            if (frameWorker == null) {
+                frameWorker = Thread { frameLoop() }.also {
+                    it.isDaemon = true
+                    it.start()
+                }
+            }
+        }
+    }
+
+    private fun frameLoop() {
+        while (running) {
+            val d: ByteArray = synchronized(frameLock) {
+                while (pendingFrame == null && running) {
+                    try {
+                        frameLock.wait(1000)
+                    } catch (_: InterruptedException) {
+                    }
+                }
+                val x = pendingFrame
+                pendingFrame = null
+                x
+            } ?: continue
+            try {
+                decodeAndShow(d)
+            } catch (e: Exception) {
+                Diag.i("Picture problem: " + e.message)
+            }
+        }
+        synchronized(frameLock) {
+            frameWorker = null
+            pendingFrame = null
+        }
+    }
+
+    private fun decodeAndShow(d: ByteArray) {
         val listener = frameListener ?: return
         val bmp = BitmapFactory.decodeByteArray(d, 1, d.size - 1) ?: return
         val quarter = ((d[0].toInt() and 3) + viewRotate) and 3
@@ -605,6 +706,7 @@ object ParentEngine {
                 offlineAlerted = true
                 Notifier.alert(appCtx, "Liquid Baby", "No answer from the child phone for 100 seconds. Check that it is on, on Wi-Fi, and monitoring.")
             }
+            adaptQuality()
             if (tick % 15 == 0) {
                 val cutoff = System.currentTimeMillis() - 8L * 60 * 60 * 1000
                 for (item in clips(appCtx)) {

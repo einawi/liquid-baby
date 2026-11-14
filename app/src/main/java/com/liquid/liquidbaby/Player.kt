@@ -25,7 +25,7 @@ object Player {
         stopPlayer()
         try {
             val p = MediaPlayer()
-            p.setDataSource(path)
+            p.setDataSource(ClipCrypt.playablePath(ctx, File(path)))
             p.prepare()
             p.setOnCompletionListener {
                 synchronized(Player) {

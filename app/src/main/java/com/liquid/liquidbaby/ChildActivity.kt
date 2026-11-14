@@ -1,6 +1,7 @@
 package com.liquid.liquidbaby
 
 import android.Manifest
+import android.animation.ObjectAnimator
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Intent
@@ -12,18 +13,31 @@ import android.provider.Settings
 import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
 
+/** Child screen: one status card, the monitoring switch, and the parent phones it serves. */
 class ChildActivity : Activity() {
 
     private val ui = Handler(Looper.getMainLooper())
-    private var statusTv: TextView? = null
-    private var toggleBtn: Button? = null
+    private var builtAr: Boolean? = null
+    private var pulse: ObjectAnimator? = null
+    private var dialogShown = false
+    private var dark: View? = null
+    private var lastParentCount = -1
+
+    private var statusPill: TextView? = null
+    private var mainBtn: Button? = null
     private var vpnBtn: Button? = null
     private var camBtn: Button? = null
-    private var chipTv: TextView? = null
+    private var hero: TextView? = null
+    private var heroSub: TextView? = null
+    private var meter: ProgressBar? = null
+    private var pairBtn: Button? = null
+    private var pairNote: TextView? = null
+    private var infoLine: TextView? = null
+    private var batteryWarn: TextView? = null
     private var listBox: LinearLayout? = null
-    private var dialogShown = false
 
     private val tick = object : Runnable {
         override fun run() {
@@ -32,43 +46,82 @@ class ChildActivity : Activity() {
         }
     }
 
+    private fun t(en: String, ar: String): String = Tr.pick(en, ar)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        build()
+    }
+
+    private fun build() {
+        builtAr = Tr.isAr()
+        pulse?.cancel()
+        pulse = null
         screen {
-            addTitle("Child unit")
-            chipTv = addChip("")
-            statusTv = addBody("")
-            val vb = addButton("A VPN is blocking local connections: open VPN settings") { openVpnSettings() }
-            vb.visibility = View.GONE
-            vpnBtn = vb
-            toggleBtn = addButton("Start monitoring") { toggle() }
-            val cb = addButton("Allow the camera (needed for the live camera)") {
+            addTitle(t("Child", "وحدة الطفل"))
+            statusPill = addChip("")
+            vpnBtn = addButton(t("VPN is blocking the connection: open VPN settings", "الـ VPN يمنع الاتصال: افتح إعدادات الـ VPN")) {
+                openVpnSettings()
+            }
+            vpnBtn?.visibility = View.GONE
+
+            card {
+                hero = TextView(context).apply {
+                    textSize = 22f
+                    setTextColor(Look.TEXT)
+                    setTypeface(typeface, android.graphics.Typeface.BOLD)
+                }
+                addView(hero)
+                heroSub = line("")
+                meter = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
+                    max = 100
+                }
+                addView(meter, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(8)).apply {
+                    topMargin = dp(12)
+                })
+                line(t("Sound in the room", "صوت الغرفة"), 13f)
+            }
+
+            mainBtn = addButton(t("Start monitoring", "ابدأ المراقبة")) { toggle() }
+            Fx.press(mainBtn!!)
+
+            camBtn = addButton(t("Allow the camera (needed for the live camera)", "اسمح بالكاميرا (لازمة للكاميرا المباشرة)")) {
                 requestPermissions(arrayOf(Manifest.permission.CAMERA), 21)
             }
-            cb.visibility = View.GONE
-            camBtn = cb
-            addButton("Allow a new parent phone to pair (2 minutes)") { allowPairing() }
-            addBody("Walkie-talkie volume is set from the parent phone.")
-            addButton("Dark screen (touch the screen to wake it)") { showDark() }
-            addBody("Paired parent phones")
+            camBtn?.visibility = View.GONE
+
+            card {
+                pairNote = line(t("Let a parent phone pair with this phone for 2 minutes.",
+                    "اسمح لجوال أبوين بالاقتران مع هذا الجوال لمدة دقيقتين."))
+                pairBtn = addButton(t("Allow a new parent phone to pair", "السماح بإقران جوال أبوين جديد")) { allowPairing() }
+            }
+
+            sectionLabel(t("Paired parent phones", "جوالات الأبوين المقترنة"))
             val box = LinearLayout(context)
             box.orientation = LinearLayout.VERTICAL
             addView(box)
             listBox = box
-            addButton("Keep running: battery settings") {
+
+            sectionLabel(t("Options", "خيارات"))
+            addButton(t("Dark screen (touch to wake)", "شاشة مطفأة (المس للعودة)")) { showDark() }
+            addButton(t("Keep running: battery settings", "البقاء في الخلفية: إعدادات البطارية")) {
                 try {
                     startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
                 } catch (e: Exception) {
-                    toast("Open the phone settings and turn battery optimization off for Liquid Baby.")
+                    toast(t("Turn battery optimization off for Liquid Baby in phone settings.",
+                        "أوقف تحسين البطارية لتطبيق Liquid Baby من إعدادات الجوال."))
                 }
             }
-            addBody("Keep this phone on the charger, on the same Wi-Fi as the parent phones. If the phone restarts, open this screen and tap Start monitoring.")
+            batteryWarn = line(t("Keep this phone on the charger and on the same Wi-Fi as the parent phones.",
+                "خلّ هذا الجوال على الشاحن وعلى نفس الواي فاي مع جوالات الأبوين."))
         }
         fillParents()
+        refresh()
     }
 
     override fun onResume() {
         super.onResume()
+        if (builtAr != Tr.isAr()) build()
         ChildEngine.onChange = { runOnUiThread { refresh() } }
         if (Prefs.getBool("serviceWanted", false) && !ChildEngine.running &&
             checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
@@ -101,7 +154,8 @@ class ChildActivity : Activity() {
         if (requestCode != 20 && requestCode != 21) return
         val mic = checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
         if (!mic) {
-            toast("The microphone permission is needed to listen to the child.")
+            toast(t("The microphone permission is needed to listen to the child.",
+                "صلاحية الميكروفون لازمة للاستماع للطفل."))
             return
         }
         if (ChildEngine.running) {
@@ -113,8 +167,6 @@ class ChildActivity : Activity() {
         }
     }
 
-    private var dark: android.view.View? = null
-
     private fun ignoringBattery(): Boolean {
         return try {
             val pm = getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager
@@ -124,9 +176,9 @@ class ChildActivity : Activity() {
         }
     }
 
-    /** Black screen over the app. The monitoring keeps running; touching the screen wakes it. */
+    /** Black screen over the app. Monitoring keeps running; a touch brings the screen back. */
     private fun showDark() {
-        val v = android.view.View(this)
+        val v = View(this)
         v.setBackgroundColor(android.graphics.Color.BLACK)
         v.setOnTouchListener { _, _ ->
             hideDark()
@@ -150,11 +202,11 @@ class ChildActivity : Activity() {
 
     private fun allowPairing() {
         if (!ChildEngine.running) {
-            toast("Tap Start monitoring first.")
+            toast(t("Tap Start monitoring first.", "اضغط ابدأ المراقبة أولاً."))
             return
         }
         ChildEngine.pairingUntil = System.currentTimeMillis() + 120_000
-        toast("Now start pairing on the parent phone.")
+        toast(t("Now start pairing on the parent phone.", "الآن ابدأ الإقران من جوال الأبوين."))
         refresh()
     }
 
@@ -162,88 +214,113 @@ class ChildActivity : Activity() {
         val box = listBox ?: return
         box.removeAllViews()
         val list = PairStore.parents()
-        if (list.isEmpty()) box.addBody("(none yet)")
-        for (p in list) {
-            val row = box.addRow()
-            val tv = TextView(this)
-            tv.text = p.name.ifBlank { "Parent phone" }
-            tv.textSize = 16f
-            row.addView(tv, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-            val b = Button(this)
-            b.text = Tr.t("Remove")
-            b.isAllCaps = false
-            b.setTextColor(Look.TEXT)
-            b.background = Look.glass(this, 18, Look.BUTTON)
-            b.minHeight = dp(44)
-            b.setOnClickListener {
-                AlertDialog.Builder(this)
-                    .setTitle("Remove this parent phone?")
-                    .setPositiveButton("Remove") { _, _ ->
-                        PairStore.removeParent(p.id)
-                        fillParents()
-                    }
-                    .setNegativeButton("Cancel", null)
-                    .show()
+        lastParentCount = list.size
+        if (list.isEmpty()) {
+            box.line(t("No parent phone yet", "لا يوجد جوال أبوين بعد"))
+            return
+        }
+        for ((index, p) in list.withIndex()) {
+            val c = box.card(14) {
+                val row = addRow()
+                row.addView(Fx.dot(context, 0xFF66BB6A.toInt()))
+                val name = TextView(context)
+                name.text = p.name.ifBlank { t("Parent phone", "جوال أبوين") }
+                name.textSize = 16f
+                name.setTextColor(Look.TEXT)
+                row.addView(name, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+                val b = Button(context)
+                b.text = t("Remove", "إزالة")
+                b.isAllCaps = false
+                b.setTextColor(0xFFFF8A8A.toInt())
+                b.background = Look.glass(context, 18, 0x22FF5252)
+                b.minHeight = dp(44)
+                b.setOnClickListener {
+                    AlertDialog.Builder(this@ChildActivity)
+                        .setTitle(t("Remove this parent phone?", "إزالة جوال الأبوين هذا؟"))
+                        .setPositiveButton(t("Remove", "إزالة")) { _, _ ->
+                            PairStore.removeParent(p.id)
+                            fillParents()
+                        }
+                        .setNegativeButton(t("Cancel", "تراجع"), null)
+                        .show()
+                }
+                row.addView(b)
             }
-            row.addView(b)
+            Fx.enter(c, index.coerceAtMost(6))
         }
     }
 
     private fun refresh() {
-        val sb = StringBuilder()
-        sb.append("Status: ").append(ChildEngine.status).append("\n")
-        if (ChildEngine.running) {
-            sb.append("Parent phones connected: ").append(ChildEngine.connectedCount())
-                .append(" of ").append(PairStore.parents().size).append("\n")
-            sb.append(ChildEngine.level()).append("\n")
-            if (ChildEngine.talking) sb.append("A parent is talking through this phone\n")
-            if (ChildEngine.viewLine().isNotEmpty()) sb.append(ChildEngine.viewLine()).append("\n")
-            sb.append("Clip length: ").append(ChildEngine.clipSeconds()).append(" s, sensitivity ")
-                .append(ChildEngine.sensitivity()).append(" of 5 (set from the parent phone)\n")
-            if (ChildEngine.lastClipMs > 0) {
-                sb.append("Last clip: ").append(java.text.DateFormat.getTimeInstance().format(java.util.Date(ChildEngine.lastClipMs))).append("\n")
-            }
-            val left = (ChildEngine.pairingUntil - System.currentTimeMillis()) / 1000
-            if (left > 0) sb.append("Pairing is open for ").append(left).append(" more seconds\n")
+        val running = ChildEngine.running
+        val connected = ChildEngine.connectedCount()
+        val paired = PairStore.parents().size
+
+        when {
+            !running -> setChip(statusPill, t("Stopped", "متوقف"), 0xFF6B7785.toInt())
+            connected > 0 -> setChip(statusPill, t("Monitoring", "المراقبة تعمل"), 0xFF2E9E6A.toInt())
+            else -> setChip(statusPill, t("Waiting for parent", "بانتظار جوال الأبوين"), 0xFFB7791F.toInt())
         }
-        if (!ignoringBattery()) sb.append(Tr.t("Battery: restricted, the phone may stop monitoring")).append("\n")
-        sb.append(Net.describe(this)).append("\n")
+        if (running) {
+            if (pulse == null) statusPill?.let { pulse = Fx.breathe(it) }
+        } else {
+            pulse?.cancel()
+            pulse = null
+            statusPill?.alpha = 1f
+        }
+
+        hero?.text = when {
+            !running -> t("Not listening", "غير مستمع")
+            ChildEngine.talking -> t("A parent is talking", "أحد الأبوين يتحدث")
+            running && connected > 0 -> t("Listening, parent connected", "يستمع، والأب متصل")
+            else -> t("Listening", "يستمع")
+        }
+        val last = if (ChildEngine.lastClipMs > 0)
+            java.text.DateFormat.getTimeInstance().format(java.util.Date(ChildEngine.lastClipMs)) else "--"
+        heroSub?.text = if (running) t(
+            "Parents connected: $connected of $paired  ·  last clip $last",
+            "الأبوين المتصلين: $connected من $paired  ·  آخر مقطع $last"
+        ) else t("Tap Start monitoring to begin.", "اضغط ابدأ المراقبة للبدء.")
+        meter?.progress = ChildEngine.soundPercent()
+
+        mainBtn?.text = if (running) t("Stop monitoring", "أوقف المراقبة") else t("Start monitoring", "ابدأ المراقبة")
+        mainBtn?.background = Look.glass(this, 22,
+            if (running) Fx.tint(Themes.current().accent, 0x40) else Look.BUTTON)
+
         vpnBtn?.visibility = if (Net.vpnBlocksLocal(this)) View.VISIBLE else View.GONE
-        if (ChildEngine.running) setChip(chipTv, "Monitoring", 0xFF2E9E6A.toInt())
-        else setChip(chipTv, "Stopped", 0xFF6B7785.toInt())
         val camOk = checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
         camBtn?.visibility = if (camOk) View.GONE else View.VISIBLE
-        sb.append("Camera permission: ").append(if (camOk) "allowed" else "NOT allowed (live camera will not work)").append("\n")
-        statusTv?.text = Tr.t(sb.toString())
-        toggleBtn?.text = Tr.t(if (ChildEngine.running) "Stop monitoring" else "Start monitoring")
-        fillParentsIfChanged()
+
+        val left = (ChildEngine.pairingUntil - System.currentTimeMillis()) / 1000
+        pairNote?.text = if (left > 0)
+            t("Pairing is open for $left more seconds.", "الإقران مفتوح لمدة $left ثانية أخرى.")
+        else t("Let a parent phone pair with this phone for 2 minutes.", "اسمح لجوال أبوين بالاقتران مع هذا الجوال لمدة دقيقتين.")
+
+        batteryWarn?.text = if (ignoringBattery())
+            t("Keep this phone on the charger and on the same Wi-Fi as the parent phones.",
+                "خلّ هذا الجوال على الشاحن وعلى نفس الواي فاي مع جوالات الأبوين.")
+        else t("Battery is restricted: the phone may stop monitoring. Tap 'Keep running' below.",
+            "البطارية مقيّدة: قد يتوقف الجوال عن المراقبة. اضغط 'البقاء في الخلفية' بالأسفل.")
+
+        if (paired != lastParentCount) fillParents()
+
         val req = ChildEngine.pendingPair
         if (req != null && !dialogShown) {
             dialogShown = true
             AlertDialog.Builder(this)
-                .setTitle("Pairing request")
-                .setMessage("Parent phone \"" + req.name + "\" wants to pair.\n\nCode:  " + req.sas + "\n\nAccept only if the parent phone shows the same number.")
+                .setTitle(t("Pairing request", "طلب إقران"))
+                .setMessage(t("Parent phone \"${req.name}\" wants to pair.\n\nCode:  ${req.sas}\n\nAccept only if the parent phone shows the same number.",
+                    "جوال الأبوين \"${req.name}\" يريد الاقتران.\n\nالرمز:  ${req.sas}\n\nاقبل فقط إذا أظهر جوال الأبوين نفس الرقم."))
                 .setCancelable(false)
-                .setPositiveButton("Same number: accept") { _, _ ->
+                .setPositiveButton(t("Same number: accept", "نفس الرقم: اقبل")) { _, _ ->
                     req.answer.offer(true)
                     dialogShown = false
                     ui.postDelayed({ fillParents() }, 1500)
                 }
-                .setNegativeButton("Reject") { _, _ ->
+                .setNegativeButton(t("Reject", "ارفض")) { _, _ ->
                     req.answer.offer(false)
                     dialogShown = false
                 }
                 .show()
-        }
-    }
-
-    private var lastParentCount = -1
-
-    private fun fillParentsIfChanged() {
-        val n = PairStore.parents().size
-        if (n != lastParentCount) {
-            lastParentCount = n
-            fillParents()
         }
     }
 }

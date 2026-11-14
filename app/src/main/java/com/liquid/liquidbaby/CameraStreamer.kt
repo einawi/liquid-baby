@@ -48,6 +48,10 @@ class CameraStreamer(
     private var closed = false
     private var generation = 0
 
+    /** Low battery: fewer pictures per second to save power. */
+    @Volatile
+    var slowMode = false
+
     fun start(front: Boolean, quality: Int, flash: Boolean, night: Boolean = false) {
         thread.start()
         handler = Handler(thread.looper)
@@ -204,7 +208,7 @@ class CameraStreamer(
         } ?: return
         try {
             val now = SystemClock.elapsedRealtime()
-            val gap = if (quality == 0) 140 else 90
+            val gap = if (slowMode) 400 else if (quality == 0) 140 else 90
             if (now - lastFrame < gap) return
             lastFrame = now
             val w = img.width
@@ -220,7 +224,7 @@ class CameraStreamer(
             YuvImage(nv, ImageFormat.NV21, w, h, null).compressToJpeg(Rect(0, 0, w, h), if (quality == 0) 50 else 60, out)
             onFrame(out.toByteArray())
         } catch (e: Exception) {
-            Diag.i("Picture problem: " + e.message)
+            Diag.limited("picture", "Picture problem: " + e.message)
         } finally {
             img.close()
         }

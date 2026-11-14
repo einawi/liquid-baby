@@ -119,7 +119,7 @@ object Notifier {
                 .setSmallIcon(R.drawable.ic_notify)
                 .setColor(COLOR)
                 .setContentTitle(Tr.t("New recording"))
-                .setContentText(when_ + "  \u00b7  " + (Wav.durationMs(file.length()) / 1000) + " s")
+                .setContentText(when_ + "  \u00b7  " + (Wav.durationMs(ClipCrypt.plainSize(file)) / 1000) + " s")
                 .setContentIntent(openApp(ctx, 4, ParentActivity::class.java))
                 .setDeleteIntent(gone)
                 .setAutoCancel(true)

@@ -8,3 +8,4 @@ APK/
 build-error.txt
 .idea/
 *.iml
+.aiy/*.keystore

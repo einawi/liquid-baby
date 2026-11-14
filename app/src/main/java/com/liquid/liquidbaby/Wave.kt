@@ -13,11 +13,7 @@ object Wave {
     /** Loudness of [bars] slices of a WAV clip, scaled to 0..1. Read once when a clip starts playing. */
     fun envelope(file: File, bars: Int = 24): FloatArray {
         val out = FloatArray(bars)
-        val bytes = try {
-            file.readBytes()
-        } catch (e: Exception) {
-            return out
-        }
+        val bytes = ClipCrypt.readPlain(file)
         if (bytes.size <= 44) return out
         val total = (bytes.size - 44) / 2
         val per = max(1, total / bars)

@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import java.io.File
-import java.io.FileInputStream
 import java.net.DatagramSocket
 import java.net.InetSocketAddress
 import java.net.ServerSocket
@@ -38,6 +37,9 @@ object ChildEngine {
 
     @Volatile
     var lastClipMs = 0L
+
+    @Volatile
+    private var lowPower = false
 
     @Volatile
     var onChange: (() -> Unit)? = null
@@ -86,6 +88,12 @@ object ChildEngine {
         viewers.isNotEmpty() -> "Live view active: clip recording paused (" + viewers.size + " watching)"
         listeners.isNotEmpty() -> "Live sound active: clip recording paused (" + listeners.size + " listening)"
         else -> ""
+    }
+
+    /** Sound in the room, 0..100, for the meter on the child screen. */
+    fun soundPercent(): Int {
+        val m = monitor ?: return 0
+        return (m.lastRms / 4000.0 * 100.0).coerceIn(0.0, 100.0).toInt()
     }
 
     fun level(): String {
@@ -207,6 +215,7 @@ object ChildEngine {
     private fun handle(s: java.net.Socket) {
         val c = Conn(s)
         var id: String? = null
+        var reason = "closed"
         try {
             s.tcpNoDelay = true
             s.soTimeout = 15_000
@@ -217,10 +226,13 @@ object ChildEngine {
                 else -> c.send(T.ERROR, "Bad request".toByteArray())
             }
         } catch (e: Exception) {
-            Diag.i("Connection ended: " + (e.message ?: e.javaClass.simpleName))
+            reason = e.message ?: e.javaClass.simpleName
+            if (id == null) Diag.i("Connection ended: $reason")
         } finally {
             if (id != null && connected[id] === c) connected.remove(id)
             if (id != null) {
+                val who = PairStore.parents().firstOrNull { it.id == id }?.name?.ifBlank { null } ?: "parent"
+                Diag.i("Parent $who disconnected: $reason. Clips waiting on this phone: ${clipCount()}")
                 stopTalk(id)
                 levelSubs.remove(id)
                 if (viewers[id]?.conn === c) stopView(id)
@@ -331,8 +343,14 @@ object ChildEngine {
                 T.SUB_LEVEL -> if (m.data.isNotEmpty() && m.data[0].toInt() == 1) levelSubs.add(id) else levelSubs.remove(id)
                 T.SYNC -> {
                     val after = if (m.data.size >= 8) Wire.bytesLong(m.data) else 0L
-                    if (after < 0L) c.send(T.SYNC_ACK, Wire.longBytes(newestClipTs())) else sendBacklog(c, after)
-                    c.send(T.SYNC_END)
+                    Thread {
+                        try {
+                            if (after < 0L) c.send(T.SYNC_ACK, Wire.longBytes(newestClipTs())) else sendBacklog(c, after)
+                            c.send(T.SYNC_END)
+                        } catch (e: Exception) {
+                            Diag.i("Sync stopped: " + (e.message ?: e.javaClass.simpleName))
+                        }
+                    }.start()
                 }
             }
         }
@@ -448,6 +466,7 @@ object ChildEngine {
                 { msg -> cameraFailed(msg) },
                 { broadcastViewState() }
             )
+            s.slowMode = lowPower
             streamer = s
             s.start(viewFront, viewQuality, viewFlash, viewNight)
         }
@@ -581,6 +600,8 @@ object ChildEngine {
         }
     }
 
+    private var batteryBlocks = 0
+
     /** Every 30 seconds: battery and temperature to the parent phones, and the 8-hour cleanup. */
     private fun statusLoop() {
         var tick = 0
@@ -608,8 +629,14 @@ object ChildEngine {
                     }
                 }
                 cleanupOld()
+                lowPower = charging == 0 && pct in 0..19
+                streamer?.slowMode = lowPower
+                batteryBlocks++
+                if (batteryBlocks % 60 == 0) {
+                    Diag.i("Battery $pct%, charging=$charging, temperature ${temp / 10.0} C, monitoring=$running")
+                }
             } catch (e: Exception) {
-                Diag.i("Status: " + e.message)
+                Diag.limited("status", "Status: " + e.message)
             }
         }
     }
@@ -652,17 +679,21 @@ object ChildEngine {
         changed()
     }
 
+    private fun tsOf(f: File): Long = f.name.removeSuffix(".wav").toLongOrNull() ?: 0L
+
+    private fun clipCount(): Int = clipsDir().listFiles { f -> f.name.endsWith(".wav") }?.size ?: 0
+
     private fun sendClip(c: Conn, f: File) {
-        val ts = f.name.removeSuffix(".wav").toLongOrNull() ?: return
+        val ts = tsOf(f)
+        val wav = ClipCrypt.readPlain(f)
+        if (wav.isEmpty()) return
         synchronized(c.clipLock) {
             c.send(T.CLIP_BEGIN, Wire.longBytes(ts))
-            FileInputStream(f).use { input ->
-                val buf = ByteArray(32 * 1024)
-                while (true) {
-                    val n = input.read(buf)
-                    if (n < 0) break
-                    c.send(T.CLIP_DATA, buf.copyOf(n))
-                }
+            var pos = 0
+            while (pos < wav.size) {
+                val n = minOf(32 * 1024, wav.size - pos)
+                c.send(T.CLIP_DATA, wav.copyOfRange(pos, pos + n))
+                pos += n
             }
             c.send(T.CLIP_END)
         }
@@ -673,12 +704,25 @@ object ChildEngine {
         return files.maxOfOrNull { it.name.removeSuffix(".wav").toLongOrNull() ?: 0L } ?: 0L
     }
 
+    /** Sends stored clips one at a time with a pause between them. Waits while someone watches live. */
     private fun sendBacklog(c: Conn, afterTs: Long) {
         val files = clipsDir().listFiles { f -> f.name.endsWith(".wav") } ?: return
-        val list = files.filter { (it.name.removeSuffix(".wav").toLongOrNull() ?: 0L) > afterTs }
-            .sortedBy { it.name.removeSuffix(".wav").toLongOrNull() ?: 0L }
-            .takeLast(20)
-        for (f in list) sendClip(c, f)
+        val list = files.filter { tsOf(it) > afterTs }.sortedBy { tsOf(it) }.takeLast(20)
+        for (f in list) {
+            waitWhileLive(c)
+            sendClip(c, f)
+            Thread.sleep(400)
+        }
+    }
+
+    /** While a parent watches live, the backlog waits. A keep-alive is sent so the parent does not time out. */
+    private fun waitWhileLive(c: Conn) {
+        var waited = 0L
+        while (running && (viewers.isNotEmpty() || listeners.isNotEmpty()) && waited < 600_000L) {
+            Thread.sleep(1000)
+            waited += 1000
+            if (waited % 20_000L == 0L) c.send(T.PONG)
+        }
     }
 
     private fun onClip(f: File, ts: Long) {
@@ -686,12 +730,8 @@ object ChildEngine {
         Diag.i("Clip recorded: " + f.name)
         // Keep only the newest MAX_STORED clips on the child phone. Older ones are removed
         // without being marked as deleted, so a parent that already received them keeps its copy.
-        val files = clipsDir().listFiles { x -> x.name.endsWith(".wav") }
-        if (files != null && files.size > MAX_STORED) {
-            files.sortedBy { it.name.removeSuffix(".wav").toLongOrNull() ?: 0L }
-                .take(files.size - MAX_STORED)
-                .forEach { it.delete() }
-        }
+        val names = clipsDir().listFiles { x -> x.name.endsWith(".wav") }?.map { it.name } ?: emptyList()
+        for (name in Retention.toDelete(names, MAX_STORED)) File(clipsDir(), name).delete()
         val targets = connected.values.toList()
         if (targets.isNotEmpty()) {
             Thread {

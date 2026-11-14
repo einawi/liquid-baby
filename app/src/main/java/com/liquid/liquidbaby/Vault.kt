@@ -17,6 +17,9 @@ object Vault {
     @Volatile
     var failed = false
 
+    /** The Keystore key used for clip files and pairing keys. */
+    fun storageKey(): SecretKey = key()
+
     private fun key(): SecretKey {
         val ks = KeyStore.getInstance("AndroidKeyStore")
         ks.load(null)
