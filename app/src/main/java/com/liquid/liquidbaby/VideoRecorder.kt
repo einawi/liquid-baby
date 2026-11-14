@@ -111,6 +111,7 @@ class VideoRecorder(private val outFile: File, private val maxMs: Long = 600_000
             framesDropped++
         }
         drainVideo(false)
+        drainAudioOut(false)
         drainAudio()
     }
 
@@ -118,6 +119,7 @@ class VideoRecorder(private val outFile: File, private val maxMs: Long = 600_000
     @Synchronized
     fun onSound(samples: ShortArray, count: Int) {
         if (stopping || aenc == null) return
+        drainAudioOut(false)
         val now = sampleIndexNow()
         for (i in 0 until count) {
             val at = now + i

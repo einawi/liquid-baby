@@ -1,3 +1,11 @@
+0.9.2 (build 63): fixes black, empty videos.
+- Cause: the sound encoder's output was only read at the end, so the video file could not start during recording, and the pictures were dropped (log: 332 pictures in, 1 written).
+- Fixed: sound output is read during recording too, so every picture is written.
+
+0.9.2 (build 63): إصلاح الفيديو الأسود والفارغ.
+- السبب: مخرجات مرمّز الصوت كانت تُقرأ فقط عند الإيقاف، فالملف ما يبدأ أثناء التسجيل، وتسقط الصور (السجل: 332 صورة دخلت، 1 كُتبت).
+- الإصلاح: قراءة مخرجات الصوت أثناء التسجيل أيضاً، فتنكتب كل الصور.
+
 0.9.2 (build 62): recording diagnostics (pictures counted at each stage).
 - Diagnostics now shows how many pictures arrived during recording, how many reached the video encoder, and how many were dropped.
 
