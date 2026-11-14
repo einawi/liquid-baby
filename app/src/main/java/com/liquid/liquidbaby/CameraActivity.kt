@@ -39,6 +39,7 @@ class CameraActivity : Activity() {
     private val qualityBtns = arrayOfNulls<Button>(4)
     private val pending = AtomicBoolean(false)
     private var lastNight = false
+    private var fullTurn = 0
     private var ending = false
 
     @Volatile
@@ -176,6 +177,7 @@ class CameraActivity : Activity() {
         root.addView(pic, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         fullPicture = pic
         fullPicture?.setImageBitmap(latest)
+        fullPicture?.rotation = fullTurn * 90f
 
         val back = Button(this)
         back.isAllCaps = false
@@ -188,10 +190,14 @@ class CameraActivity : Activity() {
 
         val rotate = Button(this)
         rotate.isAllCaps = false
-        rotate.text = t("Rotate", "تدوير")
+        rotate.text = t("Rotate picture", "تدوير الصورة")
         rotate.setTextColor(Look.TEXT)
         rotate.background = Look.glass(this, 20, Look.BUTTON)
-        rotate.setOnClickListener { rotateScreen() }
+        rotate.setOnClickListener {
+            // turns only the picture, in 90-degree steps; the phone's own orientation is not changed
+            fullTurn = (fullTurn + 1) and 3
+            fullPicture?.rotation = fullTurn * 90f
+        }
         root.addView(rotate, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
             Gravity.TOP or Gravity.END).apply { topMargin = dp(16); marginEnd = dp(16) })
 
@@ -238,13 +244,6 @@ class CameraActivity : Activity() {
         fullMic = null
         window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
         requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-    }
-
-    /** Manual rotation: landscape and portrait, only when the button is pressed. */
-    private fun rotateScreen() {
-        requestedOrientation = if (requestedOrientation == android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)
-            android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-        else android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
     }
 
     // ---------- talk ----------
