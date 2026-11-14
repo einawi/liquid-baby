@@ -1,3 +1,9 @@
+0.8.8: the Hold/Tap toggle and the talk button no longer overlap in touch.
+- The talk button is no longer clickable itself. The whole area is handled by its frame, and the small toggle, which is a child, takes touches on its own area first.
+
+0.8.8: مفتاح الضغط/النقرة وزر التحدث ما يتداخلان في اللمس.
+- زر التحدث ما عاد يستقبل اللمس بنفسه. المنطقة كلها يديرها الإطار، والمفتاح الصغير (وهو عنصر داخل الإطار) يستقبل لمسه أولاً.
+
 0.8.7: the Hold/Tap toggle no longer triggers the talk button; smoother screen changes.
 - Touches on the small toggle stay with the toggle; the big talk button ignores them.
 - Each mode change is logged in Diagnostics.

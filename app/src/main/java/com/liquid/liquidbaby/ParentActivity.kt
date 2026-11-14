@@ -178,6 +178,22 @@ class ParentActivity : Activity() {
                 listenBtn = listenTile
 
                 val talkFrame = android.widget.FrameLayout(context)
+                talkFrame.isClickable = true
+                talkFrame.setOnTouchListener { _, ev ->
+                    // the Hold/Tap toggle sits on top of this button: touches inside its bounds belong to it
+                    val hit = android.graphics.Rect()
+                    modeRowView?.getHitRect(hit)
+                    if (hit.contains(ev.x.toInt(), ev.y.toInt())) return@setOnTouchListener false
+                    if (talkMode() == "press") {
+                        if (ev.actionMasked == MotionEvent.ACTION_UP) togglePressTalk()
+                    } else {
+                        when (ev.actionMasked) {
+                            MotionEvent.ACTION_DOWN -> onTalkDown()
+                            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> onTalkUp()
+                        }
+                    }
+                    true
+                }
                 talkBtn = Button(context).apply {
                     text = idleTalkText()
                     isAllCaps = false
@@ -185,21 +201,9 @@ class ParentActivity : Activity() {
                     setTextColor(Look.TEXT)
                     background = Look.glass(context, 26, Look.BUTTON)
                     minHeight = dp(88)
-                    setOnTouchListener { _, ev ->
-                        // the Hold/Tap toggle sits on top of this button: touches inside its bounds belong to it
-                        val hit = android.graphics.Rect()
-                        modeRowView?.getHitRect(hit)
-                        if (hit.contains(ev.x.toInt(), ev.y.toInt())) return@setOnTouchListener false
-                        if (talkMode() == "press") {
-                            if (ev.actionMasked == MotionEvent.ACTION_UP) togglePressTalk()
-                        } else {
-                            when (ev.actionMasked) {
-                                MotionEvent.ACTION_DOWN -> onTalkDown()
-                                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> onTalkUp()
-                            }
-                        }
-                        true
-                    }
+                    // touch is handled by talkFrame, so the Hold/Tap toggle (a child) gets its own touches first
+                    isClickable = false
+                    isFocusable = false
                 }
                 talkFrame.addView(talkBtn, android.widget.FrameLayout.LayoutParams(
                     android.widget.FrameLayout.LayoutParams.MATCH_PARENT, dp(104)))
