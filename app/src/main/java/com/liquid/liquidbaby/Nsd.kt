@@ -48,6 +48,38 @@ object Nsd {
         }
     }
 
+    /** Parent, pairing: every child phone announcing itself, as (name, ip). */
+    fun findAll(ctx: Context, timeoutMs: Long = 4000L): List<Pair<String, String>> {
+        return try {
+            val mgr = ctx.getSystemService(Context.NSD_SERVICE) as NsdManager
+            val list = java.util.Collections.synchronizedList(ArrayList<Pair<String, String>>())
+            val listener = object : NsdManager.DiscoveryListener {
+                override fun onDiscoveryStarted(serviceType: String) {}
+                override fun onDiscoveryStopped(serviceType: String) {}
+                override fun onStartDiscoveryFailed(serviceType: String, errorCode: Int) {}
+                override fun onStopDiscoveryFailed(serviceType: String, errorCode: Int) {}
+                override fun onServiceLost(i: NsdServiceInfo) {}
+                override fun onServiceFound(i: NsdServiceInfo) {
+                    if (!i.serviceName.startsWith("lb")) return
+                    mgr.resolveService(i, object : NsdManager.ResolveListener {
+                        override fun onResolveFailed(x: NsdServiceInfo, errorCode: Int) {}
+                        override fun onServiceResolved(x: NsdServiceInfo) {
+                            val ip = x.host?.hostAddress
+                            if (ip != null && !ip.contains(':')) list.add(Pair(x.serviceName, ip))
+                        }
+                    })
+                }
+            }
+            mgr.discoverServices(TYPE, NsdManager.PROTOCOL_DNS_SD, listener)
+            Thread.sleep(timeoutMs)
+            try { mgr.stopServiceDiscovery(listener) } catch (_: Exception) {}
+            synchronized(list) { list.distinctBy { it.second } }
+        } catch (e: Exception) {
+            Diag.i("Network announcement search problem: " + e.message)
+            emptyList()
+        }
+    }
+
     /** Parent: the paired child's current IPv4 address, or null if it is not announced. */
     fun findIp(ctx: Context, unitId: String, timeoutMs: Long = 4000L): String? {
         return try {

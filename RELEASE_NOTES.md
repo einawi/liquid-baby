@@ -1,3 +1,9 @@
+0.9.2 (build 68): pairing also finds the child through the network announcement.
+- The pairing screen lists child phones found by the broadcast search and by the network announcement, and logs both results.
+
+0.9.2 (build 68): الإقران يجد الطفل أيضاً عبر إعلان الشبكة.
+- شاشة الإقران تعرض جوالات الأطفال من البحث بالبث ومن إعلان الشبكة، وتسجّل نتيجة كل منهما.
+
 0.9.2 (build 67): the parent logs the result of the network announcement search.
 - Diagnostics shows "Network announcement found the child phone at ..." or "not announced", so we can confirm it works.
 

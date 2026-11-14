@@ -771,8 +771,14 @@ class ParentActivity : Activity() {
     private fun startPairFlow() {
         toast(t("Searching for the child phone...", "جارٍ البحث عن جوال الطفل..."))
         Thread {
-            val found = Discovery.scan(applicationContext)
-            Diag.i("Scan from ${Net.wifiIp(this) ?: "no Wi-Fi"}: found ${found.size} child phone(s)")
+            val broadcast = Discovery.scan(applicationContext)
+            Diag.i("Scan from ${Net.wifiIp(this) ?: "no Wi-Fi"}: found ${broadcast.size} child phone(s)")
+            val announced = Nsd.findAll(applicationContext)
+            Diag.i("Network announcement: found ${announced.size} child phone(s)" + announced.joinToString { " at " + it.second })
+            val found = ArrayList(broadcast)
+            for ((name, ip) in announced) {
+                if (found.none { it.ip == ip }) found.add(Discovery.Found(name.removePrefix("lb"), "Child phone", ip))
+            }
             runOnUiThread { if (found.isEmpty()) showNotFound() else showPicker(found) }
         }.start()
     }
