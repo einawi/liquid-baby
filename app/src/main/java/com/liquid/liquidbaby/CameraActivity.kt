@@ -1,8 +1,7 @@
 package com.liquid.liquidbaby
 
-import android.Manifest
-import android.app.Activity
-import android.content.pm.PackageManager
+import android.app.AlertDialog
+import android.content.pm.ActivityInfo
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.ColorMatrix
@@ -12,42 +11,47 @@ import android.os.Handler
 import android.os.Looper
 import android.view.Gravity
 import android.view.MotionEvent
+import android.view.ScaleGestureDetector
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.FrameLayout
+import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import java.util.concurrent.atomic.AtomicBoolean
 
-/** Parent unit: live camera with quality levels, full screen with a microphone, and the talk controls. */
-class CameraActivity : Activity() {
+/** Parent unit: live camera. Normal view, and a separate full-screen layer with pinch zoom and icon controls. */
+class CameraActivity : android.app.Activity() {
 
     private val ui = Handler(Looper.getMainLooper())
     private var picture: ImageView? = null
     private var fullPicture: ImageView? = null
     private var statusTv: TextView? = null
+    private var talk: TalkControl? = null
+    private var soundBtn: Button? = null
     private var flashBtn: Button? = null
     private var switchBtn: Button? = null
     private var nightBtn: Button? = null
-    private var soundBtn: Button? = null
-    private var talkBtn: Button? = null
-    private var fullMic: ImageView? = null
-    private var overlay: FrameLayout? = null
     private val qualityBtns = arrayOfNulls<Button>(4)
+    private var overlay: FrameLayout? = null
+    private var fullFlash: ImageButton? = null
+    private var fullSound: ImageButton? = null
+    private var fullTalk: ImageButton? = null
+    private var zoom = 1f
+    private var fullTurn = 0
     private val pending = AtomicBoolean(false)
     private var lastNight = false
-    private var fullTurn = 0
     private var ending = false
 
     @Volatile
     private var latest: Bitmap? = null
 
     private fun t(en: String, ar: String): String = Tr.pick(en, ar)
-
-    private fun talkMode(): String = Prefs.getString("talkMode", "hold")
+    private val qualityLabels get() = arrayOf(t("Low", "منخفضة"), t("Normal", "عادية"), "960×540", "720p")
 
     private val tick = object : Runnable {
         override fun run() {
@@ -71,14 +75,10 @@ class CameraActivity : Activity() {
             // quality: four levels side by side; the chosen one has a tick
             val row = LinearLayout(context)
             row.orientation = LinearLayout.HORIZONTAL
-            val labels = arrayOf(
-                t("Low", "منخفضة"), t("Normal", "عادية"), "960×540", "720p"
-            )
             for (q in 0..3) {
                 val b = Button(context)
                 b.isAllCaps = false
                 b.textSize = 13f
-                b.text = labels[q]
                 b.setOnClickListener {
                     ParentEngine.setView(q, ParentEngine.viewFront, ParentEngine.viewFlash)
                     refresh()
@@ -90,21 +90,13 @@ class CameraActivity : Activity() {
             }
             addView(row)
 
-            val tb = addButton(t("Hold to talk to the child", "اضغط مع الاستمرار للتحدث")) { }
-            tb.textSize = 20f
-            tb.minHeight = dp(96)
-            tb.setOnTouchListener { _, ev ->
-                if (talkMode() == "press") {
-                    if (ev.actionMasked == MotionEvent.ACTION_UP) togglePressTalk()
-                } else {
-                    when (ev.actionMasked) {
-                        MotionEvent.ACTION_DOWN -> onTalkDown()
-                        MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> onTalkUp()
-                    }
-                }
-                true
-            }
-            talkBtn = tb
+            // the same talk control as the main screen
+            val tc = TalkControl(this@CameraActivity)
+            talk = tc
+            addView(tc.view, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                topMargin = dp(12)
+            })
+
             flashBtn = addButton(t("Flash", "الفلاش")) {
                 ParentEngine.setView(ParentEngine.viewQuality, ParentEngine.viewFront, !ParentEngine.viewFlash)
             }
@@ -114,9 +106,9 @@ class CameraActivity : Activity() {
             nightBtn = addButton(t("Night mode", "وضع الليل")) {
                 ParentEngine.setView(ParentEngine.viewQuality, ParentEngine.viewFront, ParentEngine.viewFlash, !ParentEngine.viewNight)
             }
-            addButton(t("Full screen, with microphone", "ملء الشاشة مع الميكروفون")) { enterFull() }
+            addButton(t("Full screen", "ملء الشاشة")) { enterFull() }
             addButton(t("Rotate the picture", "تدوير الصورة")) { ParentEngine.viewRotate = (ParentEngine.viewRotate + 1) and 3 }
-            soundBtn = addButton(t("Live sound", "الصوت المباشر")) {
+            soundBtn = addButton(t("Room sound", "صوت الغرفة")) {
                 ParentEngine.liveSound = !ParentEngine.liveSound
                 refresh()
             }
@@ -153,10 +145,10 @@ class CameraActivity : Activity() {
     override fun onPause() {
         super.onPause()
         exitFull()
+        talk?.up()
         ui.removeCallbacks(tick)
         ParentEngine.frameListener = null
         ParentEngine.onChange = null
-        ParentEngine.endTalk()
         ParentEngine.endView()
     }
 
@@ -164,65 +156,90 @@ class CameraActivity : Activity() {
         if (overlay != null) exitFull() else super.onBackPressed()
     }
 
-    // ---------- full screen ----------
+    // ---------- full-screen layer ----------
+
+    private fun iconButton(icon: Int, desc: String, onTap: () -> Unit): ImageButton {
+        val b = ImageButton(this)
+        b.setImageResource(icon)
+        b.setColorFilter(Look.TEXT)
+        b.background = Look.glass(this, 18, Look.BUTTON)
+        b.setPadding(dp(12), dp(12), dp(12), dp(12))
+        b.contentDescription = desc
+        b.setOnClickListener { onTap() }
+        b.setOnLongClickListener {
+            Toast.makeText(this, desc, Toast.LENGTH_SHORT).show()
+            true
+        }
+        return b
+    }
 
     private fun enterFull() {
         if (overlay != null) return
         val root = FrameLayout(this)
         root.setBackgroundColor(Color.BLACK)
 
+        // the picture, zoomed by pinch only
         val pic = ImageView(this)
         pic.scaleType = ImageView.ScaleType.FIT_CENTER
         pic.setBackgroundColor(Color.BLACK)
+        pic.setImageBitmap(latest)
+        pic.rotation = fullTurn * 90f
+        pic.scaleX = zoom
+        pic.scaleY = zoom
         root.addView(pic, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         fullPicture = pic
-        fullPicture?.setImageBitmap(latest)
-        fullPicture?.rotation = fullTurn * 90f
 
-        val back = Button(this)
-        back.isAllCaps = false
-        back.text = t("Back", "رجوع")
-        back.setTextColor(Look.TEXT)
-        back.background = Look.glass(this, 20, Look.BUTTON)
-        back.setOnClickListener { exitFull() }
-        root.addView(back, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
-            Gravity.TOP or Gravity.START).apply { topMargin = dp(16); marginStart = dp(16) })
+        // the layer takes every touch: two fingers zoom, anything else does nothing
+        val detector = ScaleGestureDetector(this, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            override fun onScale(d: ScaleGestureDetector): Boolean {
+                val p = fullPicture ?: return true
+                zoom = (zoom * d.scaleFactor).coerceIn(1f, 4f)
+                p.pivotX = d.focusX
+                p.pivotY = d.focusY
+                p.scaleX = zoom
+                p.scaleY = zoom
+                return true
+            }
+        })
+        root.setOnTouchListener { _, ev ->
+            if (ev.pointerCount >= 2 || ev.actionMasked == MotionEvent.ACTION_POINTER_UP) detector.onTouchEvent(ev)
+            true
+        }
 
-        val rotate = Button(this)
-        rotate.isAllCaps = false
-        rotate.text = t("Rotate picture", "تدوير الصورة")
-        rotate.setTextColor(Look.TEXT)
-        rotate.background = Look.glass(this, 20, Look.BUTTON)
-        rotate.setOnClickListener {
-            // turns only the picture, in 90-degree steps; the phone's own orientation is not changed
+        // top: back and rotate
+        val back = iconButton(R.drawable.ic_back, t("Back", "رجوع")) { exitFull() }
+        root.addView(back, FrameLayout.LayoutParams(dp(52), dp(52), Gravity.TOP or Gravity.START).apply {
+            topMargin = dp(14); marginStart = dp(14)
+        })
+        val rotate = iconButton(R.drawable.ic_rotate, t("Rotate the picture", "تدوير الصورة")) {
             fullTurn = (fullTurn + 1) and 3
             fullPicture?.rotation = fullTurn * 90f
         }
-        root.addView(rotate, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
-            Gravity.TOP or Gravity.END).apply { topMargin = dp(16); marginEnd = dp(16) })
-
-        val mic = ImageView(this)
-        mic.setImageResource(R.drawable.ic_mic)
-        mic.setColorFilter(Look.TEXT)
-        mic.background = Look.glass(this, 40, Look.BUTTON)
-        mic.setPadding(dp(18), dp(18), dp(18), dp(18))
-        mic.contentDescription = t("Talk to the child", "التحدث مع الطفل")
-        mic.setOnTouchListener { _, ev ->
-            if (talkMode() == "press") {
-                if (ev.actionMasked == MotionEvent.ACTION_UP) togglePressTalk()
-            } else {
-                when (ev.actionMasked) {
-                    MotionEvent.ACTION_DOWN -> onTalkDown()
-                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> onTalkUp()
-                }
-            }
-            true
-        }
-        fullMic = mic
-        root.addView(mic, FrameLayout.LayoutParams(dp(72), dp(72), Gravity.BOTTOM or Gravity.END).apply {
-            bottomMargin = dp(24)
-            marginEnd = dp(24)
+        root.addView(rotate, FrameLayout.LayoutParams(dp(52), dp(52), Gravity.TOP or Gravity.END).apply {
+            topMargin = dp(14); marginEnd = dp(14)
         })
+
+        // bottom: icons in one row
+        val bar = LinearLayout(this)
+        bar.orientation = LinearLayout.HORIZONTAL
+        bar.gravity = Gravity.CENTER
+        fullFlash = iconButton(R.drawable.ic_flash, t("Flash", "الفلاش")) {
+            ParentEngine.setView(ParentEngine.viewQuality, ParentEngine.viewFront, !ParentEngine.viewFlash)
+        }
+        bar.addView(fullFlash, barParams())
+        bar.addView(iconButton(R.drawable.ic_quality, t("Quality", "الجودة")) { chooseQuality() }, barParams())
+        fullSound = iconButton(R.drawable.ic_speaker, t("Room sound", "صوت الغرفة")) {
+            ParentEngine.liveSound = !ParentEngine.liveSound
+            refreshFull()
+        }
+        bar.addView(fullSound, barParams())
+        fullTalk = iconButton(R.drawable.ic_mic, t("Talk to the child", "التحدث مع الطفل")) { talk?.tap() }
+        bar.addView(fullTalk, barParams())
+        bar.addView(iconButton(R.drawable.ic_record, t("Record video", "تسجيل فيديو")) {
+            Toast.makeText(this, t("Video recording is the next step.", "تسجيل الفيديو هو الخطوة القادمة."), Toast.LENGTH_SHORT).show()
+        }, barParams())
+        root.addView(bar, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
+            Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = dp(20) })
 
         addContentView(root, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         overlay = root
@@ -232,44 +249,47 @@ class CameraActivity : Activity() {
             View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
             View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
             View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+        refreshFull()
+    }
+
+    private fun barParams() = LinearLayout.LayoutParams(dp(56), dp(56)).apply {
+        marginStart = dp(5)
+        marginEnd = dp(5)
+    }
+
+    private fun chooseQuality() {
+        val labels = qualityLabels
+        AlertDialog.Builder(this)
+            .setTitle(t("Quality", "الجودة"))
+            .setItems(labels) { _, which ->
+                ParentEngine.setView(which, ParentEngine.viewFront, ParentEngine.viewFlash)
+                refresh()
+            }
+            .setNegativeButton(t("Cancel", "تراجع"), null)
+            .show()
     }
 
     /** Leaves full screen: stops any talk that is running and restores the normal screen. */
     private fun exitFull() {
         val root = overlay ?: return
-        if (ParentEngine.talking) onTalkUp()
+        talk?.up()
         (root.parent as? ViewGroup)?.removeView(root)
         overlay = null
         fullPicture = null
-        fullMic = null
+        fullFlash = null
+        fullSound = null
+        fullTalk = null
+        zoom = 1f
         window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
-        requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
     }
 
-    // ---------- talk ----------
-
-    private fun togglePressTalk() {
-        if (ParentEngine.talking) onTalkUp() else onTalkDown()
-    }
-
-    private fun onTalkDown() {
-        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), 30)
-            toast(t("Allow the microphone, then try again.", "اسمح بالميكروفون ثم حاول مرة أخرى."))
-            return
-        }
-        if (ParentEngine.beginTalk()) {
-            talkBtn?.text = t("Talking... (live sound is muted)", "تتحدث... (الصوت المباشر مكتوم)")
-            fullMic?.background = Look.glass(this, 40, Fx.tint(Themes.current().accent, 0xAA))
-        } else {
-            toast(ParentEngine.talkNote)
-        }
-    }
-
-    private fun onTalkUp() {
-        ParentEngine.endTalk()
-        talkBtn?.text = t("Hold to talk to the child", "اضغط مع الاستمرار للتحدث")
-        fullMic?.background = Look.glass(this, 40, Look.BUTTON)
+    private fun refreshFull() {
+        val accent = Themes.current().accent
+        fullFlash?.background = Look.glass(this, 18, if (ParentEngine.viewFlash) Fx.tint(accent, 0x88) else Look.BUTTON)
+        fullSound?.setImageResource(if (ParentEngine.liveSound) R.drawable.ic_speaker else R.drawable.ic_speaker_off)
+        fullSound?.background = Look.glass(this, 18, if (ParentEngine.liveSound) Look.BUTTON else Fx.tint(accent, 0x88))
+        fullTalk?.background = Look.glass(this, 18, if (ParentEngine.talking) Fx.tint(accent, 0xAA) else Look.BUTTON)
     }
 
     // ---------- refresh ----------
@@ -293,18 +313,17 @@ class CameraActivity : Activity() {
         if (ParentEngine.talkNote.isNotEmpty()) sb.append(ParentEngine.talkNote).append("\n")
         statusTv?.text = sb.toString()
 
-        val flashState = if (ParentEngine.viewFlash) t("ON (tap to turn off)", "مشغّل (اضغط للإطفاء)")
+        val flashState = if (ParentEngine.viewFlash) t("on (tap to turn off)", "مشغّل (اضغط للإطفاء)")
         else t("off (tap to turn on)", "مطفأ (اضغط للتشغيل)")
-        val flashNote = if (ParentEngine.viewHasFlash) "" else t(" - this camera does not report a flash", " - هذه الكاميرا لا تُبلغ عن فلاش")
-        flashBtn?.text = t("Flash: ", "الفلاش: ") + flashState + flashNote
+        flashBtn?.text = t("Flash: ", "الفلاش: ") + flashState
         switchBtn?.text = t("Camera: " + (if (ParentEngine.viewFront) "front" else "back") + " (tap to switch)",
             "الكاميرا: " + (if (ParentEngine.viewFront) "أمامية" else "خلفية") + " (اضغط للتبديل)")
         nightBtn?.text = t("Night mode: " + (if (ParentEngine.viewNight) "on (tap to turn off)" else "off (tap to turn on)"),
             "وضع الليل: " + (if (ParentEngine.viewNight) "مشغّل (اضغط للإطفاء)" else "مطفأ (اضغط للتشغيل)"))
-        soundBtn?.text = t("Live sound: " + (if (ParentEngine.liveSound) "on" else "off") + " (tap to change)",
-            "الصوت المباشر: " + (if (ParentEngine.liveSound) "مشغّل" else "مطفأ") + " (اضغط للتغيير)")
+        soundBtn?.text = t("Room sound: " + (if (ParentEngine.liveSound) "on" else "muted"),
+            "صوت الغرفة: " + (if (ParentEngine.liveSound) "مشغّل" else "مكتوم"))
 
-        val labels = arrayOf(t("Low", "منخفضة"), t("Normal", "عادية"), "960×540", "720p")
+        val labels = qualityLabels
         for (q in 0..3) {
             val b = qualityBtns[q] ?: continue
             val chosen = ParentEngine.viewQuality == q
@@ -315,20 +334,17 @@ class CameraActivity : Activity() {
         val night = ParentEngine.viewNight
         if (night != lastNight) {
             lastNight = night
-            picture?.colorFilter = if (night) ColorMatrixColorFilter(
-                ColorMatrix(
-                    floatArrayOf(
-                        1.35f, 0f, 0f, 0f, 22f,
-                        0f, 1.35f, 0f, 0f, 22f,
-                        0f, 0f, 1.35f, 0f, 22f,
-                        0f, 0f, 0f, 1f, 0f
-                    )
-                )
+            val filter = if (night) ColorMatrixColorFilter(
+                ColorMatrix(floatArrayOf(
+                    1.35f, 0f, 0f, 0f, 22f,
+                    0f, 1.35f, 0f, 0f, 22f,
+                    0f, 0f, 1.35f, 0f, 22f,
+                    0f, 0f, 0f, 1f, 0f
+                ))
             ) else null
-            fullPicture?.colorFilter = picture?.colorFilter
+            picture?.colorFilter = filter
+            fullPicture?.colorFilter = filter
         }
-        if (!ParentEngine.talking && talkBtn?.text?.toString()?.startsWith("Talk") == true && talkBtn?.text?.toString()?.contains("Talking") == true) {
-            talkBtn?.text = t("Hold to talk to the child", "اضغط مع الاستمرار للتحدث")
-        }
+        refreshFull()
     }
 }

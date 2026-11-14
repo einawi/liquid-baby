@@ -1,3 +1,15 @@
+0.8.11: status words, shared talk button, full-screen layer with pinch zoom and icons.
+- Parent status: Stopped, Connecting, Connected, Disconnected (with seconds since the drop).
+- The talk button on the camera screen is the same control as the main screen (Hold/Tap toggle, glow, labels).
+- Full screen: a separate layer that takes every touch. Two fingers zoom (1x to 4x). Icons along the bottom: flash, quality menu, room sound (mute), talk, and record. Long-press an icon to see its name.
+- Not in this build yet: video recording itself. The record icon shows a message until the recorder is built.
+
+0.8.11: حالات الاتصال، وزر التحدث المشترك، وملء الشاشة بتكبير بإصبعين وأيقونات.
+- حالة الأب: متوقف، جارٍ الاتصال، متصل، انقطع الاتصال (مع عدد الثواني منذ الانقطاع).
+- زر التحدث في شاشة الكاميرا هو نفس الزر في الشاشة الرئيسية (مفتاح ضغط/نقرة، توهج، نصوص).
+- ملء الشاشة: طبقة مستقلة تستقبل كل اللمس. إصبعان للتكبير (من 1x إلى 4x). أيقونات أسفل الشاشة: الفلاش، قائمة الجودة، صوت الغرفة (كتم)، التحدث، والتسجيل. اضغط مطولاً على أي أيقونة لرؤية اسمها.
+- غير موجود بعد: تسجيل الفيديو نفسه. أيقونة التسجيل تعرض رسالة حتى يُبنى المسجّل.
+
 0.8.10: full-screen picture no longer upside down.
 - The Rotate button in full screen turns only the picture, in 90-degree steps. The phone's own orientation is not changed.
 
