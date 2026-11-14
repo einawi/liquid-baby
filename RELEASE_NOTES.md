@@ -1,3 +1,13 @@
+0.8.1: tap-to-talk switch inside the talk button, smoother visuals, faster connection status.
+- The tap/hold switch sits inside the talk button (top end).
+- Dots and the sound meter glide between values. Buttons show a touch ripple.
+- Parent notices a dead link within about 25 seconds, so the green dot turns off sooner. Battery and temperature dots turn grey when the child's status is older than 45 seconds.
+
+0.8.1: مفتاح "اضغط" داخل زر التحدث، وتأثيرات أنعم، وحالة اتصال أسرع.
+- مفتاح الضغط/الاستمرار داخل زر التحدث (في الطرف العلوي).
+- النقاط ومقياس الصوت تتحرك بسلاسة، والأزرار تظهر تأثير اللمس.
+- يكتشف الأب الانقطاع خلال حوالي 25 ثانية، فتنطفئ النقطة الخضراء أسرع. نقاط البطارية والحرارة تصير رمادية إذا كانت حالة الطفل أقدم من 45 ثانية.
+
 0.8.0: correctness, clarity, alerts, recordings, diagnostics, accessibility.
 
 - Child card shows the child's address, not this phone's.
