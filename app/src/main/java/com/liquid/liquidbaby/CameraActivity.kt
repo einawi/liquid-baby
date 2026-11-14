@@ -178,7 +178,7 @@ class CameraActivity : android.app.Activity() {
         ParentEngine.frameListener = { bmp ->
             latest = bmp
             frames++
-            recorder?.onFrame(bmp)
+            try { recorder?.onFrame(bmp) } catch (e: Throwable) { Diag.i("Recorder frame problem: " + e.message) }
             if (pending.compareAndSet(false, true)) {
                 runOnUiThread {
                     pending.set(false)
@@ -245,8 +245,8 @@ class CameraActivity : android.app.Activity() {
             return
         }
         recorder = rec
-        ParentEngine.roomSink = { s, n -> rec.onSound(s, n) }
-        ParentEngine.micSink = { s, n -> rec.onSound(s, n) }
+        ParentEngine.roomSink = { s, n -> try { rec.onSound(s, n) } catch (e: Throwable) { Diag.i("Recorder sound problem: " + e.message) } }
+        ParentEngine.micSink = { s, n -> try { rec.onSound(s, n) } catch (e: Throwable) { Diag.i("Recorder mic problem: " + e.message) } }
         updateRecordIcons()
         toast(t("Recording started.", "بدأ التسجيل."))
     }

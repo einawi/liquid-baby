@@ -1,3 +1,19 @@
+0.9.2: video recorder (new, starts only when you press the record button).
+- Record button in the camera screen and in full screen. It turns red and shows a stop icon while recording.
+- Records the picture as shown (zoom and quality included), room sound while you hear it, and your microphone while you talk.
+- Stops when you press the button, when you leave the camera screen (you are asked first), or after 10 minutes. Saved encrypted on the parent phone.
+- Recording problems are logged in Diagnostics and do not stop the live view or the connection.
+- New feature, tested on a phone only as far as the build compiles: if you see lag or a crash while recording, tell us in Diagnostics.
+- Video list and playback: next version.
+
+0.9.2: مسجّل الفيديو (جديد، يبدأ فقط عند الضغط على زر التسجيل).
+- زر التسجيل في شاشة الكاميرا وملء الشاشة. يصير أحمر وتظهر أيقونة إيقاف أثناء التسجيل.
+- يسجّل الصورة كما تظهر (مع الزوم والجودة)، وصوت الغرفة عندما تسمعه، وميكروفونك أثناء التحدث.
+- يتوقف عند الضغط عليه، أو عند الخروج من شاشة الكاميرا (يسألك أولاً)، أو بعد 10 دقائق. يُحفظ مشفّراً على جوال الأب.
+- مشاكل التسجيل تُسجَّل في التشخيص ولا توقف البث المباشر ولا الاتصال.
+- ميزة جديدة: إذا لاحظت تأخيراً أو توقفاً أثناء التسجيل، اكتب لنا ما صار ومعه سطر التشخيص.
+- قائمة الفيديوهات والتشغيل: الإصدار القادم.
+
 Work in progress: video recorder, connected to the record buttons (camera and full screen). Test it with the Trial build workflow, not the public release.
 - New: VideoRecorder (H.264 video from the frames on screen, AAC audio mixed by time, MP4 output, 10-minute limit) and VideoVault (chunked AES-GCM encryption, so long videos never load into memory).
 - New: GitHub "Trial build" workflow (manual). It builds Liquid Baby Trial and uploads the APK as an artifact. It does not publish a release.
