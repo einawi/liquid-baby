@@ -259,6 +259,13 @@ object ParentEngine {
                 PairStore.forgetIp(ip)
             }
         }
+        Nsd.findIp(appCtx, p.childId)?.let { ip ->
+            try {
+                return Pair(handshake(p, ip, 5000), ip)
+            } catch (e: IOException) {
+                last = e
+            }
+        }
         for (d in Discovery.scan(appCtx)) {
             if (d.id != p.childId) continue
             try {

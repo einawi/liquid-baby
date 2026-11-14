@@ -110,6 +110,7 @@ object ChildEngine {
         Diag.i("Child unit starting. " + Net.describe(appCtx).replace("\n", ", "))
         try {
             udp = Discovery.startResponder(appCtx, PairStore.unitId(), Build.MODEL)
+            Nsd.register(appCtx, PairStore.unitId())
         } catch (e: Exception) {
             Diag.e("Discovery responder failed", e)
         }
@@ -131,6 +132,7 @@ object ChildEngine {
 
     @Synchronized
     fun stop() {
+        Nsd.unregister(appCtx)
         if (!running) return
         running = false
         status = "Stopped"

@@ -1,3 +1,11 @@
+0.9.2 (build 66): the most reliable way to find the child phone after its address changes.
+- The child phone announces itself on the network under its identity (Android's built-in service discovery).
+- The parent looks it up by that identity and gets its current address. Order: last known addresses, then the network announcement, then the broadcast search. Every device is verified by its key before it is used.
+
+0.9.2 (build 66): أكثر طريقة استقراراً لإيجاد جوال الطفل بعد تغيّر عنوانه.
+- جوال الطفل يعلن نفسه على الشبكة بهويته (خدمة الاكتشاف المدمجة في أندرويد).
+- الأب يبحث عنه بهويته ويأخذ عنوانه الحالي. الترتيب: آخر العناوين المعروفة، ثم إعلان الشبكة، ثم البحث بالبث. وكل جهاز يُتحقق منه بمفتاحه قبل الاستخدام.
+
 0.9.2 (build 65): reconnects after the child phone's address or network changes, without re-pairing.
 - The parent tries the child's last addresses, but accepts a device only if it proves it is the paired child. Any other device at a reused address is skipped and forgotten.
 - If none of the addresses match, the parent searches the network for the paired child by its identity.
