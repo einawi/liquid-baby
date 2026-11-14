@@ -643,10 +643,82 @@ class ParentActivity : Activity() {
                             .show()
                     }
                     row.addView(del, LinearLayout.LayoutParams(dp(48), dp(48)).apply { marginStart = dp(8) })
+                    val share = ImageButton(context)
+                    share.setImageResource(R.drawable.ic_share)
+                    share.background = Look.glass(context, 18, Look.BUTTON)
+                    share.setColorFilter(Look.TEXT)
+                    share.setPadding(dp(10), dp(10), dp(10), dp(10))
+                    share.contentDescription = t("Share or save video", "مشاركة أو حفظ الفيديو")
+                    share.setOnClickListener { chooseExport(f) }
+                    row.addView(share, LinearLayout.LayoutParams(dp(48), dp(48)).apply { marginStart = dp(8) })
                 }
                 Fx.enter(card, 0)
             }
         }
+    }
+
+    private fun chooseExport(f: File) {
+        AlertDialog.Builder(this)
+            .setTitle(t("Video", "الفيديو"))
+            .setItems(arrayOf(t("Share", "مشاركة"), t("Save to the gallery (Movies/LiquidBaby)", "حفظ في المعرض (Movies/LiquidBaby)"))) { _, which ->
+                exportVideo(f, share = which == 0)
+            }
+            .setNegativeButton(t("Cancel", "تراجع"), null)
+            .show()
+    }
+
+    /** Decrypts the video and writes a normal MP4 to Movies/LiquidBaby (Android 10 and newer), then optionally shares it. */
+    private fun exportVideo(f: File, share: Boolean) {
+        if (android.os.Build.VERSION.SDK_INT < 29) {
+            toast(t("Saving to the gallery needs Android 10 or newer.", "الحفظ في المعرض يحتاج أندرويد 10 أو أحدث."))
+            return
+        }
+        toast(t("Preparing the video...", "جارٍ تجهيز الفيديو..."))
+        Thread {
+            val name = "LiquidBaby-" + android.text.format.DateFormat.format("yyyyMMdd-HHmmss", java.util.Date(f.lastModified())) + ".mp4"
+            val tmp = File(File(cacheDir, "export").apply { mkdirs() }, name)
+            val ok = VideoVault.decryptFile(f, tmp)
+            var uri: android.net.Uri? = null
+            if (ok) {
+                try {
+                    val values = android.content.ContentValues().apply {
+                        put(android.provider.MediaStore.Video.Media.DISPLAY_NAME, name)
+                        put(android.provider.MediaStore.Video.Media.MIME_TYPE, "video/mp4")
+                        put(android.provider.MediaStore.Video.Media.RELATIVE_PATH, "Movies/LiquidBaby")
+                        put(android.provider.MediaStore.Video.Media.IS_PENDING, 1)
+                    }
+                    val target = contentResolver.insert(android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI, values)
+                    if (target != null) {
+                        contentResolver.openOutputStream(target)?.use { out ->
+                            tmp.inputStream().use { it.copyTo(out) }
+                        }
+                        val done = android.content.ContentValues().apply { put(android.provider.MediaStore.Video.Media.IS_PENDING, 0) }
+                        contentResolver.update(target, done, null, null)
+                        uri = target
+                    }
+                } catch (e: Exception) {
+                    Diag.i("Video export problem: " + e.message)
+                }
+            }
+            tmp.delete()
+            runOnUiThread {
+                val target = uri
+                if (target == null) {
+                    toast(t("The video could not be saved.", "تعذّر حفظ الفيديو."))
+                    return@runOnUiThread
+                }
+                if (share) {
+                    val i = Intent(Intent.ACTION_SEND).apply {
+                        type = "video/mp4"
+                        putExtra(Intent.EXTRA_STREAM, target)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    startActivity(Intent.createChooser(i, t("Share video", "مشاركة الفيديو")))
+                } else {
+                    toast(t("Saved to Movies/LiquidBaby.", "تم الحفظ في Movies/LiquidBaby."))
+                }
+            }
+        }.start()
     }
 
     /** Encrypted videos saved by the recorder, newest first. */

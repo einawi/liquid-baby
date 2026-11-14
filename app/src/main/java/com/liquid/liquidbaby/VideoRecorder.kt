@@ -132,21 +132,32 @@ class VideoRecorder(private val outFile: File, private val maxMs: Long = 600_000
     private fun finish(byLimit: Boolean) {
         stopping = true
         try {
-            eosDeadline = System.currentTimeMillis() + 4000
+            // both encoders get one shared deadline, and are drained together until both report the end
+            eosDeadline = System.currentTimeMillis() + 6000
             drainAudio(true)
             signalEos()
-            drainVideo(true)
-            drainAudioOut(true)
-            if (started) {
-                muxer?.stop()
+            while (System.currentTimeMillis() < eosDeadline && !(videoEos && audioEos)) {
+                drainVideo(false)
+                drainAudioOut(false)
+                Thread.sleep(10)
             }
-            muxer?.release()
+            if (started) {
+                try { muxer?.stop() } catch (e: Exception) { Diag.i("Recorder mux stop: " + e.message) }
+            }
+            try { muxer?.release() } catch (_: Exception) {}
             muxer = null
             releaseCodecs()
-            onFinished?.invoke(outFile.exists() && outFile.length() > 0)
+            // an empty file is never reported as saved
+            val ok = started && outFile.exists() && outFile.length() > 1024
+            if (!ok) {
+                outFile.delete()
+                Diag.i("Recorder: no picture was written (started=" + started + ", video end=" + videoEos + ", audio end=" + audioEos + ")")
+            }
+            onFinished?.invoke(ok)
         } catch (e: Exception) {
             Diag.i("Recorder stop problem: " + e.message)
             releaseAll()
+            outFile.delete()
             onFinished?.invoke(false)
         }
     }

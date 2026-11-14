@@ -1,3 +1,13 @@
+0.9.2 (build 60): fixes empty recordings, adds sharing.
+- Fixed: a recording could be saved empty (0 MB, black picture) when the stop ran out of time. Video and sound now finish together, and an empty file is never saved.
+- New: each video has a share button. Share it (for example to WhatsApp), or save it to the gallery as a normal MP4 in Movies/LiquidBaby.
+- Empty videos from older builds remain in the list; delete them.
+
+0.9.2 (build 60): إصلاح التسجيلات الفارغة، وإضافة المشاركة.
+- تم إصلاح: كان الفيديو يُحفظ فارغاً (0 MB وشاشة سوداء) عند انتهاء وقت الإيقاف. الآن الفيديو والصوت ينتهيان معاً، ولا يُحفظ أي ملف فارغ.
+- جديد: زر مشاركة لكل فيديو. شاركه (مثل واتساب)، أو احفظه في المعرض كفيديو MP4 عادي في Movies/LiquidBaby.
+- الفيديوهات الفارغة من النسخ السابقة تبقى في القائمة؛ احذفها.
+
 0.9.2 (build 59): you can see and play your saved videos.
 - Recordings screen: a new "Videos (encrypted)" section lists saved videos, with play and delete.
 - The video plays inside the app. The decrypted copy is kept only while playing and is deleted afterwards.
