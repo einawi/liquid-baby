@@ -11,6 +11,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.text.InputType
+import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.widget.Button
@@ -42,6 +43,11 @@ class ParentActivity : Activity() {
     private var meter: ProgressBar? = null
     private var listenBtn: Button? = null
     private var talkBtn: Button? = null
+    private var modeBtn: Button? = null
+    private val talkLimit = Runnable {
+        onTalkUp()
+        toast(t("Talk stopped after 60 seconds.", "توقف الحديث بعد 60 ثانية."))
+    }
     private var settingsHead: TextView? = null
     private var settingsBox: LinearLayout? = null
     private var settingsOpen = false
@@ -156,17 +162,40 @@ class ParentActivity : Activity() {
                 val listenTile = tile(grid, t("Listen", "استماع"), t("Sound only", "صوت فقط")) { toggleListen() }
                 listenBtn = listenTile
 
+                modeBtn = Button(context).apply {
+                    isAllCaps = false
+                    textSize = 13f
+                    setTextColor(Look.SUB)
+                    background = Look.glass(context, 16, Look.BUTTON)
+                    minHeight = dp(40)
+                    text = modeLabel()
+                    setOnClickListener {
+                        val next = if (talkMode() == "press") "hold" else "press"
+                        Prefs.putString("talkMode", next)
+                        if (ParentEngine.talking) onTalkUp()
+                        text = modeLabel()
+                        talkBtn?.text = idleTalkText()
+                    }
+                }
+                addView(modeBtn, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                    topMargin = dp(12)
+                    gravity = Gravity.END
+                })
                 talkBtn = Button(context).apply {
-                    text = t("Hold to talk", "اضغط مع الاستمرار للتحدث")
+                    text = idleTalkText()
                     isAllCaps = false
                     textSize = 18f
                     setTextColor(Look.TEXT)
                     background = Look.glass(context, 26, Look.BUTTON)
                     minHeight = dp(88)
                     setOnTouchListener { _, ev ->
-                        when (ev.actionMasked) {
-                            MotionEvent.ACTION_DOWN -> onTalkDown()
-                            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> onTalkUp()
+                        if (talkMode() == "press") {
+                            if (ev.actionMasked == MotionEvent.ACTION_UP) togglePressTalk()
+                        } else {
+                            when (ev.actionMasked) {
+                                MotionEvent.ACTION_DOWN -> onTalkDown()
+                                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> onTalkUp()
+                            }
                         }
                         true
                     }
@@ -318,6 +347,29 @@ class ParentActivity : Activity() {
         stopPlayer()
     }
 
+    private fun talkMode(): String = Prefs.getString("talkMode", "hold")
+
+    private fun modeLabel(): String =
+        if (talkMode() == "press") t("Mode: tap to talk (tap again to stop)", "الوضع: اضغط للتحدث (اضغط مرة أخرى للإيقاف)")
+        else t("Mode: hold to talk", "الوضع: اضغط مع الاستمرار")
+
+    private fun idleTalkText(): String =
+        if (talkMode() == "press") t("Tap to talk", "اضغط للتحدث")
+        else t("Hold to talk", "اضغط مع الاستمرار للتحدث")
+
+    private fun talkingText(): String =
+        if (talkMode() == "press") t("Talking… tap to stop", "تتحدث… اضغط للإيقاف")
+        else t("Talking… release to stop", "تتحدث… ارفع إصبعك للإيقاف")
+
+    private fun togglePressTalk() {
+        if (ParentEngine.talking) {
+            onTalkUp()
+        } else {
+            onTalkDown()
+            if (ParentEngine.talking) ui.postDelayed(talkLimit, 60_000L)
+        }
+    }
+
     private fun onTalkDown() {
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), 30)
@@ -325,7 +377,7 @@ class ParentActivity : Activity() {
             return
         }
         if (ParentEngine.beginTalk()) {
-            talkBtn?.text = t("Talking… release to stop", "تتحدث… ارفع إصبعك للإيقاف")
+            talkBtn?.text = talkingText()
             talkBtn?.background = Look.glass(this, 26, Fx.tint(Themes.current().accent, 0x66))
             talkBtn?.animate()?.scaleX(1.02f)?.scaleY(1.02f)?.setDuration(200)?.start()
         } else {
@@ -334,8 +386,9 @@ class ParentActivity : Activity() {
     }
 
     private fun onTalkUp() {
+        ui.removeCallbacks(talkLimit)
         ParentEngine.endTalk()
-        talkBtn?.text = t("Hold to talk", "اضغط مع الاستمرار للتحدث")
+        talkBtn?.text = idleTalkText()
         talkBtn?.background = Look.glass(this, 26, Look.BUTTON)
         talkBtn?.animate()?.scaleX(1f)?.scaleY(1f)?.setDuration(200)?.start()
     }
