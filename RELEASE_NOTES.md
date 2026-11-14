@@ -1,4 +1,4 @@
-0.9.1: fixes the build (the trial build type was renamed from "test" to "trial").
+0.9.1: fixes the build (the trial build type was renamed from "test" to "trial", and resource values are enabled for it).
 - Gradle does not accept build type names starting with "test". The trial app is now assembleTrial and installs as Liquid Baby Trial.
 - Same features as 0.9.0.
 
