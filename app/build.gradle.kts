@@ -19,6 +19,7 @@ android {
         versionName = appVersionName
         val repo = providers.gradleProperty("githubRepo").getOrElse("")
         buildConfigField("String", "GITHUB_REPO", "\"$repo\"")
+        buildConfigField("boolean", "IS_TEST", "false")
     }
 
     buildFeatures {
