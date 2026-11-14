@@ -1,3 +1,32 @@
+0.8.0: correctness, clarity, alerts, recordings, diagnostics, accessibility.
+
+- Child card shows the child's address, not this phone's.
+- One set of status words on both screens: Connected, Searching, Stopped.
+- Engine messages shown on screen are in the chosen language.
+- Settings in three groups: Appearance and language, Alerts, Advanced.
+- First-run steps after choosing a role.
+- Start/Stop is coloured when it is the action to take.
+- Each kind of alert has its own channel (battery, temperature, disconnect), so each can be muted.
+- Disconnect alert time: 60, 100 or 180 seconds.
+- Recordings grouped by Today, Yesterday, This week, Earlier. Delete older than 1, 7 or 30 days, or delete all, with confirmation. Clearer empty state.
+- Diagnostics: filter by All, Errors only, or Connection only. Copy and Share remove lines that mention secrets and long hex strings.
+- Clear message when pairing keys cannot be read.
+- Touch targets for the play and delete buttons are 48dp.
+
+0.8.0: الصحة والوضوح والتنبيهات والتسجيلات والتشخيص وإمكانية الوصول.
+- بطاقة الطفل تعرض عنوان الطفل، وليس عنوان هذا الجوال.
+- كلمات حالة واحدة على الشاشتين: متصل، جارٍ البحث، متوقف.
+- الرسائل المعروضة على الشاشة باللغة المختارة.
+- الإعدادات في ثلاث مجموعات: المظهر واللغة، التنبيهات، متقدم.
+- خطوات أولى بعد اختيار الدور.
+- زر ابدأ/أوقف بلون واضح عندما يكون هو الإجراء المطلوب.
+- لكل نوع تنبيه قناة خاصة (البطارية، الحرارة، الانقطاع) يمكن كتمها.
+- وقت تنبيه الانقطاع: 60 أو 100 أو 180 ثانية.
+- التسجيلات مجمّعة: اليوم، أمس، هذا الأسبوع، أقدم. حذف الأقدم من يوم أو 7 أو 30، أو حذف الكل، مع تأكيد.
+- التشخيص: تصفية الكل، الأخطاء فقط، أو الاتصال فقط. النسخ والمشاركة يحذفان الأسطر التي فيها أسرار.
+- رسالة واضحة عند تعذر قراءة مفاتيح الاقتران.
+- أزرار التشغيل والحذف بحجم 48dp على الأقل.
+
 0.7.9: tap-to-talk option.
 
 - Parent screen: a small switch above the talk button chooses between "hold to talk" (default) and "tap to talk".

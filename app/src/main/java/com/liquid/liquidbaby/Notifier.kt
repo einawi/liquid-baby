@@ -82,16 +82,38 @@ object Notifier {
         return id
     }
 
-    fun alert(ctx: Context, title: String, text: String) {
+    /** Own channel per kind of alert, so each one can be muted in Android settings. */
+    private fun kindChannel(ctx: Context, kind: String): String {
+        if (Build.VERSION.SDK_INT < 26) return "alerts"
+        val id = "alert_$kind"
+        if (nm(ctx).getNotificationChannel(id) == null) {
+            val name = when (kind) {
+                "battery" -> "Child battery low / بطارية الطفل منخفضة"
+                "temperature" -> "Child phone hot / حرارة جوال الطفل"
+                else -> "Connection lost / انقطاع الاتصال"
+            }
+            nm(ctx).createNotificationChannel(NotificationChannel(id, name, NotificationManager.IMPORTANCE_HIGH))
+        }
+        return id
+    }
+
+    fun alert(ctx: Context, title: String, text: String, kind: String = "alerts") {
         try {
-            val b = builder(ctx, alertChannel(ctx))
+            val channel = if (kind == "alerts") alertChannel(ctx) else kindChannel(ctx, kind)
+            val b = builder(ctx, channel)
                 .setSmallIcon(R.drawable.ic_notify)
                 .setColor(COLOR)
                 .setContentTitle(Tr.t(title))
                 .setContentText(Tr.t(text))
                 .setContentIntent(openApp(ctx, 3, ParentActivity::class.java))
                 .setAutoCancel(true)
-            if (canPost(ctx)) nm(ctx).notify(1002, b.build())
+            val id = when (kind) {
+                "battery" -> 1003
+                "temperature" -> 1004
+                "disconnect" -> 1005
+                else -> 1002
+            }
+            if (canPost(ctx)) nm(ctx).notify(id, b.build())
         } catch (e: Exception) {
             Diag.e("Could not show alert", e)
         }

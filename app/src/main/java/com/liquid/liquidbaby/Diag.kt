@@ -71,6 +71,16 @@ object Diag {
         }
     }
 
+    /** Removes lines that mention passwords or keys, and long hex strings, before a log is copied or shared. */
+    fun redact(text: String): String {
+        val secretWords = Regex("(?i)password|passwd|secret|token|keystore|private")
+        val longHex = Regex("[0-9a-fA-F]{32,}")
+        return text.lines().joinToString("\n") { line ->
+            if (secretWords.containsMatchIn(line)) "[line removed: may contain a secret]"
+            else line.replace(longHex, "[removed]")
+        }
+    }
+
     fun deviceInfo(ctx: Context): String =
         "Liquid Baby " + AppInfo.versionName(ctx) + " (build " + AppInfo.versionCode(ctx) + ")\n" +
             "Device: " + Build.MANUFACTURER + " " + Build.MODEL + ", Android " +

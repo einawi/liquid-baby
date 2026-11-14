@@ -19,7 +19,7 @@ data class Style(
 
 /**
  * Looks: style (classic = glass gradient, minimal = flat colours) and mode (system / dark / light).
- * Settings chooses both. Default: classic, follows the phone.
+ * Settings chooses both. Default: minimal (flat), follows the phone.
  */
 object Themes {
     /** Set by screen() from the phone's current dark/light setting. */

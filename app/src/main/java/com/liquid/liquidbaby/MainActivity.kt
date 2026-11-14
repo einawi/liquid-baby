@@ -104,5 +104,17 @@ class MainActivity : Activity() {
         Prefs.putString("role", role)
         Diag.i("Role set to $role")
         render()
+        val msg = if (role == "child") Tr.pick(
+            "1. Keep this phone on the charger and on the home Wi-Fi.\n2. Tap Start monitoring.\n3. On the parent phone, tap Pair with the child phone, then tap 'Allow a new parent phone to pair' here.",
+            "1. خلّ هذا الجوال على الشاحن وعلى واي فاي البيت.\n2. اضغط ابدأ المراقبة.\n3. على جوال الأب اضغط اقرن مع جوال الطفل، ثم اضغط 'السماح بإقران جوال أبوين جديد' هنا."
+        ) else Tr.pick(
+            "1. Keep this phone on the same Wi-Fi as the child phone.\n2. On the child phone, tap Start monitoring.\n3. Here, tap Pair with the child phone, choose it, and check that both phones show the same code.",
+            "1. خلّ هذا الجوال على نفس واي فاي جوال الطفل.\n2. على جوال الطفل اضغط ابدأ المراقبة.\n3. هنا اضغط اقرن مع جوال الطفل، واختره، وتأكد أن الرمز متطابق على الجوالين."
+        )
+        AlertDialog.Builder(this)
+            .setTitle(Tr.pick("Next steps", "الخطوات التالية"))
+            .setMessage(msg)
+            .setPositiveButton(Tr.pick("OK", "حسناً"), null)
+            .show()
     }
 }

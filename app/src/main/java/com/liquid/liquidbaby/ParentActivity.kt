@@ -120,6 +120,12 @@ class ParentActivity : Activity() {
                         "على جوال الطفل، اضغط 'السماح بإقران جوال أبوين جديد'."))
                 }
             } else {
+                if (paired.key.isEmpty()) {
+                    card {
+                        addBody(t("Pairing keys could not be read on this phone.", "تعذّر قراءة مفاتيح الاقتران على هذا الجوال."))
+                        line(t("Remove the pairing below and pair again.", "ألغِ الاقتران من الأسفل واقرن من جديد."))
+                    }
+                }
                 card {
                     val row = addRow()
                     batteryDot = Fx.dot(context, 0xFF8899AA.toInt())
@@ -400,7 +406,7 @@ class ParentActivity : Activity() {
     /** One label for the whole connection state. Engine details stay in Diagnostics. */
     private fun stateLabel(): Pair<String, Int> = when {
         ParentEngine.connected -> Pair(t("Connected", "متصل"), 0xFF2E9E6A.toInt())
-        ParentEngine.running -> Pair(t("Searching for the child", "جارٍ البحث عن الطفل"), 0xFFB7791F.toInt())
+        ParentEngine.running -> Pair(t("Searching", "جارٍ البحث"), 0xFFB7791F.toInt())
         else -> Pair(t("Stopped", "متوقف"), 0xFF6B7785.toInt())
     }
 
@@ -410,7 +416,7 @@ class ParentActivity : Activity() {
         runBtn?.text = t(if (ParentEngine.running) "Stop monitoring" else "Start monitoring",
             if (ParentEngine.running) "أوقف المراقبة" else "ابدأ المراقبة")
         runBtn?.background = Look.glass(this, 22,
-            if (ParentEngine.running) Fx.tint(Themes.current().accent, 0x40) else Look.BUTTON)
+            if (ParentEngine.running) Look.BUTTON else Fx.tint(Themes.current().accent, 0x66))
         vpnBtn?.visibility = if (Net.vpnBlocksLocal(this)) View.VISIBLE else View.GONE
 
         if (ParentEngine.connected) {
@@ -421,11 +427,11 @@ class ParentActivity : Activity() {
             statusPill?.alpha = 1f
         }
 
-        val wifi = Net.wifiIp(this)
+        val childIp = PairStore.paired()?.lastIp?.ifBlank { null } ?: "--"
         val ago = (System.currentTimeMillis() - ParentEngine.lastContact) / 1000
         detailLine?.text = t(
-            "Wi-Fi: ${wifi ?: "--"}" + if (ParentEngine.connected) "  ·  last contact ${ago}s ago" else "",
-            "الواي فاي: ${wifi ?: "--"}" + if (ParentEngine.connected) "  ·  آخر اتصال منذ ${ago} ثانية" else ""
+            "Child address: $childIp" + if (ParentEngine.connected) "  ·  last contact ${ago}s ago" else "",
+            "عنوان الطفل: $childIp" + if (ParentEngine.connected) "  ·  آخر اتصال منذ ${ago} ثانية" else ""
         )
         val pct = ParentEngine.batteryPct
         val tc = ParentEngine.tempC
@@ -474,17 +480,76 @@ class ParentActivity : Activity() {
         }
     }
 
+    private fun groupOf(ts: Long): String {
+        val dayMs = 24L * 60 * 60 * 1000
+        val startToday = java.util.Calendar.getInstance().apply {
+            set(java.util.Calendar.HOUR_OF_DAY, 0)
+            set(java.util.Calendar.MINUTE, 0)
+            set(java.util.Calendar.SECOND, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
+        }.timeInMillis
+        return when {
+            ts >= startToday -> t("Today", "اليوم")
+            ts >= startToday - dayMs -> t("Yesterday", "أمس")
+            ts >= startToday - 6 * dayMs -> t("This week", "هذا الأسبوع")
+            else -> t("Earlier", "أقدم")
+        }
+    }
+
+    private fun confirmDelete(title: String, olderThanMs: Long?) {
+        AlertDialog.Builder(this)
+            .setTitle(title)
+            .setPositiveButton(t("Delete", "حذف")) { _, _ ->
+                stopPlayer()
+                val cutoff = if (olderThanMs == null) Long.MAX_VALUE else System.currentTimeMillis() - olderThanMs
+                for (c in ParentEngine.clips(this)) {
+                    if (c.ts < cutoff) ParentEngine.deleteClip(this, c.ts)
+                }
+                fillList()
+            }
+            .setNegativeButton(t("Cancel", "تراجع"), null)
+            .show()
+    }
+
+    private fun chooseOlder() {
+        val days = arrayOf(1L, 7L, 30L)
+        val labels = arrayOf(
+            t("Older than 1 day", "أقدم من يوم"),
+            t("Older than 7 days", "أقدم من 7 أيام"),
+            t("Older than 30 days", "أقدم من 30 يوماً")
+        )
+        AlertDialog.Builder(this)
+            .setTitle(t("Delete recordings", "حذف التسجيلات"))
+            .setItems(labels) { _, which ->
+                confirmDelete(labels[which] + "?", days[which] * 24L * 60 * 60 * 1000)
+            }
+            .setNegativeButton(t("Cancel", "تراجع"), null)
+            .show()
+    }
+
     private fun fillList() {
         val box = listBox ?: return
         box.removeAllViews()
         val clips = ParentEngine.clips(this)
         lastClipCount = clips.size
         if (clips.isEmpty()) {
-            box.line(t("No recordings yet", "لا توجد تسجيلات بعد"))
+            box.card(14) {
+                addBody(t("No recordings yet.", "لا توجد تسجيلات بعد."))
+                line(t("The child phone sends a clip when it hears sound, and only while this phone is connected.",
+                    "جوال الطفل يرسل مقطعاً عند سماع صوت، وفقط عندما يكون هذا الجوال متصلاً."))
+            }
             return
         }
+        box.addButton(t("Delete older than...", "حذف الأقدم من...")) { chooseOlder() }
+        box.addButton(t("Delete all recordings", "حذف كل التسجيلات")) { confirmDelete(t("Delete all recordings?", "حذف كل التسجيلات؟"), null) }
         val fmt = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.MEDIUM)
+        var lastGroup = ""
         for ((index, c) in clips.withIndex()) {
+            val group = groupOf(c.ts)
+            if (group != lastGroup) {
+                box.sectionLabel(group)
+                lastGroup = group
+            }
             val card = box.card(12) {
                 val row = addRow()
                 val info = TextView(context)
@@ -497,24 +562,24 @@ class ParentActivity : Activity() {
                 playBtn.background = Look.glass(context, 18, Look.BUTTON)
                 playBtn.setColorFilter(Look.TEXT)
                 playBtn.setPadding(dp(10), dp(10), dp(10), dp(10))
-                playBtn.contentDescription = t("Play", "تشغيل")
+                playBtn.contentDescription = t("Play recording", "تشغيل التسجيل")
                 playBtn.setOnClickListener {
                     if (playingTs == c.ts) stopPlayer() else play(c)
                     fillList()
                 }
-                row.addView(playBtn, LinearLayout.LayoutParams(dp(46), dp(46)).apply { marginStart = dp(8) })
+                row.addView(playBtn, LinearLayout.LayoutParams(dp(48), dp(48)).apply { marginStart = dp(8) })
                 val del = ImageButton(context)
                 del.setImageResource(R.drawable.ic_btn_delete)
                 del.background = Look.glass(context, 18, Look.BUTTON)
                 del.setColorFilter(Look.TEXT)
                 del.setPadding(dp(10), dp(10), dp(10), dp(10))
-                del.contentDescription = t("Delete", "حذف")
+                del.contentDescription = t("Delete recording", "حذف التسجيل")
                 del.setOnClickListener {
                     if (playingTs == c.ts) stopPlayer()
                     ParentEngine.deleteClip(this@ParentActivity, c.ts)
                     fillList()
                 }
-                row.addView(del, LinearLayout.LayoutParams(dp(46), dp(46)).apply { marginStart = dp(8) })
+                row.addView(del, LinearLayout.LayoutParams(dp(48), dp(48)).apply { marginStart = dp(8) })
                 if (playingTs == c.ts) {
                     val wv = WaveView(context)
                     wv.setBars(waveBars)

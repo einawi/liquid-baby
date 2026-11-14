@@ -257,8 +257,8 @@ class ChildActivity : Activity() {
 
         when {
             !running -> setChip(statusPill, t("Stopped", "متوقف"), 0xFF6B7785.toInt())
-            connected > 0 -> setChip(statusPill, t("Monitoring", "المراقبة تعمل"), 0xFF2E9E6A.toInt())
-            else -> setChip(statusPill, t("Waiting for parent", "بانتظار جوال الأبوين"), 0xFFB7791F.toInt())
+            connected > 0 -> setChip(statusPill, t("Connected", "متصل"), 0xFF2E9E6A.toInt())
+            else -> setChip(statusPill, t("Searching", "جارٍ البحث"), 0xFFB7791F.toInt())
         }
         if (running) {
             if (pulse == null) statusPill?.let { pulse = Fx.breathe(it) }
@@ -284,7 +284,7 @@ class ChildActivity : Activity() {
 
         mainBtn?.text = if (running) t("Stop monitoring", "أوقف المراقبة") else t("Start monitoring", "ابدأ المراقبة")
         mainBtn?.background = Look.glass(this, 22,
-            if (running) Fx.tint(Themes.current().accent, 0x40) else Look.BUTTON)
+            if (running) Look.BUTTON else Fx.tint(Themes.current().accent, 0x66))
 
         vpnBtn?.visibility = if (Net.vpnBlocksLocal(this)) View.VISIBLE else View.GONE
         val camOk = checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
