@@ -1,3 +1,12 @@
+0.7.9: tap-to-talk option.
+
+- Parent screen: a small switch above the talk button chooses between "hold to talk" (default) and "tap to talk".
+- Tap mode: tap once to start talking, tap again to stop. Talking stops by itself after 60 seconds, and when you leave the screen.
+
+0.7.9: خيار "اضغط للتحدث".
+- شاشة الأب: زر صغير فوق زر التحدث يختار بين "اضغط مع الاستمرار" (الافتراضي) و"اضغط للتحدث".
+- وضع الضغط: اضغط مرة للبدء، ومرة للإيقاف. يتوقف الحديث وحده بعد 60 ثانية، وعند الخروج من الشاشة.
+
 0.7.8: improvements round.
 
 - Clips are stored encrypted on the phone (key in the Android Keystore). Clips from older builds still play.
