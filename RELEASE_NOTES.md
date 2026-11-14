@@ -1,3 +1,8 @@
+0.8.5: small Hold/Tap toggle in the corner of the talk button.
+- A small slider switch with the label Hold or Tap sits in the top corner of the talk button. The knob slides and the track takes the accent colour in Tap mode.
+
+0.8.5: مفتاح صغير بشكل زر منزلق في زاوية زر التحدث، يتبدّل بين ضغط ونقرة.
+
 0.8.4: the Hold/Tap switch works.
 - The switch inside the talk button is now a tappable pill labelled Hold or Tap. Tapping it switches the mode.
 

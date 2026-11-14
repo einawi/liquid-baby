@@ -46,7 +46,8 @@ class ParentActivity : Activity() {
     private var meter: ProgressBar? = null
     private var listenBtn: Button? = null
     private var talkBtn: Button? = null
-    private var talkModePill: TextView? = null
+    private var talkModeLabel: TextView? = null
+    private var talkModeToggle: ModeToggle? = null
     private var talkPulse: ObjectAnimator? = null
     private val talkLimit = Runnable {
         onTalkUp()
@@ -198,24 +199,31 @@ class ParentActivity : Activity() {
                 talkFrame.addView(talkBtn, android.widget.FrameLayout.LayoutParams(
                     android.widget.FrameLayout.LayoutParams.MATCH_PARENT, dp(104)))
                 Fx.ripple(talkBtn!!)
-                talkModePill = TextView(context).apply {
+                val modeRow = LinearLayout(context).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                }
+                talkModeLabel = TextView(context).apply {
                     textSize = 12f
                     setTextColor(Look.TEXT)
-                    setPadding(dp(12), dp(6), dp(12), dp(6))
-                    background = Look.pill(Fx.tint(Themes.current().accent, 0x55))
-                    isClickable = true
-                    isFocusable = true
                     text = modePillText()
-                    setOnClickListener { toggleTalkMode() }
+                    setPadding(0, 0, dp(8), 0)
                 }
-                talkFrame.addView(talkModePill, android.widget.FrameLayout.LayoutParams(
+                modeRow.addView(talkModeLabel)
+                talkModeToggle = ModeToggle(context).apply {
+                    tapMode = talkMode() == "press"
+                    onToggle = { press -> applyTalkMode(press) }
+                    contentDescription = t("Talk mode: hold or tap", "وضع التحدث: ضغط أو نقرة")
+                }
+                modeRow.addView(talkModeToggle)
+                talkFrame.addView(modeRow, android.widget.FrameLayout.LayoutParams(
                     android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
                     android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
                     Gravity.TOP or Gravity.END).apply {
-                    topMargin = dp(10)
-                    marginEnd = dp(14)
+                    topMargin = dp(8)
+                    marginEnd = dp(12)
                 })
-                talkModePill?.bringToFront()
+                modeRow.bringToFront()
                 addView(talkFrame, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
                     topMargin = dp(12)
                 })
@@ -376,17 +384,13 @@ class ParentActivity : Activity() {
     private fun modePillText(): String =
         if (talkMode() == "press") t("Tap", "نقرة") else t("Hold", "ضغط")
 
-    /** Switches between hold and tap. Works from the pill, and stops any talk that is running. */
-    private fun toggleTalkMode() {
-        Prefs.putString("talkMode", if (talkMode() == "press") "hold" else "press")
+    /** Applies hold or tap mode from the toggle. Stops any talk that is running. */
+    private fun applyTalkMode(press: Boolean) {
+        Prefs.putString("talkMode", if (press) "press" else "hold")
         if (ParentEngine.talking) onTalkUp()
-        talkModePill?.text = modePillText()
+        talkModeLabel?.text = modePillText()
         talkBtn?.text = idleTalkText()
     }
-
-    private fun modeLabel(): String =
-        if (talkMode() == "press") t("Mode: tap to talk (tap again to stop)", "الوضع: اضغط للتحدث (اضغط مرة أخرى للإيقاف)")
-        else t("Mode: hold to talk", "الوضع: اضغط مع الاستمرار")
 
     private fun idleTalkText(): String =
         if (talkMode() == "press") t("Tap to talk", "اضغط للتحدث")
