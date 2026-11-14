@@ -56,7 +56,7 @@ object ParentEngine {
     var viewQuality = 1
 
     /** Target pictures per second, 10 to 20. Saved on the parent phone and sent to the child. */
-    var viewFps = Prefs.getInt("viewFps", 15).coerceIn(10, 20)
+    var viewFps = Prefs.getInt("viewFps", 15).coerceIn(10, 30)
 
     @Volatile
     var viewFront = false
@@ -500,7 +500,7 @@ object ParentEngine {
 
     /** Target frame rate from the dropdown (10 to 20). Applies at once while watching. */
     fun setFps(fps: Int) {
-        viewFps = fps.coerceIn(10, 20)
+        viewFps = fps.coerceIn(10, 30)
         Prefs.putInt("viewFps", viewFps)
         if (viewing && connected) sendView(viewQuality, viewFront, viewFlash, viewNight)
     }

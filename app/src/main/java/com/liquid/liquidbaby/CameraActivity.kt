@@ -130,7 +130,7 @@ class CameraActivity : android.app.Activity() {
             }
             controls.addView(nightIcon, LinearLayout.LayoutParams(dp(52), dp(52)).apply { marginEnd = dp(8) })
             fpsSpinner = Spinner(context).apply {
-                adapter = ArrayAdapter(context, android.R.layout.simple_spinner_dropdown_item, (10..20).map { "$it fps" })
+                adapter = ArrayAdapter(context, android.R.layout.simple_spinner_dropdown_item, (10..30).map { "$it fps" })
                 setSelection(ParentEngine.viewFps - 10, false)
                 onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                     override fun onItemSelected(p: AdapterView<*>?, v: View?, pos: Int, id: Long) {
@@ -140,12 +140,14 @@ class CameraActivity : android.app.Activity() {
                     override fun onNothingSelected(p: AdapterView<*>?) {}
                 }
             }
-            controls.addView(fpsSpinner, LinearLayout.LayoutParams(dp(96), dp(52)).apply { marginEnd = dp(8) })
+            controls.addView(fpsSpinner, LinearLayout.LayoutParams(dp(118), dp(52)).apply { marginEnd = dp(8) })
             controls.addView(Button(context).apply {
                 isAllCaps = false
                 text = t("Full screen", "ملء الشاشة")
+                setTextColor(Look.TEXT)
+                background = Look.glass(context, 22, Look.BUTTON)
                 setOnClickListener { enterFull() }
-            }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            }, LinearLayout.LayoutParams(0, dp(52), 1f))
             addView(controls)
             addButton(t("Rotate the picture", "تدوير الصورة")) { ParentEngine.viewRotate = (ParentEngine.viewRotate + 1) and 3 }
             soundBtn = addButton(t("Room sound", "صوت الغرفة")) {
@@ -203,8 +205,9 @@ class CameraActivity : android.app.Activity() {
         val b = ImageButton(this)
         b.setImageResource(icon)
         b.setColorFilter(Look.TEXT)
-        b.background = Look.glass(this, 18, Look.BUTTON)
-        b.setPadding(dp(12), dp(12), dp(12), dp(12))
+        b.background = Look.glass(this, 24, Look.BUTTON)
+        b.scaleType = ImageView.ScaleType.CENTER
+        b.setPadding(dp(10), dp(10), dp(10), dp(10))
         b.contentDescription = desc
         b.setOnClickListener { onTap() }
         b.setOnLongClickListener {
@@ -285,8 +288,12 @@ class CameraActivity : android.app.Activity() {
         bar.addView(iconButton(R.drawable.ic_record, t("Record video", "تسجيل فيديو")) {
             Toast.makeText(this, t("Video recording is the next step.", "تسجيل الفيديو هو الخطوة القادمة."), Toast.LENGTH_SHORT).show()
         }, barParams())
-        root.addView(bar, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
-            Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = dp(20) })
+        root.addView(bar, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT,
+            Gravity.BOTTOM).apply {
+            bottomMargin = dp(20)
+            marginStart = dp(10)
+            marginEnd = dp(10)
+        })
 
         addContentView(root, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         overlay = root
@@ -299,15 +306,16 @@ class CameraActivity : android.app.Activity() {
         refreshFull()
     }
 
-    private fun barParams() = LinearLayout.LayoutParams(dp(56), dp(56)).apply {
-        marginStart = dp(5)
-        marginEnd = dp(5)
+    /** Equal shares of the bar's width, so all seven icons fit on any screen. */
+    private fun barParams() = LinearLayout.LayoutParams(0, dp(48), 1f).apply {
+        marginStart = dp(3)
+        marginEnd = dp(3)
     }
 
     private fun chooseFps() {
         AlertDialog.Builder(this)
             .setTitle(t("Frame rate", "معدل الفريمات"))
-            .setItems((10..20).map { "$it fps" }.toTypedArray()) { _, which ->
+            .setItems((10..30).map { "$it fps" }.toTypedArray()) { _, which ->
                 ParentEngine.setFps(which + 10)
                 fpsSpinner?.setSelection(which, false)
             }

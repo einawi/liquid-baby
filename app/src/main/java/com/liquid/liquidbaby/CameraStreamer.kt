@@ -214,7 +214,7 @@ class CameraStreamer(
             val now = SystemClock.elapsedRealtime()
             // the pause between pictures = one second / target, minus the time the picture itself takes
             val cost = when (quality) { 0 -> 10; 1 -> 15; 2 -> 20; else -> 25 }
-            val gap = if (slowMode) 400 else maxOf(10, 1000 / fps.coerceIn(10, 20) - cost)
+            val gap = if (slowMode) 400 else maxOf(10, 1000 / fps.coerceIn(10, 30) - cost)
             if (now - lastFrame < gap) return
             lastFrame = now
             val w = img.width

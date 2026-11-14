@@ -1,3 +1,13 @@
+0.8.14: full-screen bar fits the screen, Full screen button styled, frame rate up to 30.
+- Full-screen icons share the width evenly and are round; none is cut off.
+- The Full screen button has the same colour and style as the other buttons.
+- Frame rate dropdown and full-screen icon go from 10 to 30 fps. Default stays 15. The A9 may not hold 25 to 30 fps; the measured rate is not shown, so check for lag or drops.
+
+0.8.14: شريط ملء الشاشة يناسب الشاشة، وزر ملء الشاشة بنفس الشكل، ومعدل الفريمات حتى 30.
+- أيقونات ملء الشاشة دائرية وبعرض متساوٍ، ولا تُقص أي واحدة.
+- زر ملء الشاشة بنفس لون وشكل الأزرار الأخرى.
+- القائمة وأيقونة ملء الشاشة من 10 إلى 30 fps. الافتراضي يبقى 15. جوال A9 قد لا يثبت 25 إلى 30 fps.
+
 0.8.13: frame rate chosen by the parent (10 to 20, default 15).
 - A dropdown on the camera screen and an icon in full screen set the target pictures per second.
 - The child phone paces its pictures from that target. Both phones should run 0.8.13; an older child ignores the setting.
