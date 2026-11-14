@@ -116,6 +116,13 @@ object ParentEngine {
     @Volatile
     var lastStatusMs = 0L
 
+    /** Recorder feeds: room sound (heard only, not muted) and the parent's microphone while talking. */
+    @Volatile
+    var roomSink: ((ShortArray, Int) -> Unit)? = null
+
+    @Volatile
+    var micSink: ((ShortArray, Int) -> Unit)? = null
+
     /** Goes up when a recording is added or deleted, so screens refresh their list only when needed. */
     @Volatile
     var clipsVersion = 0
@@ -326,6 +333,11 @@ object ParentEngine {
                     }
                     T.LIVE_AUDIO -> if ((viewing || listening) && liveSound && !talking && System.currentTimeMillis() > muteLiveUntil) {
                         livePlayer?.write(m.data)
+                        roomSink?.let { sink ->
+                            val n = m.data.size / 2
+                            val s = ShortArray(n) { i -> ((m.data[2 * i].toInt() and 0xFF) or (m.data[2 * i + 1].toInt() shl 8)).toShort() }
+                            sink(s, n)
+                        }
                     }
                     T.VIEW_STATE -> if (m.data.size >= 5) {
                         viewQuality = m.data[0].toInt()

@@ -58,6 +58,7 @@ class TalkSender(private val conn: Conn, private val onFail: (String) -> Unit) :
                 val out = ByteArray(frame * 2)
                 ByteBuffer.wrap(out).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().put(buf)
                 conn.send(T.TALK_DATA, out)
+                ParentEngine.micSink?.invoke(buf, frame)
             }
         } catch (e: Exception) {
             Diag.e("Talking failed", e)

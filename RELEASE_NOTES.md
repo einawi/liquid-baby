@@ -1,3 +1,15 @@
+Work in progress: video recorder, connected to the record buttons (camera and full screen). Test it with the Trial build workflow, not the public release.
+- New: VideoRecorder (H.264 video from the frames on screen, AAC audio mixed by time, MP4 output, 10-minute limit) and VideoVault (chunked AES-GCM encryption, so long videos never load into memory).
+- New: GitHub "Trial build" workflow (manual). It builds Liquid Baby Trial and uploads the APK as an artifact. It does not publish a release.
+- Connected: record buttons, room sound (when heard), the parent's microphone while talking, stop when leaving, 10-minute limit, encrypted saving.
+- Not yet: the video list and playback.
+
+قيد التطوير: مسجّل الفيديو مربوط بأزرار التسجيل (شاشة الكاميرا وملء الشاشة). جرّبه من بناء Trial وليس من الإصدار العام.
+- جديد: VideoRecorder (فيديو H.264 من الصور المعروضة، وصوت AAC مختلط حسب الوقت، وملف MP4، وحد 10 دقائق) و VideoVault (تشفير AES-GCM على أجزاء حتى لا تُحمَّل الفيديوهات الطويلة في الذاكرة).
+- جديد: سير عمل GitHub "Trial build" يدوياً، يبني Liquid Baby Trial ويرفع الـ APK كملف مرفق، بدون إصدار.
+- مربوط: أزرار التسجيل، وصوت الغرفة (عند سماعه)، وميكروفون الأب أثناء التحدث، والإيقاف عند الخروج، وحد 10 دقائق، والحفظ مشفّراً.
+- لم يُربط بعد: قائمة الفيديوهات والتشغيل.
+
 0.9.1: fixes the build (the trial build type was renamed from "test" to "trial", resource values are enabled for it, and IS_TEST is defined for every build type).
 - Gradle does not accept build type names starting with "test". The trial app is now assembleTrial and installs as Liquid Baby Trial.
 - Same features as 0.9.0.

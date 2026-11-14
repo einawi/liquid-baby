@@ -1,6 +1,7 @@
 package com.liquid.liquidbaby
 
 import android.app.AlertDialog
+import java.io.File
 import android.content.pm.ActivityInfo
 import android.graphics.Bitmap
 import android.graphics.Color
@@ -41,6 +42,9 @@ class CameraActivity : android.app.Activity() {
     private var nightBtn: Button? = null
     private var nightIcon: ImageButton? = null
     private var fpsSpinner: Spinner? = null
+    private var recorder: VideoRecorder? = null
+    private var recordIcon: ImageButton? = null
+    private var fullRecord: ImageButton? = null
     private var frames = 0
     private var fps = 0
     private val qualityBtns = arrayOfNulls<Button>(4)
@@ -129,6 +133,14 @@ class CameraActivity : android.app.Activity() {
                 }
             }
             controls.addView(nightIcon, LinearLayout.LayoutParams(dp(52), dp(52)).apply { marginEnd = dp(8) })
+            recordIcon = ImageButton(context).apply {
+                setImageResource(R.drawable.ic_record)
+                background = Look.glass(context, 18, Look.BUTTON)
+                setPadding(dp(12), dp(12), dp(12), dp(12))
+                contentDescription = t("Record video", "تسجيل فيديو")
+                setOnClickListener { toggleRecording() }
+            }
+            controls.addView(recordIcon, LinearLayout.LayoutParams(dp(52), dp(52)).apply { marginEnd = dp(8) })
             fpsSpinner = Spinner(context).apply {
                 adapter = ArrayAdapter(context, android.R.layout.simple_spinner_dropdown_item, (10..30).map { "$it fps" })
                 setSelection(ParentEngine.viewFps - 10, false)
@@ -166,6 +178,7 @@ class CameraActivity : android.app.Activity() {
         ParentEngine.frameListener = { bmp ->
             latest = bmp
             frames++
+            recorder?.onFrame(bmp)
             if (pending.compareAndSet(false, true)) {
                 runOnUiThread {
                     pending.set(false)
@@ -187,6 +200,7 @@ class CameraActivity : android.app.Activity() {
 
     override fun onPause() {
         super.onPause()
+        stopRecording()
         exitFull()
         talk?.up()
         ui.removeCallbacks(tick)
@@ -196,7 +210,80 @@ class CameraActivity : android.app.Activity() {
     }
 
     override fun onBackPressed() {
-        if (overlay != null) exitFull() else super.onBackPressed()
+        when {
+            overlay != null -> exitFull()
+            recorder != null -> AlertDialog.Builder(this)
+                .setTitle(t("Stop the recording and leave?", "إيقاف التسجيل والخروج؟"))
+                .setPositiveButton(t("Stop and leave", "إيقاف وخروج")) { _, _ -> stopRecording(); super.onBackPressed() }
+                .setNegativeButton(t("Keep recording", "متابعة التسجيل"), null)
+                .show()
+            else -> super.onBackPressed()
+        }
+    }
+
+    // ---------- recording ----------
+
+    private fun toggleRecording() {
+        if (recorder != null) stopRecording() else startRecording()
+    }
+
+    private fun startRecording() {
+        if (ParentEngine.viewQuality < 0) return
+        val (w, h) = when (ParentEngine.viewQuality) {
+            0 -> Pair(320, 240)
+            1 -> Pair(640, 480)
+            2 -> Pair(960, 540)
+            else -> Pair(1280, 720)
+        }
+        val fps = ParentEngine.viewFps
+        val bitrate = (w * h * fps / 10).coerceIn(300_000, 4_000_000)
+        val tmp = File(File(cacheDir, "rec").apply { mkdirs() }, "rec-${System.currentTimeMillis()}.mp4")
+        val rec = VideoRecorder(tmp)
+        rec.onFinished = { ok -> runOnUiThread { finishRecording(rec, tmp, ok) } }
+        if (!rec.start(w, h, fps, bitrate)) {
+            toast(t("Recording could not start on this phone.", "تعذّر بدء التسجيل على هذا الجوال."))
+            return
+        }
+        recorder = rec
+        ParentEngine.roomSink = { s, n -> rec.onSound(s, n) }
+        ParentEngine.micSink = { s, n -> rec.onSound(s, n) }
+        updateRecordIcons()
+        toast(t("Recording started.", "بدأ التسجيل."))
+    }
+
+    private fun stopRecording() {
+        recorder?.stop()
+    }
+
+    /** Runs when the recording stops, by the button, by leaving, or by the 10-minute limit. */
+    private fun finishRecording(rec: VideoRecorder, tmp: File, ok: Boolean) {
+        if (recorder !== rec) return
+        recorder = null
+        ParentEngine.roomSink = null
+        ParentEngine.micSink = null
+        updateRecordIcons()
+        if (!ok) {
+            toast(t("The recording could not be saved.", "تعذّر حفظ التسجيل."))
+            return
+        }
+        val out = File(File(filesDir, "videos").apply { mkdirs() }, "video-${System.currentTimeMillis()}.lbv")
+        Thread {
+            val saved = VideoVault.encryptFile(tmp, out)
+            runOnUiThread {
+                toast(if (saved) t("Video saved (encrypted).", "تم حفظ الفيديو (مشفّر).")
+                else t("The video could not be saved.", "تعذّر حفظ الفيديو."))
+            }
+        }.start()
+    }
+
+    private fun updateRecordIcons() {
+        val recording = recorder != null
+        val red = (0xAA shl 24) or 0xE53935
+        val icon = if (recording) R.drawable.ic_stop_record else R.drawable.ic_record
+        recordIcon?.setImageResource(icon)
+        recordIcon?.background = Look.glass(this, 18, if (recording) red else Look.BUTTON)
+        fullRecord?.setImageResource(icon)
+        fullRecord?.background = Look.glass(this, 24, if (recording) red else Look.BUTTON)
     }
 
     // ---------- full-screen layer ----------
@@ -285,9 +372,8 @@ class CameraActivity : android.app.Activity() {
         }
         bar.addView(fullNight, barParams())
         bar.addView(iconButton(R.drawable.ic_fps, t("Frame rate", "معدل الفريمات")) { chooseFps() }, barParams())
-        bar.addView(iconButton(R.drawable.ic_record, t("Record video", "تسجيل فيديو")) {
-            Toast.makeText(this, t("Video recording is the next step.", "تسجيل الفيديو هو الخطوة القادمة."), Toast.LENGTH_SHORT).show()
-        }, barParams())
+        fullRecord = iconButton(R.drawable.ic_record, t("Record video", "تسجيل فيديو")) { toggleRecording() }
+        bar.addView(fullRecord, barParams())
         root.addView(bar, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT,
             Gravity.BOTTOM).apply {
             bottomMargin = dp(20)
