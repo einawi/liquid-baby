@@ -171,6 +171,9 @@ object ParentEngine {
         changed()
     }
 
+    /** How long without an answer before the disconnect alert: 60, 100 or 180 seconds (Settings > Alerts). */
+    fun offlineLimitMs(): Long = Prefs.getInt("offlineSec", 100).coerceIn(60, 180) * 1000L
+
     private fun pause(ms: Long) {
         val end = System.currentTimeMillis() + ms
         while (running && System.currentTimeMillis() < end) {
@@ -318,7 +321,7 @@ object ParentEngine {
                         changed()
                     }
                     T.TALK_DENIED -> {
-                        talkNote = "The child phone could not start the speaker"
+                        talkNote = Tr.pick("The child phone could not start the speaker", "جوال الطفل ما قدر يشغّل السماعة")
                         endTalk()
                     }
                     T.STATUS -> if (m.data.size >= 4) onStatus(m.data)
@@ -391,7 +394,7 @@ object ParentEngine {
     fun beginView(ctx: Context): Boolean {
         val c = conn
         if (c == null || !connected) {
-            viewNote = "Not connected to the child phone yet"
+            viewNote = Tr.pick("Not connected to the child phone yet", "غير متصل بجوال الطفل بعد")
             changed()
             return false
         }
@@ -440,7 +443,7 @@ object ParentEngine {
     fun beginListen(ctx: Context): Boolean {
         val c = conn
         if (c == null || !connected) {
-            listenNote = "Not connected to the child phone yet"
+            listenNote = Tr.pick("Not connected to the child phone yet", "غير متصل بجوال الطفل بعد")
             changed()
             return false
         }
@@ -588,7 +591,7 @@ object ParentEngine {
     fun beginTalk(): Boolean {
         val c = conn
         if (c == null || !connected) {
-            talkNote = "Not connected to the child phone yet"
+            talkNote = Tr.pick("Not connected to the child phone yet", "غير متصل بجوال الطفل بعد")
             changed()
             return false
         }
@@ -678,13 +681,13 @@ object ParentEngine {
         val low = !chg && pct < 20
         if (low && !lowAlerted) {
             lowAlerted = true
-            Notifier.alert(appCtx, "Liquid Baby", "Child phone battery is low: $pct% and not charging")
+            Notifier.alert(appCtx, "Liquid Baby", "Child phone battery is low: $pct% and not charging", "battery")
         }
         if (!low) lowAlerted = false
         val hot = tempC > 42.0
         if (hot && !hotAlerted) {
             hotAlerted = true
-            Notifier.alert(appCtx, "Liquid Baby", "Child phone is hot: " + String.format(java.util.Locale.US, "%.1f", tempC) + " °C")
+            Notifier.alert(appCtx, "Liquid Baby", "Child phone is hot: " + String.format(java.util.Locale.US, "%.1f", tempC) + " °C", "temperature")
         }
         if (!hot) hotAlerted = false
         changed()
@@ -701,10 +704,10 @@ object ParentEngine {
             if (!running) break
             tick++
             if (PairStore.paired() != null && !connected &&
-                System.currentTimeMillis() - lastContact > 100_000L && !offlineAlerted
+                System.currentTimeMillis() - lastContact > offlineLimitMs() && !offlineAlerted
             ) {
                 offlineAlerted = true
-                Notifier.alert(appCtx, "Liquid Baby", "No answer from the child phone for 100 seconds. Check that it is on, on Wi-Fi, and monitoring.")
+                Notifier.alert(appCtx, "Liquid Baby", "No answer from the child phone for ${offlineLimitMs() / 1000} seconds. Check that it is on, on Wi-Fi, and monitoring.", "disconnect")
             }
             adaptQuality()
             if (tick % 15 == 0) {

@@ -11,64 +11,96 @@ import android.os.Bundle
 import android.text.InputType
 import android.widget.EditText
 
+/** Settings in three groups: appearance and language, alerts, and advanced. */
 class SettingsActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        build()
+    }
+
+    private fun t(en: String, ar: String): String = Tr.pick(en, ar)
+
+    private fun build() {
         screen {
-            addTitle("Settings")
-            addButton("App updates") { startActivity(Intent(this@SettingsActivity, UpdatesActivity::class.java)) }
-            addButton("Diagnostics") { startActivity(Intent(this@SettingsActivity, DiagnosticsActivity::class.java)) }
-            addButton("Change phone role") { askRole() }
-            addButton(if (Tr.isAr()) "اللغة: العربية (اضغط للتغيير)" else "Language: English (tap to change)") {
-                Tr.toggle()
-                recreate()
-            }
-            addButton("Notification sound") { pickTone() }
-            addButton(if (Lock.pinSet()) "Change PIN" else "Set PIN (lock the parent phone)") { setPin() }
-            if (Lock.pinSet()) addButton("Remove PIN") { removePin() }
-            addBody(Tr.t("Appearance"))
-            for (m in listOf("system", "dark", "light")) {
-                val label = when (m) {
-                    "dark" -> "Dark"
-                    "light" -> "Light"
-                    else -> "System"
-                }
-                addButton((if (Themes.mode() == m) "✓ " else "") + label) {
-                    Themes.setMode(m)
+            addTitle(t("Settings", "الإعدادات"))
+
+            sectionLabel(t("Appearance and language", "المظهر واللغة"))
+            card(14) {
+                addButton(if (Tr.isAr()) "اللغة: العربية (اضغط للتغيير)" else "Language: English (tap to change)") {
+                    Tr.toggle()
                     recreate()
                 }
-            }
-            addBody(Tr.t("Style"))
-            for (st in listOf("classic", "minimal")) {
-                val label = if (st == "minimal") "Minimal" else "Classic"
-                addButton((if (Themes.style() == st) "✓ " else "") + label) {
-                    Themes.setStyle(st)
-                    recreate()
+                addBody(t("Mode", "الوضع"))
+                for (m in listOf("system", "dark", "light")) {
+                    val label = when (m) {
+                        "dark" -> t("Dark", "داكن")
+                        "light" -> t("Light", "فاتح")
+                        else -> t("Follow the phone", "حسب الجوال")
+                    }
+                    addButton((if (Themes.mode() == m) "✓ " else "") + label) {
+                        Themes.setMode(m)
+                        recreate()
+                    }
+                }
+                addBody(t("Style", "النمط"))
+                for (st in listOf("classic", "minimal")) {
+                    val label = if (st == "minimal") t("Flat", "مسطّح") else t("Glass", "زجاجي")
+                    addButton((if (Themes.style() == st) "✓ " else "") + label) {
+                        Themes.setStyle(st)
+                        recreate()
+                    }
                 }
             }
-            addBody("Backup / Export of your settings")
-            addButton("Export settings (share)") {
-                shareText(this@SettingsActivity, "Liquid Baby settings", Prefs.exportJson())
+
+            sectionLabel(t("Alerts", "التنبيهات"))
+            card(14) {
+                addButton(t("Notification sound", "صوت الإشعار")) { pickTone() }
+                addBody(t("Disconnect alert after", "تنبيه الانقطاع بعد"))
+                val cur = Prefs.getInt("offlineSec", 100)
+                for (sec in listOf(60, 100, 180)) {
+                    addButton((if (cur == sec) "✓ " else "") + "$sec s") {
+                        Prefs.putInt("offlineSec", sec)
+                        recreate()
+                    }
+                }
+                line(t("Each kind of alert has its own channel. You can mute one in Android settings.",
+                    "لكل نوع تنبيه قناة خاصة، ويمكنك كتم واحدة منها من إعدادات أندرويد."))
             }
-            addButton("Copy settings to clipboard") {
-                copyToClipboard(this@SettingsActivity, "Liquid Baby settings", Prefs.exportJson())
-            }
-            addButton("Restore settings from clipboard") { restore() }
-            addButton("Write a test line to Diagnostics") {
-                Diag.e("Test error line created from Settings")
-                toast("Done. Open Diagnostics to see it.")
+
+            sectionLabel(t("Advanced", "متقدم"))
+            card(14) {
+                addButton(t("App updates", "تحديثات التطبيق")) {
+                    startActivity(Intent(this@SettingsActivity, UpdatesActivity::class.java))
+                }
+                addButton(t("Diagnostics", "التشخيص")) {
+                    startActivity(Intent(this@SettingsActivity, DiagnosticsActivity::class.java))
+                }
+                addButton(t("Change phone role", "تغيير دور الجوال")) { askRole() }
+                addButton(if (Lock.pinSet()) t("Change PIN", "تغيير الرمز") else t("Set PIN (lock the parent phone)", "ضع رمزاً (لقفل جوال الأب)")) { setPin() }
+                if (Lock.pinSet()) addButton(t("Remove PIN", "إزالة الرمز")) { removePin() }
+                addButton(t("Export settings (share)", "تصدير الإعدادات (مشاركة)")) {
+                    shareText(this@SettingsActivity, "Liquid Baby settings", Prefs.exportJson())
+                }
+                addButton(t("Copy settings to clipboard", "نسخ الإعدادات إلى الحافظة")) {
+                    copyToClipboard(this@SettingsActivity, "Liquid Baby settings", Prefs.exportJson())
+                }
+                addButton(t("Restore settings from clipboard", "استعادة الإعدادات من الحافظة")) { restore() }
+                addButton(t("Write a test line to Diagnostics", "اكتب سطر اختبار في التشخيص")) {
+                    Diag.e("Test error line created from Settings")
+                    toast(t("Done. Open Diagnostics to see it.", "تم. افتح التشخيص لرؤيته."))
+                }
             }
         }
     }
 
     private fun askRole() {
-        val items = arrayOf("Child unit", "Parent unit")
+        val items = arrayOf(t("Child unit", "وحدة الطفل"), t("Parent unit", "وحدة الأبوين"))
         AlertDialog.Builder(this)
-            .setTitle("This phone is the")
+            .setTitle(t("This phone is the", "هذا الجوال هو"))
             .setItems(items) { _, which ->
                 Prefs.putString("role", if (which == 0) "child" else "parent")
-                toast("Saved")
+                toast(t("Saved", "تم الحفظ"))
             }
             .show()
     }
@@ -86,46 +118,46 @@ class SettingsActivity : Activity() {
         if (requestCode == 77 && resultCode == RESULT_OK) {
             val uri = data?.getParcelableExtra<Uri>(RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
             Prefs.putString("alertTone", uri?.toString() ?: "")
-            toast("Notification sound saved")
+            toast(t("Notification sound saved", "تم حفظ صوت الإشعار"))
         }
     }
 
     private fun setPin() {
         val input = EditText(this)
-        input.hint = "4 to 8 digits"
+        input.hint = t("4 to 8 digits", "من 4 إلى 8 أرقام")
         input.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
         AlertDialog.Builder(this)
             .setTitle("PIN")
             .setView(input)
-            .setPositiveButton("Save") { _, _ ->
+            .setPositiveButton(t("Save", "حفظ")) { _, _ ->
                 val pin = input.text.toString()
                 if (pin.length in 4..8 && pin.all { it.isDigit() }) {
                     Lock.setPin(pin)
-                    toast("PIN saved")
+                    toast(t("PIN saved", "تم حفظ الرمز"))
                 } else {
-                    toast("Use 4 to 8 digits")
+                    toast(t("Use 4 to 8 digits", "استخدم من 4 إلى 8 أرقام"))
                 }
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(t("Cancel", "تراجع"), null)
             .show()
     }
 
     private fun removePin() {
         val input = EditText(this)
-        input.hint = "Current PIN"
+        input.hint = t("Current PIN", "الرمز الحالي")
         input.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
         AlertDialog.Builder(this)
-            .setTitle("Remove PIN")
+            .setTitle(t("Remove PIN", "إزالة الرمز"))
             .setView(input)
-            .setPositiveButton("Remove") { _, _ ->
+            .setPositiveButton(t("Remove", "إزالة")) { _, _ ->
                 if (Lock.checkPin(input.text.toString())) {
                     Lock.clearPin()
-                    toast("PIN removed")
+                    toast(t("PIN removed", "تمت إزالة الرمز"))
                 } else {
-                    toast("Wrong PIN")
+                    toast(t("Wrong PIN", "الرمز غير صحيح"))
                 }
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(t("Cancel", "تراجع"), null)
             .show()
     }
 
@@ -133,6 +165,7 @@ class SettingsActivity : Activity() {
         val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         val text = cm.primaryClip?.getItemAt(0)?.coerceToText(this)?.toString() ?: ""
         val n = Prefs.importJson(text)
-        toast(if (n < 0) "The clipboard does not contain exported settings." else "Restored $n settings.")
+        toast(if (n < 0) t("The clipboard does not contain exported settings.", "الحافظة لا تحتوي إعدادات مصدّرة.")
+        else t("Restored $n settings.", "تمت استعادة $n إعدادات."))
     }
 }
