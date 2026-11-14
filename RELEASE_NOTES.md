@@ -1,3 +1,17 @@
+0.8.9: live camera quality levels, full screen with microphone, manual rotation.
+- Quality: Low, Normal, 960×540, 720p, shown side by side. The chosen one has a tick.
+- Full screen button: black screen with the picture, a Back button (top left), a Rotate button (top right), and a microphone (bottom right) that works like the talk button (hold or tap, as set).
+- Rotation is manual: the screen turns only when you press Rotate.
+- Frame limit raised from 300 KB to 1.5 MB, so 720p frames are accepted.
+- After a slow spell, the picture returns to the quality you chose.
+
+0.8.9: مستويات جودة الكاميرا، وملء الشاشة مع الميكروفون، والتدوير اليدوي.
+- الجودة: منخفضة، عادية، 960×540، 720p، بجانب بعض، والمختار عليه علامة صح.
+- زر ملء الشاشة: شاشة سوداء فيها الصورة، وزر رجوع (أعلى اليسار)، وزر تدوير (أعلى اليمين)، وميكروفون (أسفل اليمين) يعمل مثل زر التحدث (ضغط أو نقرة حسب الإعداد).
+- التدوير يدوي: الشاشة تدور فقط عند الضغط على تدوير.
+- رفع حد الإطار من 300 KB إلى 1.5 MB، ليقبل إطارات 720p.
+- بعد فترة بطء ترجع الصورة للجودة التي اخترتها.
+
 0.8.8: the Hold/Tap toggle and the talk button no longer overlap in touch.
 - The talk button is no longer clickable itself. The whole area is handled by its frame, and the small toggle, which is a child, takes touches on its own area first.
 

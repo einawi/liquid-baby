@@ -511,7 +511,7 @@ object ChildEngine {
     private fun setView(data: ByteArray) {
         val s = streamer ?: return
         if (data.size < 3) return
-        val q = data[0].toInt().coerceIn(0, 1)
+        val q = data[0].toInt().coerceIn(0, 3)
         val front = data[1].toInt() == 1
         val flip = front != viewFront
         val flash = data[2].toInt() == 1

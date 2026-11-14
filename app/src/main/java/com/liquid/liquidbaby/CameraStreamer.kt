@@ -208,7 +208,12 @@ class CameraStreamer(
         } ?: return
         try {
             val now = SystemClock.elapsedRealtime()
-            val gap = if (slowMode) 400 else if (quality == 0) 140 else 90
+            val gap = if (slowMode) 400 else when (quality) {
+                0 -> 140
+                1 -> 90
+                2 -> 110
+                else -> 130
+            }
             if (now - lastFrame < gap) return
             lastFrame = now
             val w = img.width
@@ -221,7 +226,7 @@ class CameraStreamer(
             )
             val out = ByteArrayOutputStream(w * h / 4)
             out.write(rotation)
-            YuvImage(nv, ImageFormat.NV21, w, h, null).compressToJpeg(Rect(0, 0, w, h), if (quality == 0) 50 else 60, out)
+            YuvImage(nv, ImageFormat.NV21, w, h, null).compressToJpeg(Rect(0, 0, w, h), when (quality) { 0 -> 50; 1 -> 60; else -> 70 }, out)
             onFrame(out.toByteArray())
         } catch (e: Exception) {
             Diag.limited("picture", "Picture problem: " + e.message)

@@ -497,6 +497,7 @@ object ParentEngine {
 
     /** The user changed the picture settings: this wins over the automatic quality. */
     fun setView(quality: Int, front: Boolean, flash: Boolean, night: Boolean = viewNight) {
+        userQuality = quality
         lowQuality = false
         sendView(quality, front, flash, night)
     }
@@ -518,6 +519,9 @@ object ParentEngine {
 
     private var goodSince = 0L
 
+    /** The level the user picked; restored after a slow spell. */
+    private var userQuality = 1
+
     /**
      * Pictures too slow for 4 seconds: ask the child phone for low quality. After 20 seconds of
      * good pictures, normal quality is requested again.
@@ -529,7 +533,7 @@ object ParentEngine {
         }
         val now = System.currentTimeMillis()
         val age = now - lastFrameMs
-        if (!lowQuality && viewQuality == 1 && age > 4000L) {
+        if (!lowQuality && viewQuality >= 1 && age > 4000L) {
             lowQuality = true
             goodSince = 0L
             Diag.i("Pictures are slow: asking for low quality")
@@ -540,8 +544,8 @@ object ParentEngine {
                 if (now - goodSince > 20_000L) {
                     lowQuality = false
                     goodSince = 0L
-                    Diag.i("Pictures are good again: asking for normal quality")
-                    sendView(1, viewFront, viewFlash, viewNight)
+                    Diag.i("Pictures are good again: asking for the chosen quality")
+                    sendView(userQuality, viewFront, viewFlash, viewNight)
                 }
             } else {
                 goodSince = 0L

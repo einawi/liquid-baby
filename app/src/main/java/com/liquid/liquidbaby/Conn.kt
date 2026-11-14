@@ -79,7 +79,7 @@ class Conn(val socket: Socket) {
     fun read(): Msg {
         val len = input.readInt()
         val a = aead
-        val limit = if (a != null) 300_000 else 4096
+        val limit = if (a != null) 1_500_000 else 4096
         if (len < 1 || len > limit) throw IOException("Bad frame size $len")
         val buf = ByteArray(len)
         input.readFully(buf)
