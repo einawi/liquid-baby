@@ -5,7 +5,6 @@ import java.io.DataOutputStream
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.security.SecureRandom
 import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
 
@@ -17,7 +16,6 @@ import javax.crypto.spec.GCMParameterSpec
 object VideoVault {
     private const val CHUNK = 1024 * 1024
     private val MAGIC = byteArrayOf(0x4C, 0x42, 0x56, 0x31) // "LBV1"
-    private val rnd = SecureRandom()
 
     /** Encrypts [plain] into [out] and deletes [plain]. Returns true when the encrypted file is complete. */
     fun encryptFile(plain: File, out: File): Boolean {
@@ -30,9 +28,10 @@ object VideoVault {
                     while (true) {
                         val n = input.read(buf)
                         if (n <= 0) break
-                        val iv = ByteArray(12).also { rnd.nextBytes(it) }
+                        // Android Keystore creates the IV itself; the app may not pass one when encrypting
                         val c = Cipher.getInstance("AES/GCM/NoPadding")
-                        c.init(Cipher.ENCRYPT_MODE, key, GCMParameterSpec(128, iv))
+                        c.init(Cipher.ENCRYPT_MODE, key)
+                        val iv = c.iv
                         val ct = c.doFinal(buf, 0, n)
                         dos.writeInt(ct.size)
                         dos.write(iv)
@@ -45,6 +44,7 @@ object VideoVault {
         } catch (e: Exception) {
             Diag.i("Video could not be encrypted: " + e.message)
             out.delete()
+            plain.delete()   // never leave an unencrypted video on the phone
             false
         }
     }

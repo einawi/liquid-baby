@@ -1,3 +1,11 @@
+0.9.2 (build 58): videos are saved encrypted.
+- Fixed: recordings stopped before saving because the phone's key does not accept an app-chosen IV. The key now creates it, as intended.
+- An unencrypted recording is deleted if encryption fails, so none is left on the phone.
+
+0.9.2 (build 58): الفيديو يُحفظ مشفّراً.
+- تم إصلاح: كان التسجيل ينتهي بدون حفظ لأن مفتاح الجوال ما يقبل IV من التطبيق. الآن المفتاح يولّده كما هو مقصود.
+- إذا فشل التشفير يُحذف التسجيل الأصلي، فما يبقى فيديو بدون تشفير على الجوال.
+
 0.9.2 (build 57): the recorder stop no longer freezes the app.
 - Stopping the recording runs in the background, with a 4-second limit on every wait.
 - Build 56 was published before this fix; please update to build 57.
