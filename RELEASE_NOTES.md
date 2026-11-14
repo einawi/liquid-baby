@@ -1,9 +1,17 @@
+0.9.1: fixes the build (the trial build type was renamed from "test" to "trial").
+- Gradle does not accept build type names starting with "test". The trial app is now assembleTrial and installs as Liquid Baby Trial.
+- Same features as 0.9.0.
+
+0.9.1: إصلاح البناء (نوع البناء التجريبي صار اسمه trial بدل test).
+- Gradle ما يقبل أسماء أنواع البناء التي تبدأ بـ test. التطبيق التجريبي صار assembleTrial ويتثبّت باسم Liquid Baby Trial.
+- نفس مميزات 0.9.0.
+
 0.9.0: all current features in one build (no video recording yet).
 - Parent: status Stopped, Connecting, Connected, Disconnected; Hold/Tap talk button shared with the camera screen.
 - Live camera: quality Low, Normal, 960×540, 720p; frame rate 10 to 30 fps chosen by the parent; night mode icon; room sound mute; flash; switch camera; rotate picture.
 - Full screen: separate layer, two-finger zoom (1x to 4x), icon bar for flash, quality, room sound, talk, night mode, frame rate, and record (record shows a message; not built yet).
 - Child: 3 most recent clips kept, backlog sent one at a time, encrypted clips on the phone, low-battery mode, Wi-Fi address shown.
-- Test build type (assembleTest) is included for the recorder work; it does not auto-update.
+- Trial build type (assembleTrial) is included for the recorder work; it does not auto-update.
 
 0.9.0: كل المميزات الحالية في بناء واحد (بدون تسجيل الفيديو بعد).
 - الأب: حالات متوقف، جارٍ الاتصال، متصل، انقطع الاتصال؛ زر التحدث بمفتاح ضغط/نقرة مشترك مع شاشة الكاميرا.

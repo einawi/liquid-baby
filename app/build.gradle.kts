@@ -2,8 +2,8 @@ plugins {
     id("com.android.application")
 }
 
-val appVersionName = "0.9.0"
-val appVersionCode = 54
+val appVersionName = "0.9.1"
+val appVersionCode = 55
 
 val keystoreFile: String? = System.getenv("KEYSTORE_FILE")
 
@@ -46,11 +46,12 @@ android {
                 signingConfigs.getByName("debug")
             }
         }
-        // Separate test app: installs next to the main app, has its own name and does not auto-update.
-        create("test") {
+        // Separate trial app: installs next to the main app, has its own name and does not auto-update.
+        // Gradle does not allow build type names starting with "test", so this one is "trial".
+        create("trial") {
             initWith(getByName("release"))
-            applicationIdSuffix = ".test"
-            resValue("string", "app_name", "Liquid Baby Test")
+            applicationIdSuffix = ".trial"
+            resValue("string", "app_name", "Liquid Baby Trial")
             buildConfigField("boolean", "IS_TEST", "true")
             matchingFallbacks += listOf("release")
         }
