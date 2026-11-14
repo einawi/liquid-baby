@@ -453,10 +453,24 @@ class ParentActivity : Activity() {
     }
 
     /** One label for the whole connection state. Engine details stay in Diagnostics. */
-    private fun stateLabel(): Pair<String, Int> = when {
-        ParentEngine.connected -> Pair(t("Connected", "متصل"), 0xFF2E9E6A.toInt())
-        ParentEngine.running -> Pair(t("Searching", "جارٍ البحث"), 0xFFB7791F.toInt())
-        else -> Pair(t("Stopped", "متوقف"), 0xFF6B7785.toInt())
+    private var lastConnectedMs = 0L
+
+    /** Four states: Stopped, Connecting (first attempt), Connected, Disconnected (lost, retrying). */
+    private fun stateLabel(): Pair<String, Int> {
+        val now = System.currentTimeMillis()
+        if (!ParentEngine.running) {
+            lastConnectedMs = 0L
+            return Pair(t("Stopped", "متوقف"), 0xFF6B7785.toInt())
+        }
+        if (ParentEngine.connected) {
+            lastConnectedMs = now
+            return Pair(t("Connected", "متصل"), 0xFF2E9E6A.toInt())
+        }
+        if (lastConnectedMs > 0L) {
+            val secs = (now - lastConnectedMs) / 1000
+            return Pair(t("Disconnected, retrying (${secs}s)", "انقطع الاتصال، نحاول مرة أخرى (${secs} ثانية)"), 0xFFC0392B.toInt())
+        }
+        return Pair(t("Connecting...", "جارٍ الاتصال..."), 0xFFB7791F.toInt())
     }
 
     private fun refresh() {
