@@ -43,7 +43,7 @@ class ParentActivity : Activity() {
     private var meter: ProgressBar? = null
     private var listenBtn: Button? = null
     private var talkBtn: Button? = null
-    private var modeBtn: Button? = null
+    private var talkSwitch: android.widget.Switch? = null
     private val talkLimit = Runnable {
         onTalkUp()
         toast(t("Talk stopped after 60 seconds.", "توقف الحديث بعد 60 ثانية."))
@@ -107,6 +107,7 @@ class ParentActivity : Activity() {
             statusPill = addChip("")
             runBtn = addButton(t("Start monitoring", "ابدأ المراقبة")) { toggle() }
             Fx.press(runBtn!!)
+            Fx.ripple(runBtn!!)
             vpnBtn = addButton(t("VPN is blocking the connection: open VPN settings", "الـ VPN يمنع الاتصال: افتح إعدادات الـ VPN")) {
                 openVpnSettings()
             }
@@ -168,25 +169,7 @@ class ParentActivity : Activity() {
                 val listenTile = tile(grid, t("Listen", "استماع"), t("Sound only", "صوت فقط")) { toggleListen() }
                 listenBtn = listenTile
 
-                modeBtn = Button(context).apply {
-                    isAllCaps = false
-                    textSize = 13f
-                    setTextColor(Look.SUB)
-                    background = Look.glass(context, 16, Look.BUTTON)
-                    minHeight = dp(40)
-                    text = modeLabel()
-                    setOnClickListener {
-                        val next = if (talkMode() == "press") "hold" else "press"
-                        Prefs.putString("talkMode", next)
-                        if (ParentEngine.talking) onTalkUp()
-                        text = modeLabel()
-                        talkBtn?.text = idleTalkText()
-                    }
-                }
-                addView(modeBtn, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-                    topMargin = dp(12)
-                    gravity = Gravity.END
-                })
+                val talkFrame = android.widget.FrameLayout(context)
                 talkBtn = Button(context).apply {
                     text = idleTalkText()
                     isAllCaps = false
@@ -206,7 +189,28 @@ class ParentActivity : Activity() {
                         true
                     }
                 }
-                addView(talkBtn, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                talkFrame.addView(talkBtn, android.widget.FrameLayout.LayoutParams(
+                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT, dp(104)))
+                Fx.ripple(talkBtn!!)
+                talkSwitch = android.widget.Switch(context).apply {
+                    text = t("Tap", "اضغط")
+                    textSize = 12f
+                    setTextColor(Look.SUB)
+                    isChecked = talkMode() == "press"
+                    setOnCheckedChangeListener { _, checked ->
+                        Prefs.putString("talkMode", if (checked) "press" else "hold")
+                        if (ParentEngine.talking) onTalkUp()
+                        talkBtn?.text = idleTalkText()
+                    }
+                }
+                talkFrame.addView(talkSwitch, android.widget.FrameLayout.LayoutParams(
+                    android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
+                    android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
+                    Gravity.TOP or Gravity.END).apply {
+                    topMargin = dp(10)
+                    marginEnd = dp(14)
+                })
+                addView(talkFrame, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
                     topMargin = dp(12)
                 })
 
@@ -292,6 +296,7 @@ class ParentActivity : Activity() {
         b.minHeight = dp(104)
         b.setOnClickListener { onClick() }
         Fx.press(b)
+        Fx.ripple(b)
         val lp = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         lp.marginEnd = dp(6)
         lp.marginStart = dp(6)
@@ -440,19 +445,20 @@ class ParentActivity : Activity() {
             (if (ParentEngine.charging) t(" (charging)", " (تشحن)") else "")
         tempTv?.text = if (pct < 0) t("Temperature: --", "الحرارة: --")
         else t("Temperature ", "الحرارة ") + String.format(java.util.Locale.US, "%.1f", tc) + " °C"
-        Fx.paintDot(batteryDot, when {
-            pct < 0 -> 0xFF8899AA.toInt()
+        val fresh = ParentEngine.connected && System.currentTimeMillis() - ParentEngine.lastStatusMs < 45_000L
+        Fx.animateDot(batteryDot, when {
+            !fresh || pct < 0 -> 0xFF8899AA.toInt()
             !ParentEngine.charging && pct < 20 -> 0xFFE53935.toInt()
             !ParentEngine.charging && pct < 40 -> 0xFFFFA726.toInt()
             else -> 0xFF66BB6A.toInt()
         })
-        Fx.paintDot(tempDot, when {
-            pct < 0 -> 0xFF8899AA.toInt()
+        Fx.animateDot(tempDot, when {
+            !fresh || pct < 0 -> 0xFF8899AA.toInt()
             tc >= 42.0 -> 0xFFE53935.toInt()
             tc >= 38.0 -> 0xFFFFA726.toInt()
             else -> 0xFF66BB6A.toInt()
         })
-        meter?.progress = ParentEngine.level
+        Fx.animateMeter(meter, ParentEngine.level)
 
         listenBtn?.text = t(if (ParentEngine.listening) "Stop" else "Listen",
             if (ParentEngine.listening) "أوقف" else "استماع") + "\n" +

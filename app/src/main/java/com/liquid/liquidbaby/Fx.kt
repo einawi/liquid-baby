@@ -56,6 +56,38 @@ object Fx {
         v?.background = oval(color)
     }
 
+    private val dotColour = java.util.WeakHashMap<View, Int>()
+
+    /** Colour changes glide over 350 ms instead of jumping. */
+    fun animateDot(v: View?, to: Int) {
+        v ?: return
+        val from = dotColour[v] ?: to
+        dotColour[v] = to
+        if (from == to) return
+        android.animation.ValueAnimator.ofObject(android.animation.ArgbEvaluator(), from, to).apply {
+            duration = 350
+            addUpdateListener { v.background = oval(it.animatedValue as Int) }
+            start()
+        }
+    }
+
+    /** Progress bar moves smoothly to the new value. */
+    fun animateMeter(pb: android.widget.ProgressBar?, to: Int) {
+        pb ?: return
+        android.animation.ObjectAnimator.ofInt(pb, "progress", pb.progress, to).apply {
+            duration = 300
+            interpolator = DecelerateInterpolator()
+            start()
+        }
+    }
+
+    /** Standard Android touch ripple drawn over the glass background. */
+    fun ripple(v: View) {
+        val tv = android.util.TypedValue()
+        v.context.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, tv, true)
+        v.foreground = v.context.getDrawable(tv.resourceId)
+    }
+
     private fun oval(color: Int): GradientDrawable {
         return GradientDrawable().apply {
             shape = GradientDrawable.OVAL

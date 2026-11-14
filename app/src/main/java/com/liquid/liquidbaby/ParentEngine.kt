@@ -109,6 +109,13 @@ object ParentEngine {
     @Volatile
     var batteryPct = -1
 
+    /** When the child last sent its status (battery, temperature). Used to grey out the dots when stale. */
+    @Volatile
+    var lastStatusMs = 0L
+
+    @Volatile
+    private var lastPongMs = 0L
+
     @Volatile
     var charging = false
 
@@ -269,8 +276,15 @@ object ParentEngine {
         c.send(T.SYNC, Wire.longBytes(if (last == 0L) -1L else last))
         flushPendingDeletes(c)
         Thread {
+            lastPongMs = System.currentTimeMillis()
             while (running && connected && conn === c) {
                 pause(10_000)
+                // no answer for 25 seconds: the link is dead, so close it now instead of waiting for a long timeout
+                if (System.currentTimeMillis() - lastPongMs > 25_000L) {
+                    Diag.i("No answer from the child phone for 25 seconds: closing the connection")
+                    c.close()
+                    break
+                }
                 try {
                     if (running && connected && conn === c) c.send(T.PING)
                 } catch (_: Exception) {
@@ -324,6 +338,7 @@ object ParentEngine {
                         talkNote = Tr.pick("The child phone could not start the speaker", "جوال الطفل ما قدر يشغّل السماعة")
                         endTalk()
                     }
+                    T.PONG -> lastPongMs = System.currentTimeMillis()
                     T.STATUS -> if (m.data.size >= 4) onStatus(m.data)
                     T.LEVEL -> if (m.data.isNotEmpty()) level = m.data[0].toInt() and 255
                     T.DELETED_LIST -> applyDeleted(m.data)
@@ -676,6 +691,7 @@ object ParentEngine {
         val chg = d[1].toInt() == 1
         val temp = (((d[2].toInt() and 255) shl 8) or (d[3].toInt() and 255)).toShort().toInt()
         batteryPct = pct
+        lastStatusMs = System.currentTimeMillis()
         charging = chg
         tempC = temp / 10.0
         val low = !chg && pct < 20
