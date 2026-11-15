@@ -68,6 +68,10 @@ class VideoRecorder(private val outFile: File, private val maxMs: Long = 600_000
             v.configure(vf, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
             v.start()
             venc = v
+            val inFmt = v.inputFormat
+            inStride = if (inFmt.containsKey(MediaFormat.KEY_STRIDE)) inFmt.getInteger(MediaFormat.KEY_STRIDE) else width
+            inSliceHeight = if (inFmt.containsKey(MediaFormat.KEY_SLICE_HEIGHT)) inFmt.getInteger(MediaFormat.KEY_SLICE_HEIGHT) else height
+            Diag.i("Recorder encoder layout: stride=" + inStride + ", slice height=" + inSliceHeight)
 
             val af = MediaFormat.createAudioFormat("audio/mp4a-latm", sampleRate, 1)
             af.setInteger(MediaFormat.KEY_AAC_PROFILE, MediaCodecInfo.CodecProfileLevel.AACObjectLC)
@@ -104,17 +108,9 @@ class VideoRecorder(private val outFile: File, private val maxMs: Long = 600_000
         toNv12(pixels, width, height, nv12)
         val idx = v.dequeueInputBuffer(0)
         if (idx >= 0) {
-            val img = try { v.getInputImage(idx) } catch (e: Exception) { null }
-            if (img != null) {
-                // write each row where the encoder's own layout expects it (its row stride can be wider than the picture)
-                writePlanes(img)
-                img.close()
-            } else {
-                val buf = v.getInputBuffer(idx) ?: return
-                buf.clear()
-                buf.put(nv12)
-            }
-            v.queueInputBuffer(idx, 0, nv12.size, elapsedUs(), 0)
+            val buf = v.getInputBuffer(idx) ?: return
+            val size = writeFrame(buf)
+            v.queueInputBuffer(idx, 0, size, elapsedUs(), 0)
             framesQueued++
         } else {
             framesDropped++
@@ -125,6 +121,8 @@ class VideoRecorder(private val outFile: File, private val maxMs: Long = 600_000
     }
 
     private var fitBmp: Bitmap? = null
+    private var inStride = 0
+    private var inSliceHeight = 0
 
     /** Fits a picture of another shape inside the frame: same proportions, black edges where needed. */
     private fun fitIntoFrame(src: Bitmap): Bitmap {
@@ -332,28 +330,28 @@ class VideoRecorder(private val outFile: File, private val maxMs: Long = 600_000
         muxer = null
     }
 
-    /** Copies the NV12 picture into the encoder's planes, row by row, using the encoder's stride. */
-    private fun writePlanes(img: android.media.Image) {
-        val yPlane = img.planes[0]
-        val uvPlane = img.planes[1]
-        val yBuf = yPlane.buffer
-        val uvBuf = uvPlane.buffer
-        for (row in 0 until height) {
-            val base = yPlane.rowStride * row
-            for (col in 0 until width) {
-                yBuf.put(base + col * yPlane.pixelStride, nv12[row * width + col])
-            }
-        }
+    /**
+     * Writes the picture into the encoder's input buffer using the encoder's own stride and slice height
+     * (read from its input format). Returns the number of bytes written.
+     */
+    private fun writeFrame(buf: java.nio.ByteBuffer): Int {
+        buf.clear()
+        val stride = inStride
+        val sliceH = inSliceHeight
         val uvOffset = width * height
-        for (row in 0 until height / 2) {
-            val base = uvPlane.rowStride * row
-            for (col in 0 until width / 2) {
-                val src = uvOffset + row * width + col * 2
-                val dst = base + col * uvPlane.pixelStride
-                uvBuf.put(dst, nv12[src])
-                uvBuf.put(dst + 1, nv12[src + 1])
-            }
+        // luma: one picture row per encoder row
+        for (row in 0 until height) {
+            buf.position(row * stride)
+            buf.put(nv12, row * width, width)
         }
+        // chroma (interleaved U/V): starts after the luma slice
+        val chromaStart = stride * sliceH
+        for (row in 0 until height / 2) {
+            buf.position(chromaStart + row * stride)
+            buf.put(nv12, uvOffset + row * width, width)
+        }
+        val total = chromaStart + stride * (height / 2)
+        return minOf(total, buf.capacity())
     }
 
     /** ARGB pixels to NV12 (Y plane, then interleaved U and V at half resolution). */

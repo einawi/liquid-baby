@@ -1,3 +1,13 @@
+0.9.3 (build 70): recorded video works again (no more black video), and a crash when the child service stops is fixed.
+- Frames are written using the encoder's own layout, so every picture reaches the video.
+- Fixed a crash when the child phone's monitoring is stopped before it started.
+- Pairing and reconnecting through the network announcement are confirmed working.
+
+0.9.3 (build 70): الفيديو المسجّل يشتغل من جديد (بدون شاشة سوداء)، وإصلاح انهيار عند إيقاف خدمة الطفل.
+- الصور تُكتب حسب تخطيط المرمّز نفسه، فتدخل كل الصور الفيديو.
+- إصلاح انهيار عند إيقاف مراقبة الطفل قبل أن تبدأ.
+- الإقران وإعادة الاتصال عبر إعلان الشبكة يعملان.
+
 0.9.2 (build 69): fixes the striped, distorted recorded video.
 - Cause: the recorder wrote each frame as one block, but the encoder's rows can be wider than the picture, so every row slid into the next.
 - Fixed: each row is written at the encoder's own row layout.

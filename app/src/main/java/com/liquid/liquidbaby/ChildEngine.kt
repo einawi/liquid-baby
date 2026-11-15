@@ -132,7 +132,7 @@ object ChildEngine {
 
     @Synchronized
     fun stop() {
-        Nsd.unregister(appCtx)
+        if (this::appCtx.isInitialized) Nsd.unregister(appCtx)
         if (!running) return
         running = false
         status = "Stopped"
