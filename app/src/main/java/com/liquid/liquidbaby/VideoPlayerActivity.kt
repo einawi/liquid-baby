@@ -144,7 +144,7 @@ class VideoPlayerActivity : Activity() {
         }, LinearLayout.LayoutParams(dp(44), dp(44)))
 
         bar.addView(ImageButton(this).apply {
-            setImageResource(R.drawable.ic_quality)
+            setImageResource(R.drawable.ic_save)
             setColorFilter(0xFFFFFFFF.toInt())
             background = null
             contentDescription = t("Save to gallery", "حفظ في المعرض")

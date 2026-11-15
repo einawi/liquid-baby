@@ -260,6 +260,8 @@ class CameraActivity : android.app.Activity() {
     }
 
     private fun stopRecording() {
+        if (recorder == null) return
+        toast(t("Stopping. Saving in the background...", "جارٍ الإيقاف والحفظ في الخلفية..."))
         recorder?.stop()
     }
 
@@ -277,8 +279,11 @@ class CameraActivity : android.app.Activity() {
         }
         val out = File(File(filesDir, "videos").apply { mkdirs() }, "video-${System.currentTimeMillis()}.lbv")
         Thread {
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND)
+            val t0 = System.nanoTime()
             val saved = VideoVault.encryptFile(tmp, out)
             if (saved) ParentEngine.clipsVersion++
+            Diag.i("Video encrypted in " + (System.nanoTime() - t0) / 1_000_000 + " ms, saved=" + saved)
             runOnUiThread {
                 toast(if (saved) t("Video saved (encrypted).", "تم حفظ الفيديو (مشفّر).")
                 else t("The video could not be saved.", "تعذّر حفظ الفيديو."))

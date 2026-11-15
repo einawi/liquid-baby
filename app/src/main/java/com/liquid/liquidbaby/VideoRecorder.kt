@@ -156,10 +156,13 @@ class VideoRecorder(private val outFile: File, private val maxMs: Long = 600_000
     /** Stops and saves. The caller then encrypts the result with VideoVault. */
     /** Returns at once. The encoders are drained on a background thread, so the screen never freezes. */
     fun stop() {
+        val t0 = System.nanoTime()
         Thread({
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND)
             synchronized(this) {
                 if (!stopping) finish(false)
             }
+            Diag.i("Recorder stopped in " + (System.nanoTime() - t0) / 1_000_000 + " ms (background)")
         }, "LiquidBaby-rec-stop").start()
     }
 

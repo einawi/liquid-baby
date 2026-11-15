@@ -1,3 +1,15 @@
+0.9.8 (build 75): stopping a recording gives immediate feedback and saves in the background.
+- A message appears at once when you stop; saving and encryption run on low-priority background threads.
+- Diagnostics records how long stopping and encryption took, to confirm the cause if a pause remains.
+
+0.9.8 (build 75): إيقاف التسجيل يعطي تأكيداً فورياً ويحفظ في الخلفية.
+- رسالة تظهر فوراً عند الإيقاف، والحفظ والتشفير يعملان في خيوط خلفية منخفضة الأولوية.
+- التشخيص يسجّل مدة الإيقاف والتشفير، لتأكيد السبب إذا بقي أي توقف.
+
+0.9.7 (build 74): the save button in the player uses a download icon instead of the quality icon.
+
+0.9.7 (build 74): زر الحفظ في المشغّل صار أيقونة تنزيل بدل أيقونة الجودة.
+
 0.9.6 (build 73): visible touch feedback on every button.
 - Every button shows a ripple and a small press shrink when touched, so you can tell whether a tap was received.
 - Applies to the main screen, camera, full screen, recordings, videos, and the player. The talk button shrinks while pressed.
