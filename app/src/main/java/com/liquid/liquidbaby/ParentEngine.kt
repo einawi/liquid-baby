@@ -173,10 +173,17 @@ object ParentEngine {
         running = true
         status = "Starting"
         Diag.i("Parent unit starting. " + Net.describe(appCtx).replace("\n", ", "))
-        Thread { loop() }.start()
+        val gen = ++generation
+        Thread { loop(gen) }.start()
         Thread { watchLoop() }.start()
         changed()
     }
+
+    /** Each start() gets a new number; an older connection loop stops itself, so two loops never fight over the child. */
+    @Volatile
+    private var generation = 0
+
+    private fun alive(gen: Int): Boolean = running && gen == generation
 
     @Synchronized
     fun stop() {
@@ -205,8 +212,8 @@ object ParentEngine {
         }
     }
 
-    private fun loop() {
-        while (running) {
+    private fun loop(gen: Int) {
+        while (alive(gen)) {
             val p = PairStore.paired()
             if (p == null) {
                 status = "Not paired with a child phone yet"
@@ -219,7 +226,7 @@ object ParentEngine {
             try {
                 run(p)
             } catch (e: Exception) {
-                if (running) {
+                if (alive(gen)) {
                     status = "Disconnected: " + (e.message ?: e.javaClass.simpleName) + ". Retrying..."
                     Diag.i(status)
                 }

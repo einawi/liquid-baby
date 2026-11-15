@@ -1,3 +1,11 @@
+0.9.4 (build 71): steadier connection after a Wi-Fi or router change.
+- Fixed: when the parent restarted its connection, the old connection loop kept running next to the new one, so two connections kept replacing each other and dropping every few seconds.
+- Each restart now replaces the old loop cleanly.
+
+0.9.4 (build 71): اتصال أثبت بعد تغيّر الواي فاي أو الراوتر.
+- تم إصلاح: عند إعادة بدء اتصال الأب، كانت الحلقة القديمة تستمر مع الجديدة، فيتبادل الاتصالان الطرد كل بضع ثوانٍ.
+- كل إعادة بدء تستبدل الحلقة القديمة بشكل نظيف.
+
 0.9.3 (build 70): recorded video works again (no more black video), and a crash when the child service stops is fixed.
 - Frames are written using the encoder's own layout, so every picture reaches the video.
 - Fixed a crash when the child phone's monitoring is stopped before it started.
