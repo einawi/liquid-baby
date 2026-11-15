@@ -65,7 +65,7 @@ object Discovery {
         } finally {
             ds?.close()
         }
-        Diag.i("Scan finished: " + found.size + " child phone(s) found")
+        Diag.limited("scan-finished", "Scan finished: " + found.size + " child phone(s) found", 30_000L)
         return found.values.toList()
     }
 

@@ -672,56 +672,7 @@ class ParentActivity : Activity() {
 
     /** Decrypts the video and writes a normal MP4 to Movies/LiquidBaby (Android 10 and newer), then optionally shares it. */
     private fun exportVideo(f: File, share: Boolean) {
-        if (android.os.Build.VERSION.SDK_INT < 29) {
-            toast(t("Saving to the gallery needs Android 10 or newer.", "الحفظ في المعرض يحتاج أندرويد 10 أو أحدث."))
-            return
-        }
-        toast(t("Preparing the video...", "جارٍ تجهيز الفيديو..."))
-        Thread {
-            val name = "LiquidBaby-" + android.text.format.DateFormat.format("yyyyMMdd-HHmmss", java.util.Date(f.lastModified())) + ".mp4"
-            val tmp = File(File(cacheDir, "export").apply { mkdirs() }, name)
-            val ok = VideoVault.decryptFile(f, tmp)
-            var uri: android.net.Uri? = null
-            if (ok) {
-                try {
-                    val values = android.content.ContentValues().apply {
-                        put(android.provider.MediaStore.Video.Media.DISPLAY_NAME, name)
-                        put(android.provider.MediaStore.Video.Media.MIME_TYPE, "video/mp4")
-                        put(android.provider.MediaStore.Video.Media.RELATIVE_PATH, "Movies/LiquidBaby")
-                        put(android.provider.MediaStore.Video.Media.IS_PENDING, 1)
-                    }
-                    val target = contentResolver.insert(android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI, values)
-                    if (target != null) {
-                        contentResolver.openOutputStream(target)?.use { out ->
-                            tmp.inputStream().use { it.copyTo(out) }
-                        }
-                        val done = android.content.ContentValues().apply { put(android.provider.MediaStore.Video.Media.IS_PENDING, 0) }
-                        contentResolver.update(target, done, null, null)
-                        uri = target
-                    }
-                } catch (e: Exception) {
-                    Diag.i("Video export problem: " + e.message)
-                }
-            }
-            tmp.delete()
-            runOnUiThread {
-                val target = uri
-                if (target == null) {
-                    toast(t("The video could not be saved.", "تعذّر حفظ الفيديو."))
-                    return@runOnUiThread
-                }
-                if (share) {
-                    val i = Intent(Intent.ACTION_SEND).apply {
-                        type = "video/mp4"
-                        putExtra(Intent.EXTRA_STREAM, target)
-                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    }
-                    startActivity(Intent.createChooser(i, t("Share video", "مشاركة الفيديو")))
-                } else {
-                    toast(t("Saved to Movies/LiquidBaby.", "تم الحفظ في Movies/LiquidBaby."))
-                }
-            }
-        }.start()
+        VideoExport.run(this, f, share)
     }
 
     /** Encrypted videos saved by the recorder, newest first. */

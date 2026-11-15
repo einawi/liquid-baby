@@ -578,6 +578,7 @@ object ParentEngine {
     private var lowQuality = false
 
     private var goodSince = 0L
+    private var lastStepMs = 0L
 
     /** The level the user picked; restored after a slow spell. */
     private var userQuality = 1
@@ -593,11 +594,14 @@ object ParentEngine {
         }
         val now = System.currentTimeMillis()
         val age = now - lastFrameMs
-        if (!lowQuality && viewQuality >= 1 && age > 4000L) {
+        // slow pictures: step down one level at a time (every 4 s), so the best quality the link can carry is kept
+        if (age > 4000L && viewQuality >= 1 && now - lastStepMs > 4000L) {
             lowQuality = true
             goodSince = 0L
-            Diag.i("Pictures are slow: asking for low quality")
-            sendView(0, viewFront, viewFlash, viewNight)
+            lastStepMs = now
+            val next = viewQuality - 1
+            Diag.i("Pictures are slow: stepping down to quality " + next)
+            sendView(next, viewFront, viewFlash, viewNight)
         } else if (lowQuality) {
             if (age < 1500L) {
                 if (goodSince == 0L) goodSince = now
@@ -793,7 +797,7 @@ object ParentEngine {
                 System.currentTimeMillis() - lastContact > offlineLimitMs() && !offlineAlerted
             ) {
                 offlineAlerted = true
-                Notifier.alert(appCtx, "Liquid Baby", "No answer from the child phone for ${offlineLimitMs() / 1000} seconds. Check that it is on, on Wi-Fi, and monitoring.", "disconnect")
+                Notifier.alert(appCtx, "Liquid Baby", "The child phone has not answered for " + (offlineLimitMs() / 1000) + " seconds. Check that it is on, monitoring, and on the same Wi-Fi.", "disconnect")
             }
             adaptQuality()
             if (tick % 15 == 0) {

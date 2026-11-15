@@ -246,53 +246,7 @@ class VideoPlayerActivity : Activity() {
 
     /** Share or save an unencrypted copy (Movies/LiquidBaby). This copy is made only when you ask for it. */
     private fun exportVideo(share: Boolean) {
-        val src = encFile ?: return
-        if (android.os.Build.VERSION.SDK_INT < 29) {
-            Toast.makeText(this, t("Saving needs Android 10 or newer.", "الحفظ يحتاج أندرويد 10 أو أحدث."), Toast.LENGTH_SHORT).show()
-            return
-        }
-        Toast.makeText(this, t("Preparing the video...", "جارٍ تجهيز الفيديو..."), Toast.LENGTH_SHORT).show()
-        Thread {
-            val name = "LiquidBaby-" + android.text.format.DateFormat.format("yyyyMMdd-HHmmss", java.util.Date(src.lastModified())) + ".mp4"
-            val tmp = File(File(cacheDir, "export").apply { mkdirs() }, name)
-            var uri: Uri? = null
-            if (VideoVault.decryptFile(src, tmp)) {
-                try {
-                    val values = ContentValues().apply {
-                        put(MediaStore.Video.Media.DISPLAY_NAME, name)
-                        put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
-                        put(MediaStore.Video.Media.RELATIVE_PATH, "Movies/LiquidBaby")
-                        put(MediaStore.Video.Media.IS_PENDING, 1)
-                    }
-                    val target = contentResolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, values)
-                    if (target != null) {
-                        contentResolver.openOutputStream(target)?.use { o -> tmp.inputStream().use { it.copyTo(o) } }
-                        contentResolver.update(target, ContentValues().apply { put(MediaStore.Video.Media.IS_PENDING, 0) }, null, null)
-                        uri = target
-                    }
-                } catch (e: Exception) {
-                    Diag.i("Video export problem: " + e.message)
-                }
-            }
-            tmp.delete()
-            runOnUiThread {
-                val target = uri
-                if (target == null) {
-                    Toast.makeText(this, t("The video could not be saved.", "تعذّر حفظ الفيديو."), Toast.LENGTH_SHORT).show()
-                    return@runOnUiThread
-                }
-                if (share) {
-                    val i = Intent(Intent.ACTION_SEND).apply {
-                        type = "video/mp4"
-                        putExtra(Intent.EXTRA_STREAM, target)
-                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    }
-                    startActivity(Intent.createChooser(i, t("Share video", "مشاركة الفيديو")))
-                } else {
-                    Toast.makeText(this, t("Saved to Movies/LiquidBaby.", "تم الحفظ في Movies/LiquidBaby."), Toast.LENGTH_SHORT).show()
-                }
-            }
-        }.start()
+        VideoExport.run(this, encFile ?: return, share)
     }
 
     override fun onPause() {

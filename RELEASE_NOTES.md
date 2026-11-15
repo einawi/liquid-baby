@@ -1,3 +1,15 @@
+0.9.12 (build 79): gradual quality on a weak link, clearer disconnect alert, lighter diagnostics, one share-and-save function.
+- Slow pictures step down one level at a time (every 4 seconds) instead of jumping to the lowest, and go back to the chosen quality after 20 good seconds.
+- The disconnect alert is clearer and names the time it has waited.
+- Repeated diagnostic lines (clip send errors, scan results) are written at most once per 30 to 60 seconds.
+- Sharing and saving a video uses one shared function in the recordings list and the player.
+
+0.9.12 (build 79): ضغط تدريجي للصورة عند الاتصال الضعيف، وتنبيه انقطاع أوضح، وتشخيص أخف، ودالة واحدة للمشاركة والحفظ.
+- الصورة البطيئة تنزل مستوى واحداً كل 4 ثوانٍ بدل القفز للأدنى، وترجع للجودة المختارة بعد 20 ثانية جيدة.
+- تنبيه الانقطاع أوضح ويذكر المدة التي انتظرها.
+- السطور المتكررة في التشخيص (أخطاء الإرسال ونتائج البحث) تُكتب مرة كل 30 إلى 60 ثانية.
+- المشاركة والحفظ للفيديو يستخدم دالة واحدة في قائمة التسجيلات والمشغّل.
+
 0.9.11 (build 78): warning for 720p with a high frame rate; test folder ignored by git.
 - Choosing 720p together with 20 fps or more shows a notice: the picture may stutter on this phone, so 15 fps gives a smoother picture.
 - The test folder is no longer added to the repository by mistake.

@@ -742,7 +742,7 @@ object ChildEngine {
                     try {
                         sendClip(c, f)
                     } catch (e: Exception) {
-                        Diag.i("Could not send clip: " + e.message)
+                        Diag.limited("send-clip", "Could not send clip: " + e.message, 60_000L)
                     }
                 }
             }.start()
