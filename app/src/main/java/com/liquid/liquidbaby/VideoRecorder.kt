@@ -94,8 +94,7 @@ class VideoRecorder(private val outFile: File, private val maxMs: Long = 600_000
     }
 
     /** One picture from the screen. Scaled to the recording size, converted to NV12, and queued for the encoder. */
-    @Synchronized
-    fun onFrame(src: Bitmap) {
+    private fun onFrameLocked(src: Bitmap) {
         val v = venc ?: return
         if (stopping) return
         if (elapsedMs() >= maxMs) {
@@ -138,9 +137,28 @@ class VideoRecorder(private val outFile: File, private val maxMs: Long = 600_000
         return out
     }
 
-    /** Room sound or the parent's microphone, 16 kHz mono. Both are added into the same mix by time. */
-    @Synchronized
+    private val encLock = Any()
+    @Volatile
+    private var closing = false
+
+    /** Pictures from the screen. Returns at once when the recording is closing, so the caller never waits. */
+    fun onFrame(src: Bitmap) {
+        if (closing) return
+        synchronized(encLock) {
+            if (!closing) onFrameLocked(src)
+        }
+    }
+
+    /** Room sound or the parent's microphone, 16 kHz mono. Returns at once when closing. */
     fun onSound(samples: ShortArray, count: Int) {
+        if (closing) return
+        synchronized(encLock) {
+            if (!closing) onSoundLocked(samples, count)
+        }
+    }
+
+    /** Room sound or the parent's microphone, 16 kHz mono. Both are added into the same mix by time. */
+    private fun onSoundLocked(samples: ShortArray, count: Int) {
         if (stopping || aenc == null) return
         drainAudioOut(false)
         val now = sampleIndexNow()
@@ -156,10 +174,12 @@ class VideoRecorder(private val outFile: File, private val maxMs: Long = 600_000
     /** Stops and saves. The caller then encrypts the result with VideoVault. */
     /** Returns at once. The encoders are drained on a background thread, so the screen never freezes. */
     fun stop() {
+        if (closing) return
+        closing = true
         val t0 = System.nanoTime()
         Thread({
             android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND)
-            synchronized(this) {
+            synchronized(encLock) {
                 if (!stopping) finish(false)
             }
             Diag.i("Recorder stopped in " + (System.nanoTime() - t0) / 1_000_000 + " ms (background)")

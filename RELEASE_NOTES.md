@@ -1,3 +1,15 @@
+0.9.10 (build 77): the largest accepted message is now 3 MB (was 1.5 MB), for larger pictures.
+
+0.9.10 (build 77): أكبر رسالة مقبولة صارت 3 MB (كانت 1.5 MB)، لصور أكبر.
+
+0.9.9 (build 76): stopping a recording no longer stalls the app.
+- The picture and sound feeds no longer wait for the recorder while it closes; they skip the work at once.
+- Closing runs under its own lock, so the live connection keeps reading during the save.
+
+0.9.9 (build 76): إيقاف التسجيل ما يعود يوقف التطبيق.
+- مجاري الصورة والصوت ما تنتظر المسجّل أثناء الإغلاق؛ تتجاوز العمل فوراً.
+- الإغلاق يعمل بقفل خاص، فيبقى الاتصال المباشر يقرأ أثناء الحفظ.
+
 0.9.8 (build 75): stopping a recording gives immediate feedback and saves in the background.
 - A message appears at once when you stop; saving and encryption run on low-priority background threads.
 - Diagnostics records how long stopping and encryption took, to confirm the cause if a pause remains.
