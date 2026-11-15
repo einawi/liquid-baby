@@ -9,3 +9,4 @@ build-error.txt
 .idea/
 *.iml
 .aiy/*.keystore
+test/

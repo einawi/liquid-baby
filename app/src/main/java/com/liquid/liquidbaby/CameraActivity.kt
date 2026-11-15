@@ -96,6 +96,7 @@ class CameraActivity : android.app.Activity() {
                 b.textSize = 13f
                 b.setOnClickListener {
                     ParentEngine.setView(q, ParentEngine.viewFront, ParentEngine.viewFlash)
+                    checkHeavy(q, ParentEngine.viewFps)
                     refresh()
                 }
                 qualityBtns[q] = b
@@ -150,7 +151,10 @@ class CameraActivity : android.app.Activity() {
                 onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                     override fun onItemSelected(p: AdapterView<*>?, v: View?, pos: Int, id: Long) {
                         val fps = pos + 10
-                        if (fps != ParentEngine.viewFps) ParentEngine.setFps(fps)
+                        if (fps != ParentEngine.viewFps) {
+                            ParentEngine.setFps(fps)
+                            checkHeavy(ParentEngine.viewQuality, fps)
+                        }
                     }
                     override fun onNothingSelected(p: AdapterView<*>?) {}
                 }
@@ -419,10 +423,23 @@ class CameraActivity : android.app.Activity() {
             .setTitle(t("Frame rate", "معدل الفريمات"))
             .setItems((10..30).map { "$it fps" }.toTypedArray()) { _, which ->
                 ParentEngine.setFps(which + 10)
+                checkHeavy(ParentEngine.viewQuality, which + 10)
                 fpsSpinner?.setSelection(which, false)
             }
             .setNegativeButton(t("Cancel", "تراجع"), null)
             .show()
+    }
+
+    /** Warns when 720p is combined with a high frame rate, which stutters on this phone. */
+    private fun checkHeavy(quality: Int, fps: Int) {
+        if (quality == 3 && fps >= 20) {
+            Toast.makeText(
+                this,
+                t("720p with $fps fps may stutter on this phone. For a smooth picture, use 15 fps.",
+                  "720p مع $fps فريم قد يتقطّع على هذا الجوال. للصورة السلسة استخدم 15 فريم."),
+                Toast.LENGTH_LONG
+            ).show()
+        }
     }
 
     private fun chooseQuality() {
@@ -431,6 +448,7 @@ class CameraActivity : android.app.Activity() {
             .setTitle(t("Quality", "الجودة"))
             .setItems(labels) { _, which ->
                 ParentEngine.setView(which, ParentEngine.viewFront, ParentEngine.viewFlash)
+                checkHeavy(which, ParentEngine.viewFps)
                 refresh()
             }
             .setNegativeButton(t("Cancel", "تراجع"), null)

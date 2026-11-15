@@ -1,3 +1,11 @@
+0.9.11 (build 78): warning for 720p with a high frame rate; test folder ignored by git.
+- Choosing 720p together with 20 fps or more shows a notice: the picture may stutter on this phone, so 15 fps gives a smoother picture.
+- The test folder is no longer added to the repository by mistake.
+
+0.9.11 (build 78): تحذير عند 720p مع معدل فريمات عالٍ، وتجاهل مجلد الاختبار في git.
+- اختيار 720p مع 20 فريم أو أكثر يعرض تنبيهاً: الصورة قد تتقطّع على هذا الجوال، و15 فريم أسلس.
+- مجلد الاختبار ما يدخل المستودع بالخطأ.
+
 0.9.10 (build 77): the largest accepted message is now 3 MB (was 1.5 MB), for larger pictures.
 
 0.9.10 (build 77): أكبر رسالة مقبولة صارت 3 MB (كانت 1.5 MB)، لصور أكبر.
