@@ -12,6 +12,20 @@ import android.widget.TextView
 
 /** Visual effects shared by the parent and child screens. */
 object Fx {
+    /**
+     * Gives every clickable control visible feedback: a ripple when touched, and a small press shrink.
+     * Views with their own touch handling (custom views) are left alone.
+     */
+    fun feedbackAll(root: View) {
+        if (root is android.view.ViewGroup) {
+            for (i in 0 until root.childCount) feedbackAll(root.getChildAt(i))
+        }
+        if (root.isClickable && root.hasOnClickListeners() && root !is ModeToggle && root.foreground == null) {
+            ripple(root)
+            press(root)
+        }
+    }
+
     /** Slight shrink while a control is pressed; back to normal on release. Clicks still work. */
     fun press(v: View) {
         v.setOnTouchListener { view, ev ->

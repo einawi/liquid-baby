@@ -92,6 +92,7 @@ class TalkControl(private val host: Activity) {
     }
 
     fun down() {
+        button.animate().scaleX(0.97f).scaleY(0.97f).setDuration(90).start()
         if (host.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             host.requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), 30)
             Toast.makeText(host, t("Allow the microphone, then try again.", "اسمح بالميكروفون ثم حاول مرة أخرى."), Toast.LENGTH_SHORT).show()
@@ -109,6 +110,7 @@ class TalkControl(private val host: Activity) {
     }
 
     fun up() {
+        button.animate().scaleX(1f).scaleY(1f).setDuration(180).start()
         ui.removeCallbacks(limit)
         ParentEngine.endTalk()
         glow?.cancel()

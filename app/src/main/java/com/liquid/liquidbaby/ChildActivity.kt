@@ -255,6 +255,7 @@ class ChildActivity : Activity() {
             }
             if (!entered) Fx.enter(c, index.coerceAtMost(6))
         }
+        Fx.feedbackAll(box)
     }
 
     private fun refresh() {

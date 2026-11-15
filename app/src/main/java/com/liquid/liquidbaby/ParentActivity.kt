@@ -606,6 +606,7 @@ class ParentActivity : Activity() {
             }
             if (!entered) Fx.enter(card, index.coerceAtMost(6))
         }
+        Fx.feedbackAll(box)
         if (videos.isNotEmpty()) {
             box.sectionLabel(t("Videos (encrypted)", "الفيديوهات (مشفّرة)"))
             for (f in videos) {

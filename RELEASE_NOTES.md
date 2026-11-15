@@ -1,3 +1,23 @@
+0.9.6 (build 73): visible touch feedback on every button.
+- Every button shows a ripple and a small press shrink when touched, so you can tell whether a tap was received.
+- Applies to the main screen, camera, full screen, recordings, videos, and the player. The talk button shrinks while pressed.
+
+0.9.6 (build 73): تأثير بصري عند لمس أي زر.
+- كل زر يظهر تموّجاً وانكماشاً بسيطاً عند اللمس، فتعرف إذا وصلت اللمسة.
+- يشمل الشاشة الرئيسية، والكاميرا، وملء الشاشة، والتسجيلات، والفيديوهات، والمشغّل. زر التحدث ينكمش أثناء الضغط.
+
+0.9.5 (build 72): a better video player.
+- Play and pause buttons, a seek bar, and current and total time.
+- The picture keeps its proportions; loading indicator while the video opens.
+- The screen stays on only while a video plays, and playback pauses when you leave.
+- Share and save buttons on the player screen.
+
+0.9.5 (build 72): مشغّل فيديو أفضل.
+- أزرار تشغيل وإيقاف، وشريط تقدّم، والوقت الحالي والكلي.
+- الصورة تحافظ على نسبها، ومؤشر تحميل أثناء فتح الفيديو.
+- الشاشة تبقى مضاءة فقط أثناء التشغيل، ويتوقف الفيديو عند الخروج.
+- أزرار مشاركة وحفظ داخل شاشة المشغّل.
+
 0.9.4 (build 71): steadier connection after a Wi-Fi or router change.
 - Fixed: when the parent restarted its connection, the old connection loop kept running next to the new one, so two connections kept replacing each other and dropping every few seconds.
 - Each restart now replaces the old loop cleanly.

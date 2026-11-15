@@ -95,6 +95,7 @@ fun Activity.screen(build: LinearLayout.() -> Unit) {
         insets
     }
     setContentView(sv)
+    Fx.feedbackAll(sv)
     // Blur only AFTER the window exists (setting it earlier caused a null-window crash on Android 12+).
     if (blur) {
         try {
