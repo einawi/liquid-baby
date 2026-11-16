@@ -1,3 +1,7 @@
+0.9.19 (build 86): space between the night-mode button and the row of icons below it. Look only.
+
+0.9.19 (build 86): مسافة بين زر وضع الليل والصف الذي تحته. للشكل فقط.
+
 0.9.18 (build 85): wider gaps between the night, record, frame rate and full screen buttons. Look only.
 
 0.9.18 (build 85): مسافات أوسع بين أزرار الليل والتسجيل والفريمات وملء الشاشة. للشكل فقط.

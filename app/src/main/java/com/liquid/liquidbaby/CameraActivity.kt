@@ -171,7 +171,10 @@ class CameraActivity : android.app.Activity() {
                 background = Look.glass(context, 22, Look.BUTTON)
                 setOnClickListener { enterFull() }
             }, LinearLayout.LayoutParams(0, dp(52), 1f))
-            addView(controls)
+            addView(controls, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                topMargin = dp(14)
+                bottomMargin = dp(6)
+            })
             addButton(t("Rotate the picture", "تدوير الصورة")) { ParentEngine.viewRotate = (ParentEngine.viewRotate + 1) and 3 }
             soundBtn = addButton(t("Room sound", "صوت الغرفة")) {
                 ParentEngine.liveSound = !ParentEngine.liveSound
