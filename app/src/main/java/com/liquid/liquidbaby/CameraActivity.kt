@@ -140,7 +140,7 @@ class CameraActivity : android.app.Activity() {
                     refresh()
                 }
             }
-            controls.addView(nightIcon, LinearLayout.LayoutParams(dp(52), dp(52)).apply { marginEnd = dp(8) })
+            controls.addView(nightIcon, LinearLayout.LayoutParams(dp(52), dp(52)).apply { marginEnd = dp(16) })
             recordIcon = ImageButton(context).apply {
                 setImageResource(R.drawable.ic_record)
                 background = Look.glass(context, 18, Look.BUTTON)
@@ -148,7 +148,7 @@ class CameraActivity : android.app.Activity() {
                 contentDescription = t("Record video", "تسجيل فيديو")
                 setOnClickListener { toggleRecording() }
             }
-            controls.addView(recordIcon, LinearLayout.LayoutParams(dp(52), dp(52)).apply { marginEnd = dp(8) })
+            controls.addView(recordIcon, LinearLayout.LayoutParams(dp(52), dp(52)).apply { marginEnd = dp(16) })
             fpsSpinner = Spinner(context).apply {
                 adapter = ArrayAdapter(context, android.R.layout.simple_spinner_dropdown_item, (10..30).map { "$it fps" })
                 setSelection(ParentEngine.viewFps - 10, false)
@@ -163,7 +163,7 @@ class CameraActivity : android.app.Activity() {
                     override fun onNothingSelected(p: AdapterView<*>?) {}
                 }
             }
-            controls.addView(fpsSpinner, LinearLayout.LayoutParams(dp(118), dp(52)).apply { marginEnd = dp(8) })
+            controls.addView(fpsSpinner, LinearLayout.LayoutParams(dp(112), dp(52)).apply { marginEnd = dp(16) })
             controls.addView(Button(context).apply {
                 isAllCaps = false
                 text = t("Full screen", "ملء الشاشة")

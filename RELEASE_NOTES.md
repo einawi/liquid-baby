@@ -1,3 +1,11 @@
+0.9.18 (build 85): wider gaps between the night, record, frame rate and full screen buttons. Look only.
+
+0.9.18 (build 85): مسافات أوسع بين أزرار الليل والتسجيل والفريمات وملء الشاشة. للشكل فقط.
+
+0.9.17 (build 84): more space between the camera controls (night, record, frame rate, full screen). Look only.
+
+0.9.17 (build 84): مسافات أوسع بين أزرار الكاميرا (الليل، التسجيل، الفريمات، ملء الشاشة). للشكل فقط.
+
 0.9.16 (build 83): live camera screen, cleaner look. Display only.
 - Rounded picture panel and rounded quality buttons with a comfortable touch height.
 
