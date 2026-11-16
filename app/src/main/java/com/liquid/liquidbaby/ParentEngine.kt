@@ -138,6 +138,11 @@ object ParentEngine {
 
     @Volatile
     var level = 0
+    /** The other parent: connected to the child, and talking to it (from the child's status). */
+    @Volatile
+    var partnerConnected = false
+    @Volatile
+    var partnerTalking = false
     /** When the last level arrived; the level is shown as zero when none has come for a while (monitoring stopped). */
     @Volatile
     var levelAt = 0L
@@ -780,6 +785,12 @@ object ParentEngine {
         lastStatusMs = System.currentTimeMillis()
         charging = chg
         tempC = temp / 10.0
+        if (d.size >= 6) {
+            val parentsOnChild = d[4].toInt() and 255
+            val talkersOnChild = d[5].toInt() and 255
+            partnerConnected = parentsOnChild >= 2
+            partnerTalking = talkersOnChild - (if (talking) 1 else 0) > 0
+        }
         val low = !chg && pct < 20
         if (low && !lowAlerted) {
             lowAlerted = true

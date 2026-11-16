@@ -482,6 +482,7 @@ class ParentActivity : Activity() {
             else -> 0xFF66BB6A.toInt()
         })
         styleLevelMeter(meter)
+        partnerTalk?.setState(connected = ParentEngine.connected && ParentEngine.partnerConnected, talking = ParentEngine.partnerTalking)
         val levelIsFresh = ParentEngine.connected && System.currentTimeMillis() - ParentEngine.levelAt < 2500L
         Fx.animateMeter(meter, if (levelIsFresh) ParentEngine.level else 0)
         soundVisual?.setStyle(Prefs.getString("soundVisual", "wave"))

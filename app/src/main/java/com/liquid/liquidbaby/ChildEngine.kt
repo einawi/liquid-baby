@@ -624,7 +624,8 @@ object ChildEngine {
                 val charging = if (st == android.os.BatteryManager.BATTERY_STATUS_CHARGING ||
                     st == android.os.BatteryManager.BATTERY_STATUS_FULL) 1 else 0
                 val temp = bi?.getIntExtra(android.os.BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0
-                val payload = byteArrayOf(pct.toByte(), charging.toByte(), (temp shr 8).toByte(), temp.toByte())
+                val payload = byteArrayOf(pct.toByte(), charging.toByte(), (temp shr 8).toByte(), temp.toByte(),
+                    connected.size.toByte(), talkers.size.toByte())
                 for (c in connected.values) {
                     try {
                         c.send(T.STATUS, payload)

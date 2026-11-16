@@ -1,3 +1,7 @@
+0.9.37 (build 104): the Talk to partner button turns on when the other parent is connected to the child phone, and shows "Partner is talking" when they talk. Both phones need this version.
+
+0.9.37 (build 104): زر التحدث مع الشريك يُفعَّل عند اتصال الشريك بجوال الطفل، ويعرض "الشريك يتحدث" عند حديثه. يحتاج الجوالان هذه النسخة.
+
 0.9.36 (build 103): a "Talk to partner" button below the talk-to-child button on the parent screen, with the same look and the Hold/Tap switch. Greyed out with "Partner not connected" until the other parent is connected. The partner audio itself comes in a later build.
 
 0.9.36 (build 103): زر "التحدث مع الشريك" أسفل زر التحدث مع الطفل في شاشة الأب، بنفس الشكل ومفتاح Hold/Tap. رمادي مع "الشريك غير متصل" حتى يتصل الشريك. صوت الشريك نفسه يأتي في نسخة لاحقة.
