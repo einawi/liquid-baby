@@ -135,8 +135,8 @@ fun LinearLayout.addMono(text: String): TextView {
     tv.typeface = Typeface.MONOSPACE
     tv.setTextColor(Look.TEXT)
     tv.setTextIsSelectable(true)
-    tv.background = Look.glass(context, 16, Look.GLASS)
-    tv.setPadding(context.dp(12), context.dp(12), context.dp(12), context.dp(12))
+    tv.background = Look.glass(context, 18, Look.GLASS)
+    tv.setPadding(context.dp(14), context.dp(14), context.dp(14), context.dp(14))
     addView(tv)
     return tv
 }
@@ -146,11 +146,13 @@ fun LinearLayout.addButton(text: String, onClick: () -> Unit): Button {
     b.text = Tr.t(text)
     b.isAllCaps = false
     b.setTextColor(Look.TEXT)
-    b.background = Look.glass(context, 22, Look.BUTTON)
-    b.minHeight = context.dp(52)
+    b.textSize = 15f
+    b.background = Look.glass(context, 18, Look.BUTTON)
+    b.minHeight = context.dp(56)
+    b.setPadding(context.dp(16), context.dp(10), context.dp(16), context.dp(10))
     b.setOnClickListener { onClick() }
     val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-    lp.topMargin = context.dp(8)
+    lp.topMargin = context.dp(10)
     addView(b, lp)
     return b
 }

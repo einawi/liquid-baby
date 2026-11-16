@@ -1,3 +1,15 @@
+0.9.23 (build 90): one modern look for buttons and panels on every screen. Look only.
+- Buttons have softer corners, larger text, and more room around them.
+- Text panels (such as diagnostics) have matching corners and padding.
+
+0.9.23 (build 90): شكل موحّد وحديث للأزرار واللوحات في كل الشاشات. للشكل فقط.
+- الأزرار بزوايا أنعم، ونص أكبر، ومسافات أوسع حولها.
+- لوحات النصوص (مثل التشخيص) بزوايا ومسافات متناسقة.
+
+0.9.22 (build 89): sound bars removed from the parent and child screens; the thin sound line is back.
+
+0.9.22 (build 89): أُزيلت أعمدة الصوت من شاشتي الأب والطفل، وعاد الخط الرفيع لصوت الغرفة.
+
 0.9.21 (build 88): child screen uses the same sound bars as the parent screen. Look only.
 
 0.9.21 (build 88): شاشة الطفل تستخدم نفس أعمدة الصوت التي في شاشة الأب. للشكل فقط.

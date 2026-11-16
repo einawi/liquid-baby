@@ -43,7 +43,6 @@ class ParentActivity : Activity() {
     private var batteryDot: View? = null
     private var batteryTv: TextView? = null
     private var batteryRing: BatteryRing? = null
-    private var soundBars: SoundBars? = null
     private var tempDot: View? = null
     private var tempTv: TextView? = null
     private var meter: ProgressBar? = null
@@ -164,11 +163,6 @@ class ParentActivity : Activity() {
                         progress = ParentEngine.level
                     }
                     addView(meter, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(8)).apply {
-                        topMargin = dp(10)
-                    })
-                    meter?.visibility = View.GONE
-                    soundBars = SoundBars(context)
-                    addView(soundBars, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(44)).apply {
                         topMargin = dp(10)
                     })
                     line(t("Sound in the room", "صوت الغرفة"), 13f)
@@ -475,7 +469,6 @@ class ParentActivity : Activity() {
             else -> 0xFF66BB6A.toInt()
         })
         Fx.animateMeter(meter, ParentEngine.level)
-        soundBars?.setLevel(ParentEngine.level)
         batteryRing?.setPercent(ParentEngine.batteryPct)
 
         listenBtn?.text = t(if (ParentEngine.listening) "Stop" else "Listen",
