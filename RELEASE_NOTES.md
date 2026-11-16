@@ -1,3 +1,7 @@
+0.9.40 (build 107): the partner button turns off on its own when the link drops, even when no new message arrives. Look only; both phones should update.
+
+0.9.40 (build 107): زر الشريك يتعطّل وحده عند انقطاع الاتصال حتى لو لم تصل رسائل جديدة. يُفضّل تحديث الجوالين.
+
 0.9.39 (build 106): the partner button turns off when monitoring stops or the other parent disconnects. Both phones need this version.
 
 0.9.39 (build 106): زر الشريك يتوقف عند إيقاف المراقبة أو انقطاع الشريك. يحتاج الجوالان هذه النسخة.

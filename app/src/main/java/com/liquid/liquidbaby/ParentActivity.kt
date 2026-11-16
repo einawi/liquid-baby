@@ -323,8 +323,18 @@ class ParentActivity : Activity() {
             .show()
     }
 
+    private val partnerHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val partnerTick = object : Runnable {
+        override fun run() {
+            partnerTalk?.setState(connected = ParentEngine.connected && ParentEngine.partnerConnected, talking = ParentEngine.partnerTalking)
+            partnerHandler.postDelayed(this, 1000L)
+        }
+    }
+
     override fun onResume() {
         super.onResume()
+        partnerHandler.removeCallbacks(partnerTick)
+        partnerHandler.post(partnerTick)
         if (builtAr != Tr.isAr()) build()
         ParentEngine.onChange = { runOnUiThread { refresh() } }
         ParentEngine.setLevelSub(true)
@@ -343,6 +353,7 @@ class ParentActivity : Activity() {
     }
 
     override fun onPause() {
+        partnerHandler.removeCallbacks(partnerTick)
         super.onPause()
         ParentEngine.onChange = null
         ui.removeCallbacks(tick)
