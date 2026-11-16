@@ -168,7 +168,7 @@ class ParentActivity : Activity() {
                     })
                     meter?.visibility = View.GONE
                     soundBars = SoundBars(context)
-                    addView(soundBars, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(26)).apply {
+                    addView(soundBars, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(44)).apply {
                         topMargin = dp(10)
                     })
                     line(t("Sound in the room", "صوت الغرفة"), 13f)

@@ -68,50 +68,46 @@ class BatteryRing(ctx: Context) : View(ctx) {
     }
 }
 
-/** Row of bars that move with the room sound level. */
+/** Row of bars that follow the room sound level (no motion when the room is quiet). */
 class SoundBars(ctx: Context) : View(ctx) {
-    private var level = 0
-    private var phase = 0f
+    private val n = 24
+    private var target = 0f
+    private var shown = 0f
+    private val weight = FloatArray(n) { i -> (0.45f + 0.55f * ((sin(i * 0.55) + 1) / 2)).toFloat() }
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val moving = ValueAnimator.ofFloat(0f, 1f).apply {
-        duration = 900L
-        repeatMode = ValueAnimator.REVERSE
-        repeatCount = ValueAnimator.INFINITE
-        addUpdateListener { phase = it.animatedValue as Float; invalidate() }
-    }
     private val rect = RectF()
+    private var smooth: ValueAnimator? = null
 
+    /** level 0..100 from the screen; quiet sounds are lifted so they are visible. */
     fun setLevel(v: Int) {
-        // quiet sounds are lifted with a square-root curve and a small gain, so the bars react to whispers too
         val raw = v.coerceIn(0, 100) / 100f
-        level = (Math.sqrt(raw.toDouble()) * 100 * 1.5).toInt().coerceIn(0, 100)
-        invalidate()
-    }
-
-    override fun onAttachedToWindow() {
-        super.onAttachedToWindow()
-        if (!moving.isRunning) moving.start()
-    }
-
-    override fun onDetachedFromWindow() {
-        moving.cancel()
-        super.onDetachedFromWindow()
+        val to = (Math.sqrt(raw.toDouble()) * 1.5).toFloat().coerceIn(0f, 1f)
+        if (to == target) return
+        target = to
+        smooth?.cancel()
+        smooth = ValueAnimator.ofFloat(shown, to).apply {
+            duration = 220L
+            addUpdateListener { shown = it.animatedValue as Float; invalidate() }
+            start()
+        }
     }
 
     override fun onDraw(c: Canvas) {
         paint.color = Themes.current().accent
-        val n = 14
-        val barW = width / (n * 1.8f)
-        val gap = barW * 0.8f
+        val barW = width / (n * 1.7f)
+        val gap = barW * 0.7f
         val minH = 3f * resources.displayMetrics.density
         for (i in 0 until n) {
-            val wave = ((sin((phase + i * 0.07f) * 2 * Math.PI) + 1) / 2).toFloat()
-            val amp = (level / 100f) * (0.35f + 0.65f * wave)
-            val h = maxOf(minH, height * amp)
+            val h = maxOf(minH, height * shown * weight[i])
             val x = i * (barW + gap)
             val top = (height - h) / 2f
             rect.set(x, top, x + barW, top + h)
             c.drawRoundRect(rect, barW / 2, barW / 2, paint)
         }
+    }
+
+    override fun onDetachedFromWindow() {
+        smooth?.cancel()
+        super.onDetachedFromWindow()
     }
 }

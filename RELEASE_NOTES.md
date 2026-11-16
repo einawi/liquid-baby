@@ -1,3 +1,11 @@
+0.9.20 (build 87): room sound bars follow the real sound level. More bars and taller.
+- The bars no longer move on their own; they rise and fall with the sound.
+- 24 bars, taller area.
+
+0.9.20 (build 87): أعمدة صوت الغرفة تتبع مستوى الصوت الفعلي. أعمدة أكثر وأطول.
+- الأعمدة ما تتحرك لوحدها؛ ترتفع وتنخفض مع الصوت.
+- 24 عموداً، ومساحة أطول.
+
 0.9.19 (build 86): space between the night-mode button and the row of icons below it. Look only.
 
 0.9.19 (build 86): مسافة بين زر وضع الليل والصف الذي تحته. للشكل فقط.
