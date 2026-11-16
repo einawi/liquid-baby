@@ -1,3 +1,7 @@
+0.9.21 (build 88): child screen uses the same sound bars as the parent screen. Look only.
+
+0.9.21 (build 88): شاشة الطفل تستخدم نفس أعمدة الصوت التي في شاشة الأب. للشكل فقط.
+
 0.9.20 (build 87): room sound bars follow the real sound level. More bars and taller.
 - The bars no longer move on their own; they rise and fall with the sound.
 - 24 bars, taller area.
