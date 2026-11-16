@@ -45,6 +45,22 @@ object Themes {
         0xFFFFFFFF.toInt(), 0xFFFFFFFF.toInt(), 0xFFFFFFFF.toInt(), 0xFF1E66D0.toInt(),
         0xFF1B1F24.toInt(), 0xFF5F6368.toInt(), 0xFFF2F4F7.toInt(), 0xFFEEF1F5.toInt(), 0xFF1E66D0.toInt(), 0x1F000000, 10, 0)
 
+    private val tealDark = Style("teal-dark",
+        0xFF0B2F36.toInt(), 0xFF0F3E47.toInt(), 0xFF145059.toInt(), 0xFF7FE3D6.toInt(),
+        0xFFE6FBF7.toInt(), 0xFF9FD9CF.toInt(), 0x26FFFFFF, 0xCC1F7A70.toInt(), 0x3300C9B0, 0x4DFFFFFF, 18, 40)
+
+    private val tealLight = Style("teal-light",
+        0xFFF2FBFA.toInt(), 0xFFE0F4F1.toInt(), 0xFFCDEBE6.toInt(), 0xFF1A9E8F.toInt(),
+        0xFF0C3B35.toInt(), 0xFF3E6E66.toInt(), 0x99FFFFFF.toInt(), 0xCC1A9E8F.toInt(), 0x1F1A9E8F, 0xCCFFFFFF.toInt(), 18, 0)
+
+    private val brightDark = Style("bright-dark",
+        0xFF2A1B3D.toInt(), 0xFF3D2457.toInt(), 0xFF5A2E6B.toInt(), 0xFFFFB020.toInt(),
+        0xFFFFF4E8.toInt(), 0xFFFFD9B8.toInt(), 0x33FFFFFF, 0xCCFF6B6B.toInt(), 0x33FFB020, 0x4DFFFFFF, 20, 40)
+
+    private val brightLight = Style("bright-light",
+        0xFFFFF6EE.toInt(), 0xFFFFE9DA.toInt(), 0xFFFFD9C2.toInt(), 0xFFFF6B6B.toInt(),
+        0xFF2B1A12.toInt(), 0xFF7A4D3A.toInt(), 0xAAFFFFFF.toInt(), 0xFFFF6B6B.toInt(), 0x33FF6B6B, 0xCCFFFFFF.toInt(), 20, 0)
+
     fun mode(): String = Prefs.getString("themeMode", "system")
 
     fun style(): String = Prefs.getString("themeStyle", "minimal")
@@ -56,12 +72,12 @@ object Themes {
     }
 
     fun current(): Style {
-        val minimal = style() == "minimal"
-        return when {
-            minimal && isDark() -> minimalDark
-            minimal -> minimalLight
-            isDark() -> classicDark
-            else -> classicLight
+        val dark = isDark()
+        return when (style()) {
+            "teal" -> if (dark) tealDark else tealLight
+            "bright" -> if (dark) brightDark else brightLight
+            "minimal" -> if (dark) minimalDark else minimalLight
+            else -> if (dark) classicDark else classicLight
         }
     }
 

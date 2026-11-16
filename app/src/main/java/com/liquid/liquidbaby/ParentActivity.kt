@@ -42,6 +42,8 @@ class ParentActivity : Activity() {
     private var detailLine: TextView? = null
     private var batteryDot: View? = null
     private var batteryTv: TextView? = null
+    private var batteryRing: BatteryRing? = null
+    private var soundBars: SoundBars? = null
     private var tempDot: View? = null
     private var tempTv: TextView? = null
     private var meter: ProgressBar? = null
@@ -140,6 +142,8 @@ class ParentActivity : Activity() {
                 card {
                     val row = addRow()
                     batteryDot = Fx.dot(context, 0xFF8899AA.toInt())
+                    batteryRing = BatteryRing(context)
+                    row.addView(batteryRing, LinearLayout.LayoutParams(dp(44), dp(44)).apply { marginEnd = dp(10) })
                     row.addView(batteryDot)
                     childLine = TextView(context).apply {
                         textSize = 17f
@@ -160,6 +164,11 @@ class ParentActivity : Activity() {
                         progress = ParentEngine.level
                     }
                     addView(meter, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(8)).apply {
+                        topMargin = dp(10)
+                    })
+                    meter?.visibility = View.GONE
+                    soundBars = SoundBars(context)
+                    addView(soundBars, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(26)).apply {
                         topMargin = dp(10)
                     })
                     line(t("Sound in the room", "صوت الغرفة"), 13f)
@@ -466,6 +475,8 @@ class ParentActivity : Activity() {
             else -> 0xFF66BB6A.toInt()
         })
         Fx.animateMeter(meter, ParentEngine.level)
+        soundBars?.setLevel(ParentEngine.level)
+        batteryRing?.setPercent(ParentEngine.batteryPct)
 
         listenBtn?.text = t(if (ParentEngine.listening) "Stop" else "Listen",
             if (ParentEngine.listening) "أوقف" else "استماع") + "\n" +
@@ -554,7 +565,11 @@ class ParentActivity : Activity() {
             }
             return
         }
-        box.addButton(t("Delete older than...", "حذف الأقدم من...")) { chooseOlder() }
+        box.addButton(t("Delete older than...", "حذف الأقدم من...")) { chooseOlder() }.apply {
+            textSize = 14f
+            isSingleLine = true
+            ellipsize = android.text.TextUtils.TruncateAt.END
+        }
         box.addButton(t("Delete all recordings", "حذف كل التسجيلات")) { confirmDelete(t("Delete all recordings?", "حذف كل التسجيلات؟"), null) }
         val fmt = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.MEDIUM)
         var lastGroup = ""

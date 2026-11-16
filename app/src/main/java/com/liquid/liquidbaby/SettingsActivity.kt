@@ -44,9 +44,14 @@ class SettingsActivity : Activity() {
                         build()
                     }
                 }
-                addBody(t("Style", "النمط"))
-                for (st in listOf("classic", "minimal")) {
-                    val label = if (st == "minimal") t("Flat", "مسطّح") else t("Glass", "زجاجي")
+                addBody(t("Theme", "السمة"))
+                for (st in listOf("minimal", "classic", "teal", "bright")) {
+                    val label = when (st) {
+                        "minimal" -> t("Flat", "مسطّح")
+                        "classic" -> t("Glass", "زجاجي")
+                        "teal" -> t("Teal", "فيروزي")
+                        else -> t("Bright", "مشرق")
+                    }
                     addButton((if (Themes.style() == st) "✓ " else "") + label) {
                         Themes.setStyle(st)
                         build()

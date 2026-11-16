@@ -189,6 +189,7 @@ fun LinearLayout.addCheck(text: String, checked: Boolean, onChange: (Boolean) ->
     val c = CheckBox(context)
     c.text = Tr.t(text)
     c.setTextColor(Look.TEXT)
+    c.textSize = 15f
     c.isChecked = checked
     c.setOnCheckedChangeListener { _, v -> onChange(v) }
     addView(c)

@@ -1,3 +1,23 @@
+0.9.14 (build 81): parent home screen redesign (look only).
+- A battery ring around the child's status, which breathes softly and fills to the battery level.
+- Room sound shown as moving bars instead of a thin line.
+- No behaviour changed.
+
+0.9.14 (build 81): إعادة تصميم الشاشة الرئيسية للأب (الشكل فقط).
+- حلقة بطارية حول حالة الطفل، تتنفس بهدوء وتمتلئ حسب مستوى البطارية.
+- صوت الغرفة يظهر كأعمدة متحركة بدل الخط الرفيع.
+- لم يتغيّر أي سلوك.
+
+0.9.13 (build 80): new themes and tidier labels. Only the look changed; no behaviour changed.
+- Settings > Theme: Flat, Glass, Teal and Bright. Each works in dark and light.
+- The "Delete older than..." button keeps its label on one line.
+- Checkbox labels such as "Pre-download updates on Wi-Fi" are sized to fit their rows.
+
+0.9.13 (build 80): سمات جديدة وعناوين أوضح. تغيّر الشكل فقط، ولم يتغيّر أي سلوك.
+- الإعدادات > السمة: مسطّح، زجاجي، فيروزي، ومشرق. كل سمة تعمل بالوضع الداكن والفاتح.
+- زر "حذف الأقدم من..." يبقى نصه في سطر واحد.
+- عناوين خانات الاختيار مثل "تنزيل التحديث مسبقاً على Wi-Fi" مضبوطة لتناسب صفوفها.
+
 0.9.12 (build 79): gradual quality on a weak link, clearer disconnect alert, lighter diagnostics, one share-and-save function.
 - Slow pictures step down one level at a time (every 4 seconds) instead of jumping to the lowest, and go back to the chosen quality after 20 good seconds.
 - The disconnect alert is clearer and names the time it has waited.
