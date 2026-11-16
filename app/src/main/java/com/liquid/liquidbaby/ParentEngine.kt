@@ -788,8 +788,13 @@ object ParentEngine {
         if (d.size >= 6) {
             val parentsOnChild = d[4].toInt() and 255
             val talkersOnChild = d[5].toInt() and 255
-            partnerConnected = parentsOnChild >= 2
-            partnerTalking = talkersOnChild - (if (talking) 1 else 0) > 0
+            val newConnected = parentsOnChild >= 2
+            val newTalking = talkersOnChild - (if (talking) 1 else 0) > 0
+            if (newConnected != partnerConnected || newTalking != partnerTalking) {
+                partnerConnected = newConnected
+                partnerTalking = newTalking
+                changed()
+            }
         }
         val low = !chg && pct < 20
         if (low && !lowAlerted) {

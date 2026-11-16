@@ -1,3 +1,7 @@
+0.9.38 (build 105): the partner button turns on right away when the other parent connects (it used to wait up to 30 seconds). Both phones need this version.
+
+0.9.38 (build 105): زر الشريك يُفعَّل فوراً عند اتصال الشريك (كان ينتظر حتى 30 ثانية). يحتاج الجوالان هذه النسخة.
+
 0.9.37 (build 104): the Talk to partner button turns on when the other parent is connected to the child phone, and shows "Partner is talking" when they talk. Both phones need this version.
 
 0.9.37 (build 104): زر التحدث مع الشريك يُفعَّل عند اتصال الشريك بجوال الطفل، ويعرض "الشريك يتحدث" عند حديثه. يحتاج الجوالان هذه النسخة.

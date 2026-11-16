@@ -608,13 +608,20 @@ object ChildEngine {
     /** Every 30 seconds: battery and temperature to the parent phones, and the 8-hour cleanup. */
     private fun statusLoop() {
         var tick = 0
+        var lastParents = -1
+        var lastTalkers = -1
         while (running) {
             try {
                 Thread.sleep(1000)
             } catch (_: InterruptedException) {
             }
             tick++
-            if (tick % 30 != 0) continue
+            val parentsNow = connected.size
+            val talkersNow = talkers.size
+            val changedNow = parentsNow != lastParents || talkersNow != lastTalkers
+            lastParents = parentsNow
+            lastTalkers = talkersNow
+            if (tick % 30 != 0 && !changedNow) continue
             try {
                 val bi = appCtx.registerReceiver(null, android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED))
                 val level = bi?.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1) ?: -1
