@@ -1,5 +1,6 @@
 package com.liquid.liquidbaby
 
+import android.view.View
 import android.Manifest
 import android.animation.ObjectAnimator
 import android.app.Activity
@@ -70,6 +71,13 @@ class TalkControl(private val host: Activity) {
             marginEnd = host.dp(12)
         })
         modeRow.bringToFront()
+        // force the switch to draw above the talk button, and never clip it
+        modeRow.elevation = host.dp(8).toFloat()
+        modeRow.visibility = View.VISIBLE
+        modeRow.alpha = 1f
+        view.clipChildren = false
+        view.clipToPadding = false
+        view.post { modeRow.bringToFront() }
 
         // the toggle is a child, so it takes touches on its own area first; this handles the rest
         view.setOnTouchListener { _, ev ->

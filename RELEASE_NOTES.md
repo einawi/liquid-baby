@@ -1,3 +1,7 @@
+0.9.35 (build 102): the Hold/Tap switch is drawn above the talk button, so it is visible.
+
+0.9.35 (build 102): مفتاح Hold/Tap يُرسم فوق زر التحدث ليكون ظاهراً.
+
 0.9.34 (build 101): three room-sound visuals on the parent and child screens, chosen in Settings > Sound visual: a calm glowing wave, ripple rings, or a glowing orb. Flat and still when the room is silent. Look only.
 
 0.9.34 (build 101): ثلاثة أشكال لصوت الغرفة في شاشتي الأب والطفل، تختارها من الإعدادات > شكل الصوت: موجة هادئة متوهجة، أو حلقات انتشار، أو كرة متوهجة. تبقى ساكنة عند الصمت. للشكل فقط.
