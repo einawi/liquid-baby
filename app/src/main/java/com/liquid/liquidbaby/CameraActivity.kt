@@ -81,7 +81,8 @@ class CameraActivity : android.app.Activity() {
         screen {
             addTitle("Live camera")
             val iv = ImageView(context)
-            iv.setBackgroundColor(Color.BLACK)
+            iv.background = Look.glass(context, 18, Color.BLACK)
+            iv.clipToOutline = true
             iv.scaleType = ImageView.ScaleType.FIT_CENTER
             addView(iv, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(340)))
             picture = iv
@@ -94,6 +95,9 @@ class CameraActivity : android.app.Activity() {
                 val b = Button(context)
                 b.isAllCaps = false
                 b.textSize = 13f
+                b.minHeight = dp(44)
+                b.setTextColor(Look.TEXT)
+                b.background = Look.glass(context, 14, Look.BUTTON)
                 b.setOnClickListener {
                     ParentEngine.setView(q, ParentEngine.viewFront, ParentEngine.viewFlash)
                     checkHeavy(q, ParentEngine.viewFps)

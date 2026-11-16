@@ -1,3 +1,13 @@
+0.9.16 (build 83): live camera screen, cleaner look. Display only.
+- Rounded picture panel and rounded quality buttons with a comfortable touch height.
+
+0.9.16 (build 83): شاشة الكاميرا المباشرة بشكل أنظف. للعرض فقط.
+- لوحة الصورة وأزرار الجودة مستديرة، مع ارتفاع مريح للّمس.
+
+0.9.15 (build 82): the room sound bars react to quieter sounds too. Display only.
+
+0.9.15 (build 82): أعمدة صوت الغرفة تتفاعل مع الأصوات الخفيفة أيضاً. للعرض فقط.
+
 0.9.14 (build 81): parent home screen redesign (look only).
 - A battery ring around the child's status, which breathes softly and fills to the battery level.
 - Room sound shown as moving bars instead of a thin line.

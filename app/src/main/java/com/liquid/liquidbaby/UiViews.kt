@@ -82,7 +82,10 @@ class SoundBars(ctx: Context) : View(ctx) {
     private val rect = RectF()
 
     fun setLevel(v: Int) {
-        level = v.coerceIn(0, 100)
+        // quiet sounds are lifted with a square-root curve and a small gain, so the bars react to whispers too
+        val raw = v.coerceIn(0, 100) / 100f
+        level = (Math.sqrt(raw.toDouble()) * 100 * 1.5).toInt().coerceIn(0, 100)
+        invalidate()
     }
 
     override fun onAttachedToWindow() {
