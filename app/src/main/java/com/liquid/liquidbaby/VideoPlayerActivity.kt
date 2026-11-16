@@ -97,8 +97,8 @@ class VideoPlayerActivity : Activity() {
         val bar = LinearLayout(this)
         bar.orientation = LinearLayout.HORIZONTAL
         bar.gravity = Gravity.CENTER_VERTICAL
-        bar.setBackgroundColor(0xAA000000.toInt())
-        bar.setPadding(dp(8), dp(6), dp(8), dp(6))
+        bar.background = Look.glass(this, 22, 0xB3000000.toInt())
+        bar.setPadding(dp(10), dp(8), dp(10), dp(8))
 
         val play = ImageButton(this).apply {
             setImageResource(R.drawable.ic_btn_play)
@@ -108,10 +108,13 @@ class VideoPlayerActivity : Activity() {
             setOnClickListener { togglePlay() }
         }
         playBtn = play
-        bar.addView(play, LinearLayout.LayoutParams(dp(48), dp(48)))
+        bar.addView(play, LinearLayout.LayoutParams(dp(52), dp(52)))
 
         val sb = SeekBar(this).apply {
             max = 1000
+            val accent = android.content.res.ColorStateList.valueOf(Themes.current().accent)
+            progressTintList = accent
+            thumbTintList = accent
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(s: SeekBar?, progress: Int, fromUser: Boolean) {}
                 override fun onStartTrackingTouch(s: SeekBar?) { userSeeking = true }
@@ -129,8 +132,9 @@ class VideoPlayerActivity : Activity() {
         val time = TextView(this).apply {
             textSize = 12f
             setTextColor(0xFFFFFFFF.toInt())
+            textSize = 13f
             text = "0:00 / 0:00"
-            setPadding(dp(6), 0, dp(6), 0)
+            setPadding(dp(8), 0, dp(8), 0)
         }
         timeTv = time
         bar.addView(time)
@@ -141,7 +145,7 @@ class VideoPlayerActivity : Activity() {
             background = null
             contentDescription = t("Share", "مشاركة")
             setOnClickListener { exportVideo(share = true) }
-        }, LinearLayout.LayoutParams(dp(44), dp(44)))
+        }, LinearLayout.LayoutParams(dp(48), dp(48)).apply { marginStart = dp(6) })
 
         bar.addView(ImageButton(this).apply {
             setImageResource(R.drawable.ic_save)
@@ -149,7 +153,7 @@ class VideoPlayerActivity : Activity() {
             background = null
             contentDescription = t("Save to gallery", "حفظ في المعرض")
             setOnClickListener { exportVideo(share = false) }
-        }, LinearLayout.LayoutParams(dp(44), dp(44)))
+        }, LinearLayout.LayoutParams(dp(48), dp(48)).apply { marginStart = dp(6) })
 
         r.addView(bar, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM))
         setContentView(r)

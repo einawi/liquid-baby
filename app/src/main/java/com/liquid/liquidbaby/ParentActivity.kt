@@ -572,7 +572,7 @@ class ParentActivity : Activity() {
                 box.sectionLabel(group)
                 lastGroup = group
             }
-            val card = box.card(12) {
+            val card = box.card(20) {
                 val row = addRow()
                 val info = TextView(context)
                 info.text = fmt.format(Date(c.ts)) + "  ·  " + (c.durationMs / 1000) + " s"
@@ -589,7 +589,7 @@ class ParentActivity : Activity() {
                     if (playingTs == c.ts) stopPlayer() else play(c)
                     fillList()
                 }
-                row.addView(playBtn, LinearLayout.LayoutParams(dp(48), dp(48)).apply { marginStart = dp(8) })
+                row.addView(playBtn, LinearLayout.LayoutParams(dp(46), dp(46)).apply { marginStart = dp(12) })
                 val del = ImageButton(context)
                 del.setImageResource(R.drawable.ic_btn_delete)
                 del.background = Look.glass(context, 18, Look.BUTTON)
@@ -601,7 +601,7 @@ class ParentActivity : Activity() {
                     ParentEngine.deleteClip(this@ParentActivity, c.ts)
                     fillList()
                 }
-                row.addView(del, LinearLayout.LayoutParams(dp(48), dp(48)).apply { marginStart = dp(8) })
+                row.addView(del, LinearLayout.LayoutParams(dp(46), dp(46)).apply { marginStart = dp(12) })
                 if (playingTs == c.ts) {
                     val wv = WaveView(context)
                     wv.setBars(waveBars)
@@ -618,7 +618,7 @@ class ParentActivity : Activity() {
         if (videos.isNotEmpty()) {
             box.sectionLabel(t("Videos (encrypted)", "الفيديوهات (مشفّرة)"))
             for (f in videos) {
-                val card = box.card(12) {
+                val card = box.card(20) {
                     val row = addRow()
                     val info = TextView(context)
                     val kb = f.length() / 1024.0
@@ -636,7 +636,7 @@ class ParentActivity : Activity() {
                     playBtn.setOnClickListener {
                         startActivity(Intent(this@ParentActivity, VideoPlayerActivity::class.java).putExtra("path", f.absolutePath))
                     }
-                    row.addView(playBtn, LinearLayout.LayoutParams(dp(48), dp(48)).apply { marginStart = dp(8) })
+                    row.addView(playBtn, LinearLayout.LayoutParams(dp(46), dp(46)).apply { marginStart = dp(12) })
                     val del = ImageButton(context)
                     del.setImageResource(R.drawable.ic_btn_delete)
                     del.background = Look.glass(context, 18, Look.BUTTON)
@@ -653,7 +653,7 @@ class ParentActivity : Activity() {
                             .setNegativeButton(t("Cancel", "تراجع"), null)
                             .show()
                     }
-                    row.addView(del, LinearLayout.LayoutParams(dp(48), dp(48)).apply { marginStart = dp(8) })
+                    row.addView(del, LinearLayout.LayoutParams(dp(46), dp(46)).apply { marginStart = dp(12) })
                     val share = ImageButton(context)
                     share.setImageResource(R.drawable.ic_share)
                     share.background = Look.glass(context, 18, Look.BUTTON)
@@ -661,7 +661,7 @@ class ParentActivity : Activity() {
                     share.setPadding(dp(10), dp(10), dp(10), dp(10))
                     share.contentDescription = t("Share or save video", "مشاركة أو حفظ الفيديو")
                     share.setOnClickListener { chooseExport(f) }
-                    row.addView(share, LinearLayout.LayoutParams(dp(48), dp(48)).apply { marginStart = dp(8) })
+                    row.addView(share, LinearLayout.LayoutParams(dp(46), dp(46)).apply { marginStart = dp(12) })
                 }
                 Fx.enter(card, 0)
             }
@@ -763,7 +763,15 @@ class ParentActivity : Activity() {
         AlertDialog.Builder(this)
             .setTitle(if (found.isEmpty()) t("Child phone not found automatically", "لم نجد جوال الطفل تلقائياً")
             else t("Choose the child phone", "اختر جوال الطفل"))
-            .setItems(items.toTypedArray()) { _, which ->
+            .setAdapter(object : android.widget.ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, items) {
+                override fun getView(position: Int, convertView: android.view.View?, parent: android.view.ViewGroup): android.view.View {
+                    val v = super.getView(position, convertView, parent) as android.widget.TextView
+                    v.minHeight = dp(60)
+                    v.setPadding(dp(20), dp(14), dp(20), dp(14))
+                    v.textSize = 16f
+                    return v
+                }
+            }) { _, which ->
                 if (which < found.size) pair(found[which].ip) else askIp()
             }
             .setNegativeButton(t("Cancel", "تراجع"), null)

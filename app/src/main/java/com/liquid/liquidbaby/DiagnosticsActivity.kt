@@ -42,7 +42,10 @@ class DiagnosticsActivity : Activity() {
                 build()
             }
             addMono(Diag.redact(Diag.deviceInfo(this@DiagnosticsActivity)) + "\n" +
-                (if (log.isEmpty()) t("(no entries yet)", "(لا توجد سجلات بعد)") else log))
+                (if (log.isEmpty()) t("(no entries yet)", "(لا توجد سجلات بعد)") else log)).apply {
+                textSize = 12.5f
+                setLineSpacing(0f, 1.25f)
+            }
         }
     }
 }

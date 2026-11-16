@@ -1,3 +1,37 @@
+0.9.31 (build 98): the updates screen shows version details and release notes in clear panels. Look only.
+
+0.9.31 (build 98): شاشة التحديثات تعرض تفاصيل الإصدار وملاحظاته في لوحات واضحة. للشكل فقط.
+
+0.9.30 (build 97): the pairing list has roomier rows and larger text. Look only.
+
+0.9.30 (build 97): قائمة الإقران بصفوف أوسع ونص أكبر. للشكل فقط.
+
+0.9.29 (build 96): diagnostics log is easier to read (larger text, more line spacing). Look only.
+
+0.9.29 (build 96): سجل التشخيص أسهل في القراءة (خط أكبر، ومسافة أوسع بين الأسطر). للشكل فقط.
+
+0.9.28 (build 95): video player has a rounded control bar, a theme-coloured seek bar, and roomier buttons. Look only.
+
+0.9.28 (build 95): مشغّل الفيديو بشريط تحكم مستدير، وشريط تقدّم بلون السمة، وأزرار أوسع. للشكل فقط.
+
+0.9.27 (build 94): clearer spacing between the play, share and delete buttons in each recording. Look only.
+
+0.9.27 (build 94): مسافات أوضح بين أزرار التشغيل والمشاركة والحذف في كل تسجيل. للشكل فقط.
+
+0.9.26 (build 93): recordings list has softer, rounder cards. Look only.
+
+0.9.26 (build 93): قائمة التسجيلات ببطاقات أنعم وأكثر استدارة. للشكل فقط.
+
+0.9.25 (build 92): full-screen icon bar has roomier, rounder buttons. Look only.
+
+0.9.25 (build 92): شريط الأيقونات في ملء الشاشة بأزرار أوسع وأنعم. للشكل فقط.
+
+0.9.24 (build 91): the parent screen shows the room sound level again after reconnecting (it stayed at zero).
+- The parent now asks the child for the sound level again after every connection.
+
+0.9.24 (build 91): شاشة الأب تعرض مستوى صوت الغرفة من جديد بعد إعادة الاتصال (كان يبقى صفراً).
+- الأب يطلب من الطفل مستوى الصوت من جديد بعد كل اتصال.
+
 0.9.23 (build 90): one modern look for buttons and panels on every screen. Look only.
 - Buttons have softer corners, larger text, and more room around them.
 - Text panels (such as diagnostics) have matching corners and padding.

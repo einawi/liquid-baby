@@ -314,6 +314,8 @@ object ParentEngine {
         val (c, ip) = connectToChild(p)
         conn = c
         c.socket.soTimeout = 90_000
+        // the child only sends the room level to parents that asked; ask again after every reconnection
+        if (levelWanted) sendAsync(c, T.SUB_LEVEL, byteArrayOf(1))
         PairStore.setLastIp(ip)
         connected = true
         offlineAlerted = false
@@ -719,7 +721,11 @@ object ParentEngine {
         if (connected) sendAsync(c, T.SET_TALKVOL, byteArrayOf(v.toByte()))
     }
 
+    @Volatile
+    private var levelWanted = false
+
     fun setLevelSub(on: Boolean) {
+        levelWanted = on
         val c = conn ?: return
         if (connected) sendAsync(c, T.SUB_LEVEL, byteArrayOf(if (on) 1 else 0))
     }

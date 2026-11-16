@@ -38,8 +38,12 @@ class UpdatesActivity : Activity() {
             statusView = addBody(message)
             if (info != null && info.code > local) {
                 val req = if (info.required) " - REQUIRED" else ""
-                addBody("New version: " + info.name + " (build " + info.code + ")" + req + "\nSize: " + VersionUtil.formatSize(info.apkSize))
-                addBody("Release notes:\n" + (if (info.notes.isBlank()) "(none)" else info.notes))
+                card(18) {
+                    addBody("New version: " + info.name + " (build " + info.code + ")" + req + "\nSize: " + VersionUtil.formatSize(info.apkSize))
+                }
+                card(18) {
+                    addBody("Release notes:\n" + (if (info.notes.isBlank()) "(none)" else info.notes))
+                }
                 if (Updater.apkFile(this@UpdatesActivity, info).exists()) {
                     addButton("Install update") { install(info) }
                 } else {
@@ -53,7 +57,7 @@ class UpdatesActivity : Activity() {
                     }
                 }
             } else if (info != null) {
-                addBody("You have the latest version.")
+                card(18) { addBody("You have the latest version.") }
             }
             addButton("Check now") { check() }
             addCheck("Pre-download updates on Wi-Fi", Prefs.getBool("wifiPredownload", true)) {

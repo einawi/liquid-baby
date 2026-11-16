@@ -318,9 +318,9 @@ class CameraActivity : android.app.Activity() {
         val b = ImageButton(this)
         b.setImageResource(icon)
         b.setColorFilter(Look.TEXT)
-        b.background = Look.glass(this, 24, Look.BUTTON)
+        b.background = Look.glass(this, 25, Look.BUTTON)
         b.scaleType = ImageView.ScaleType.CENTER
-        b.setPadding(dp(10), dp(10), dp(10), dp(10))
+        b.setPadding(dp(12), dp(12), dp(12), dp(12))
         b.contentDescription = desc
         b.setOnClickListener { onTap() }
         b.setOnLongClickListener {
@@ -420,9 +420,9 @@ class CameraActivity : android.app.Activity() {
     }
 
     /** Equal shares of the bar's width, so all seven icons fit on any screen. */
-    private fun barParams() = LinearLayout.LayoutParams(0, dp(48), 1f).apply {
-        marginStart = dp(3)
-        marginEnd = dp(3)
+    private fun barParams() = LinearLayout.LayoutParams(0, dp(50), 1f).apply {
+        marginStart = dp(6)
+        marginEnd = dp(6)
     }
 
     private fun chooseFps() {
