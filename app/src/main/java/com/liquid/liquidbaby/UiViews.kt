@@ -111,3 +111,143 @@ class SoundBars(ctx: Context) : View(ctx) {
         super.onDetachedFromWindow()
     }
 }
+
+/**
+ * Styles a horizontal ProgressBar as a rounded level meter: a soft track with a bright accent fill.
+ * Display only; the bar still shows the same numbers it always did.
+ */
+fun styleLevelMeter(pb: android.widget.ProgressBar?) {
+    pb ?: return
+    val density = pb.resources.displayMetrics.density
+    val t = Themes.current()
+    val radius = 8f * density
+    val track = android.graphics.drawable.GradientDrawable().apply {
+        shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+        cornerRadius = radius
+        setColor((t.sub and 0x00FFFFFF) or 0x33000000)
+    }
+    val fill = android.graphics.drawable.GradientDrawable(
+        android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
+        intArrayOf(t.accent, (t.text and 0x00FFFFFF) or 0xCC000000.toInt())
+    ).apply {
+        shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+        cornerRadius = radius
+    }
+    val clip = android.graphics.drawable.ClipDrawable(fill, android.view.Gravity.START, android.graphics.drawable.ClipDrawable.HORIZONTAL)
+    val layers = android.graphics.drawable.LayerDrawable(arrayOf(track, clip))
+    layers.setId(0, android.R.id.background)
+    layers.setId(1, android.R.id.progress)
+    pb.progressDrawable = layers
+    pb.minimumHeight = (12f * density).toInt()
+}
+
+/**
+ * Room-sound visual with three looks, chosen in Settings: "wave" (calm glowing wave), "rings" (ripples
+ * spreading from the centre) and "orb" (a glowing orb). Flat and still when the room is silent.
+ * Display only: it draws the level it is given.
+ */
+class SoundVisual(ctx: Context) : View(ctx) {
+    private var style = "wave"
+    private var target = 0f
+    private var level = 0f
+    private var phase = 0f
+    private val cool = intArrayOf(94, 234, 212)
+    private val warm = intArrayOf(255, 176, 32)
+    private val p = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
+    private val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    private val ticker = ValueAnimator.ofFloat(0f, 1f).apply {
+        duration = 1000L
+        repeatCount = ValueAnimator.INFINITE
+        addUpdateListener {
+            phase += 0.04f
+            invalidate()
+        }
+    }
+
+    fun setStyle(s: String) {
+        if (s != style) {
+            style = s
+            invalidate()
+        }
+    }
+
+    /** level 0..100 from the screen; quiet sounds are lifted so they are visible. */
+    fun setLevel(v: Int) {
+        val raw = v.coerceIn(0, 100) / 100f
+        target = (Math.sqrt(raw.toDouble()) * 1.4).toFloat().coerceIn(0f, 1f)
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        if (!ticker.isRunning) ticker.start()
+    }
+
+    override fun onDetachedFromWindow() {
+        ticker.cancel()
+        super.onDetachedFromWindow()
+    }
+
+    private fun mix(k: Float): Int {
+        val r = (cool[0] + (warm[0] - cool[0]) * k).toInt()
+        val g = (cool[1] + (warm[1] - cool[1]) * k).toInt()
+        val b = (cool[2] + (warm[2] - cool[2]) * k).toInt()
+        return android.graphics.Color.rgb(r, g, b)
+    }
+
+    override fun onDraw(c: Canvas) {
+        level += (target - level) * 0.12f
+        if (kotlin.math.abs(target - level) > 0.002f) postInvalidateOnAnimation()
+        val w = width.toFloat()
+        val h = height.toFloat()
+        val mid = h / 2f
+        val dpi = resources.displayMetrics.density
+        when (style) {
+            "rings" -> {
+                val cx = w / 2f
+                for (r in 0 until 4) {
+                    val k = ((phase * 0.15f + r * 0.25f) % 1f)
+                    val rad = 6f * dpi + k * (h * 0.45f) * (0.4f + level)
+                    p.strokeWidth = 2f * dpi
+                    p.color = mix(k)
+                    p.alpha = ((1f - k) * (0.25f + 0.75f * level) * 255).toInt()
+                    c.drawCircle(cx, mid, rad, p)
+                }
+                p.alpha = 255
+                fill.color = mix(level)
+                fill.setShadowLayer(12f * dpi, 0f, 0f, fill.color)
+                c.drawCircle(cx, mid, 4f * dpi, fill)
+                fill.clearShadowLayer()
+            }
+            "orb" -> {
+                val r = (8f + level * 18f + kotlin.math.sin(phase * 2f) * 1.2f * (0.2f + level)) * dpi
+                val col = mix(level)
+                fill.color = col
+                fill.alpha = 217
+                fill.setShadowLayer((14f + 20f * level) * dpi, 0f, 0f, col)
+                c.drawCircle(w / 2f, mid, r, fill)
+                fill.alpha = 255
+                fill.clearShadowLayer()
+            }
+            else -> {
+                p.strokeWidth = 2.4f * dpi
+                val amp = level * h * 0.4f
+                var px = 0f
+                var py = mid
+                var x = 4f
+                while (x <= w) {
+                    val ph = x / w * Math.PI.toFloat() * 3f + phase * 1.4f
+                    val wob = kotlin.math.sin(ph) * 0.75f + kotlin.math.sin(ph * 0.5f + phase) * 0.25f
+                    val y = mid - wob * amp
+                    val k = minOf(1f, kotlin.math.abs(y - mid) / (h * 0.4f + 0.001f))
+                    p.color = mix(k)
+                    p.setShadowLayer((6f + 8f * k) * dpi, 0f, 0f, p.color)
+                    c.drawLine(px, py, x, y, p)
+                    px = x
+                    py = y
+                    x += 4f
+                }
+                p.clearShadowLayer()
+            }
+        }
+    }
+}

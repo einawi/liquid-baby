@@ -35,6 +35,7 @@ class ChildActivity : Activity() {
     private var heroSub: TextView? = null
     private var addressLine: TextView? = null
     private var meter: ProgressBar? = null
+    private var soundVisual: SoundVisual? = null
     private var pairBtn: Button? = null
     private var pairNote: TextView? = null
     private var infoLine: TextView? = null
@@ -80,7 +81,12 @@ class ChildActivity : Activity() {
                 meter = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
                     max = 100
                 }
-                addView(meter, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(8)).apply {
+                addView(meter, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(14)).apply {
+                    topMargin = dp(12)
+                })
+                meter?.visibility = View.GONE
+                soundVisual = SoundVisual(context)
+                addView(soundVisual, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(70)).apply {
                     topMargin = dp(12)
                 })
                 line(t("Sound in the room", "صوت الغرفة"), 13f)
@@ -288,7 +294,10 @@ class ChildActivity : Activity() {
             "Parents connected: $connected of $paired  ·  last clip $last",
             "الأبوين المتصلين: $connected من $paired  ·  آخر مقطع $last"
         ) else t("Tap Start monitoring to begin.", "اضغط ابدأ المراقبة للبدء.")
+        styleLevelMeter(meter)
         meter?.progress = ChildEngine.soundPercent()
+        soundVisual?.setStyle(Prefs.getString("soundVisual", "wave"))
+        soundVisual?.setLevel(ChildEngine.soundPercent())
         addressLine?.text = t("Wi-Fi address: ", "عنوان الواي فاي: ") + (Net.wifiIp(this) ?: "--")
 
         mainBtn?.text = if (running) t("Stop monitoring", "أوقف المراقبة") else t("Start monitoring", "ابدأ المراقبة")

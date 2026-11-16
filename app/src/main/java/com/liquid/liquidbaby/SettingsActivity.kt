@@ -59,6 +59,20 @@ class SettingsActivity : Activity() {
                 }
             }
 
+            sectionLabel(t("Sound visual", "شكل الصوت"))
+            card(14) {
+                val current = Prefs.getString("soundVisual", "wave")
+                for ((id, label) in listOf(
+                    "wave" to t("Calm wave", "موجة هادئة"),
+                    "rings" to t("Ripple rings", "حلقات الانتشار"),
+                    "orb" to t("Glowing orb", "كرة متوهجة"))) {
+                    addButton((if (current == id) "✓ " else "") + label) {
+                        Prefs.putString("soundVisual", id)
+                        build()
+                    }
+                }
+            }
+
             sectionLabel(t("Alerts", "التنبيهات"))
             card(14) {
                 addButton(t("Notification sound", "صوت الإشعار")) { pickTone() }

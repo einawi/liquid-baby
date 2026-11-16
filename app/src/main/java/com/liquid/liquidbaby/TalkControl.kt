@@ -52,13 +52,16 @@ class TalkControl(private val host: Activity) {
         button.minHeight = host.dp(104)
         view.addView(button, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, host.dp(104)))
 
-        label.textSize = 12f
-        label.setTextColor(Look.TEXT)
+        label.textSize = 13f
+        label.setTextColor(0xFFFFFFFF.toInt())
         label.setPadding(0, 0, host.dp(8), 0)
         toggle.tapMode = mode() == "press"
         toggle.onToggle = { press -> applyMode(press) }
         modeRow.orientation = LinearLayout.HORIZONTAL
         modeRow.gravity = Gravity.CENTER_VERTICAL
+        // a small dark pill behind the switch, so it stays readable and visible in every theme
+        modeRow.background = Look.glass(host, 14, 0x66000000)
+        modeRow.setPadding(host.dp(8), host.dp(4), host.dp(6), host.dp(4))
         modeRow.addView(label)
         modeRow.addView(toggle)
         view.addView(modeRow, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT,

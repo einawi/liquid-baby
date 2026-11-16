@@ -46,6 +46,7 @@ class ParentActivity : Activity() {
     private var tempDot: View? = null
     private var tempTv: TextView? = null
     private var meter: ProgressBar? = null
+    private var soundVisual: SoundVisual? = null
     private var listenBtn: Button? = null
     private var talkBtn: Button? = null
     private var talkModeLabel: TextView? = null
@@ -162,7 +163,12 @@ class ParentActivity : Activity() {
                         max = 100
                         progress = ParentEngine.level
                     }
-                    addView(meter, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(8)).apply {
+                    addView(meter, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(14)).apply {
+                        topMargin = dp(10)
+                    })
+                    meter?.visibility = View.GONE
+                    soundVisual = SoundVisual(context)
+                    addView(soundVisual, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(70)).apply {
                         topMargin = dp(10)
                     })
                     line(t("Sound in the room", "صوت الغرفة"), 13f)
@@ -468,7 +474,11 @@ class ParentActivity : Activity() {
             tc >= 38.0 -> 0xFFFFA726.toInt()
             else -> 0xFF66BB6A.toInt()
         })
-        Fx.animateMeter(meter, ParentEngine.level)
+        styleLevelMeter(meter)
+        val levelIsFresh = ParentEngine.connected && System.currentTimeMillis() - ParentEngine.levelAt < 2500L
+        Fx.animateMeter(meter, if (levelIsFresh) ParentEngine.level else 0)
+        soundVisual?.setStyle(Prefs.getString("soundVisual", "wave"))
+        soundVisual?.setLevel(if (levelIsFresh) ParentEngine.level else 0)
         batteryRing?.setPercent(ParentEngine.batteryPct)
 
         listenBtn?.text = t(if (ParentEngine.listening) "Stop" else "Listen",

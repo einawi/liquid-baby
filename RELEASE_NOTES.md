@@ -1,3 +1,15 @@
+0.9.34 (build 101): three room-sound visuals on the parent and child screens, chosen in Settings > Sound visual: a calm glowing wave, ripple rings, or a glowing orb. Flat and still when the room is silent. Look only.
+
+0.9.34 (build 101): ثلاثة أشكال لصوت الغرفة في شاشتي الأب والطفل، تختارها من الإعدادات > شكل الصوت: موجة هادئة متوهجة، أو حلقات انتشار، أو كرة متوهجة. تبقى ساكنة عند الصمت. للشكل فقط.
+
+0.9.33 (build 100): nicer sound meter on the parent and child screens. The parent's sound level returns to zero when monitoring is stopped, instead of staying frozen.
+
+0.9.33 (build 100): مستوى الصوت بشكل أجمل في شاشتي الأب والطفل. ومستوى الصوت عند الأب يعود إلى الصفر عند إيقاف المراقبة بدل أن يبقى مجمّداً.
+
+0.9.32 (build 99): the Hold/Tap switch in the talk button sits on a small dark pill, so it stays visible in every theme. Look only.
+
+0.9.32 (build 99): مفتاح Hold/Tap في زر التحدث صار على خلفية داكنة صغيرة، ليبقى ظاهراً في كل السمات. للشكل فقط.
+
 0.9.31 (build 98): the updates screen shows version details and release notes in clear panels. Look only.
 
 0.9.31 (build 98): شاشة التحديثات تعرض تفاصيل الإصدار وملاحظاته في لوحات واضحة. للشكل فقط.

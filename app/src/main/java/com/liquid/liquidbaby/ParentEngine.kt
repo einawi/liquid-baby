@@ -138,6 +138,9 @@ object ParentEngine {
 
     @Volatile
     var level = 0
+    /** When the last level arrived; the level is shown as zero when none has come for a while (monitoring stopped). */
+    @Volatile
+    var levelAt = 0L
 
     @Volatile
     var lastContact = System.currentTimeMillis()
@@ -399,7 +402,10 @@ object ParentEngine {
                     }
                     T.PONG -> lastPongMs = System.currentTimeMillis()
                     T.STATUS -> if (m.data.size >= 4) onStatus(m.data)
-                    T.LEVEL -> if (m.data.isNotEmpty()) level = m.data[0].toInt() and 255
+                    T.LEVEL -> if (m.data.isNotEmpty()) {
+                        level = m.data[0].toInt() and 255
+                        levelAt = System.currentTimeMillis()
+                    }
                     T.DELETED_LIST -> applyDeleted(m.data)
                     T.SYNC_END -> inBacklog = false
                     T.SYNC_ACK -> if (m.data.size >= 8) PairStore.raiseLastSyncTs(maxOf(1L, Wire.bytesLong(m.data)))
