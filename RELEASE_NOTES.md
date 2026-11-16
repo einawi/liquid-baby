@@ -1,3 +1,7 @@
+0.9.39 (build 106): the partner button turns off when monitoring stops or the other parent disconnects. Both phones need this version.
+
+0.9.39 (build 106): زر الشريك يتوقف عند إيقاف المراقبة أو انقطاع الشريك. يحتاج الجوالان هذه النسخة.
+
 0.9.38 (build 105): the partner button turns on right away when the other parent connects (it used to wait up to 30 seconds). Both phones need this version.
 
 0.9.38 (build 105): زر الشريك يُفعَّل فوراً عند اتصال الشريك (كان ينتظر حتى 30 ثانية). يحتاج الجوالان هذه النسخة.

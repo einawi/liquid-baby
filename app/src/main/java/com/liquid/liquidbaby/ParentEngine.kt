@@ -140,7 +140,10 @@ object ParentEngine {
     var level = 0
     /** The other parent: connected to the child, and talking to it (from the child's status). */
     @Volatile
-    var partnerConnected = false
+    private var partnerFlagA = false
+    var partnerConnected: Boolean
+        get() = partnerFlagA && System.currentTimeMillis() - lastStatusMs < 40_000L
+        set(v) { partnerFlagA = v }
     @Volatile
     var partnerTalking = false
     /** When the last level arrived; the level is shown as zero when none has come for a while (monitoring stopped). */
@@ -198,6 +201,8 @@ object ParentEngine {
         if (!running) return
         running = false
         connected = false
+        partnerConnected = false
+        partnerTalking = false
         endTalk()
         dropView()
         status = "Stopped"
@@ -240,6 +245,8 @@ object ParentEngine {
                 }
             }
             connected = false
+            partnerConnected = false
+            partnerTalking = false
             endTalk()
             dropView()
             conn?.close()
