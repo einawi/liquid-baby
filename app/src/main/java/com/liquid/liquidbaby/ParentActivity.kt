@@ -51,6 +51,7 @@ class ParentActivity : Activity() {
     private var talkBtn: Button? = null
     private var talkModeLabel: TextView? = null
     private var talkControl: TalkControl? = null
+    private var partnerTalk: PartnerTalkControl? = null
     private var talkModeToggle: ModeToggle? = null
     private var modeRowView: View? = null
     private var talkPulse: ObjectAnimator? = null
@@ -193,6 +194,12 @@ class ParentActivity : Activity() {
                 talkControl = tc
                 addView(tc.view, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
                     topMargin = dp(12)
+                })
+                // the partner button, right below the talk-to-child button (same look, different name)
+                val ptc = PartnerTalkControl(this@ParentActivity)
+                partnerTalk = ptc
+                addView(ptc.view, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                    topMargin = dp(10)
                 })
 
                 sectionLabel(t("Recordings", "التسجيلات"))

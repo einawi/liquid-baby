@@ -1,3 +1,7 @@
+0.9.36 (build 103): a "Talk to partner" button below the talk-to-child button on the parent screen, with the same look and the Hold/Tap switch. Greyed out with "Partner not connected" until the other parent is connected. The partner audio itself comes in a later build.
+
+0.9.36 (build 103): زر "التحدث مع الشريك" أسفل زر التحدث مع الطفل في شاشة الأب، بنفس الشكل ومفتاح Hold/Tap. رمادي مع "الشريك غير متصل" حتى يتصل الشريك. صوت الشريك نفسه يأتي في نسخة لاحقة.
+
 0.9.35 (build 102): the Hold/Tap switch is drawn above the talk button, so it is visible.
 
 0.9.35 (build 102): مفتاح Hold/Tap يُرسم فوق زر التحدث ليكون ظاهراً.
