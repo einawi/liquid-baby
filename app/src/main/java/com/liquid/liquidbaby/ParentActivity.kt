@@ -326,6 +326,7 @@ class ParentActivity : Activity() {
     private val partnerHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private val partnerTick = object : Runnable {
         override fun run() {
+            partnerTalk?.setSending(ParentEngine.partnerSending)
             partnerTalk?.setState(connected = ParentEngine.connected && ParentEngine.partnerConnected, talking = ParentEngine.partnerTalking || ParentEngine.partnerSpeaking)
             partnerHandler.postDelayed(this, 1000L)
         }

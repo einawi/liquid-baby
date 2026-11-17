@@ -1,6 +1,8 @@
 package com.liquid.liquidbaby
 
+import android.Manifest
 import android.app.Activity
+import android.content.pm.PackageManager
 import android.view.Gravity
 import android.view.View
 import android.widget.Button
@@ -62,26 +64,72 @@ class PartnerTalkControl(private val host: Activity) {
         setState(connected = false, talking = false)
     }
 
+    private var sending = false
+
+    private fun hasMic(): Boolean =
+        host.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+
+    private fun pressIn() {
+        button.animate().scaleX(0.97f).scaleY(0.97f).setDuration(90).start()
+    }
+
+    private fun pressOut() {
+        button.animate().scaleX(1f).scaleY(1f).setDuration(180).start()
+    }
+
+    /** Starts talking to the partner; asks for the microphone the first time, as the child talk does. */
+    private fun startTalking(): Boolean {
+        if (!hasMic()) {
+            host.requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), 77)
+            return false
+        }
+        return ParentEngine.beginPartnerTalk()
+    }
+
     init {
         view.setOnTouchListener { _, ev ->
             val press = Prefs.getString("talkMode", "hold") == "press"
             when (ev.actionMasked) {
-                android.view.MotionEvent.ACTION_DOWN -> if (!press) ParentEngine.beginPartnerTalk()
+                android.view.MotionEvent.ACTION_DOWN -> {
+                    pressIn()
+                    if (!press) startTalking()
+                }
                 android.view.MotionEvent.ACTION_UP -> {
+                    pressOut()
                     if (press) {
-                        if (ParentEngine.partnerSending) ParentEngine.endPartnerTalk() else ParentEngine.beginPartnerTalk()
+                        if (ParentEngine.partnerSending) ParentEngine.endPartnerTalk()
+                        else startTalking()
                     } else {
                         ParentEngine.endPartnerTalk()
                     }
                 }
-                android.view.MotionEvent.ACTION_CANCEL -> if (!press) ParentEngine.endPartnerTalk()
+                android.view.MotionEvent.ACTION_CANCEL -> {
+                    pressOut()
+                    if (!press) ParentEngine.endPartnerTalk()
+                }
             }
             true
         }
     }
 
+    /** Shows that this parent is talking to the partner (green, with the talking label). */
+    fun setSending(on: Boolean) {
+        if (on == sending) return
+        sending = on
+        if (on) {
+            button.text = t("Talking to partner", "تتحدث مع الشريك")
+            button.background = Look.glass(host, 26, 0xFF1F5E4A.toInt())
+            button.setTextColor(0xFFBFF5E0.toInt())
+        } else {
+            button.background = Look.glass(host, 26, Look.BUTTON)
+            button.setTextColor(Look.TEXT)
+            setState(connected = button.isEnabled, talking = false)
+        }
+    }
+
     /** Shows the state of the partner link; greyed out with the reason while the partner is not connected. */
     fun setState(connected: Boolean, talking: Boolean) {
+        if (sending) return
         when {
             !connected -> {
                 button.text = t("Talk to partner", "التحدث مع الشريك") + "\n" + t("Partner not connected", "الشريك غير متصل")
