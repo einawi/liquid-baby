@@ -772,8 +772,14 @@ object ParentEngine {
 
     /** Hold or tap to talk to the partner. Refused unless the partner is connected and not already speaking. */
     fun beginPartnerTalk(): Boolean {
-        val c = conn ?: return false
-        if (!connected || !partnerConnected || partnerSpeaking || partnerSender != null) return false
+        val c = conn
+        val stuck = partnerSender?.isAlive != true
+        if (stuck) partnerSender = null
+        if (c == null || !connected || !partnerConnected || partnerSpeaking || partnerSender != null) {
+            Diag.i("Partner talk not started: connected=" + connected + ", partnerConnected=" + partnerConnected +
+                ", partnerSpeaking=" + partnerSpeaking + ", busy=" + (partnerSender != null))
+            return false
+        }
         try {
             c.send(T.PARTNER_START)
         } catch (_: Exception) {

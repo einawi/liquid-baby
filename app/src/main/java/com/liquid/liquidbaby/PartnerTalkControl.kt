@@ -80,9 +80,11 @@ class PartnerTalkControl(private val host: Activity) {
     /** Starts talking to the partner; asks for the microphone the first time, as the child talk does. */
     private fun startTalking(): Boolean {
         if (!hasMic()) {
+            Diag.i("Partner talk: microphone permission missing, asking")
             host.requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), 77)
             return false
         }
+        Diag.i("Partner talk: starting, microphone allowed")
         return ParentEngine.beginPartnerTalk()
     }
 

@@ -1,3 +1,7 @@
+0.9.45 (build 112): the partner talk writes in Diagnostics why it did or did not start (microphone permission, connection, or partner state).
+
+0.9.45 (build 112): التحدث مع الشريك يكتب في التشخيص سبب البدء أو عدمه (إذن الميكروفون، أو الاتصال، أو حالة الشريك).
+
 0.9.44 (build 111): the partner talk now captures your voice and sends it only to the other parent. Fixed: it was also opening the room speaker on the child phone.
 
 0.9.44 (build 111): التحدث مع الشريك يلتقط صوتك ويرسله إلى الأب الآخر فقط. تم إصلاح: كان يفتح أيضاً سماعة الغرفة في جوال الطفل.
