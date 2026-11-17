@@ -1,3 +1,7 @@
+0.9.51 (build 118): night mode is one level (off or on) with better low-light clarity that avoids ghosting on moving parts. Black and white is removed. The flash has manual levels: off, low, medium, full (dimmer where the phone supports it, otherwise on or off). Update both phones.
+
+0.9.51 (build 118): الوضع الليلي مستوى واحد (إيقاف أو تشغيل) مع وضوح أفضل في الإضاءة الخافتة دون ظلال على الأجزاء المتحركة. حُذف الأبيض والأسود. الفلاش له مستويات يدوية: إيقاف، منخفض، متوسط، كامل (أخفت حيث يدعم الجهاز ذلك، وإلا تشغيل أو إيقاف). يُفضّل تحديث الجوالين.
+
 0.9.50 (build 117): night mode has three manual levels: off, low light (colour, gradual noise reduction and shadow lift), and pitch dark (black and white). The big night button is removed; the icon cycles through the levels. Update both phones.
 
 0.9.50 (build 117): الوضع الليلي ثلاثة مستويات يدوية: إيقاف، إضاءة خافتة (ألوان، تقليل تدريجي للضوضاء ورفع الظلال)، وظلام دامس (أبيض وأسود). حُذف الزر الكبير، والأيقونة تتنقل بين المستويات. يُفضّل تحديث الجوالين.

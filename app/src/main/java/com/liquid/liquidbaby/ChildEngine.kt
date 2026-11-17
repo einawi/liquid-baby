@@ -550,7 +550,8 @@ object ChildEngine {
     private fun setView(data: ByteArray) {
         val s = streamer ?: return
         if (data.size < 3) return
-        s.nightLevel = if (data.size >= 4) data[3].toInt().coerceIn(0, 2) else 0
+        s.nightLevel = if (data.size >= 4 && data[3].toInt() != 0) 1 else 0
+        s.flashLevel = if (data.size >= 6) data[5].toInt().coerceIn(0, 3) else if (data.size >= 3 && data[2].toInt() == 1) 1 else 0
         val q = data[0].toInt().coerceIn(0, 3)
         val front = data[1].toInt() == 1
         s.fps = if (data.size >= 5) data[4].toInt().coerceIn(10, 30) else 15

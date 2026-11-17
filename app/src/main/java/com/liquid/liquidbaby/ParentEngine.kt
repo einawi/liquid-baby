@@ -1,5 +1,7 @@
 package com.liquid.liquidbaby
 
+import kotlin.math.max
+
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -77,6 +79,8 @@ object ParentEngine {
     var viewNight = false
     /** 0 = off, 1 = low light (colour), 2 = pitch dark (black and white). Chosen by hand. */
     var viewNightLevel = 0
+    /** Flash strength by hand: 0 off, 1 low, 2 medium, 3 full. */
+    var viewFlashLevel = 0
 
     @Volatile
     var listening = false
@@ -584,11 +588,18 @@ object ParentEngine {
     }
 
     /** The user changed the picture settings: this wins over the automatic quality. */
-    /** Night mode by hand: 0 off, 1 low light, 2 pitch dark. */
+    /** Night mode by hand: 0 off, 1 low light. */
     fun setNightLevel(level: Int) {
-        viewNightLevel = level.coerceIn(0, 2)
+        viewNightLevel = level.coerceIn(0, 1)
         viewNight = viewNightLevel != 0
         lowQuality = false
+        sendView(userQuality, viewFront, viewFlash, viewNight)
+    }
+
+    /** Flash by hand: 0 off, 1 low, 2 medium, 3 full. */
+    fun setFlashLevel(level: Int) {
+        viewFlashLevel = level.coerceIn(0, 3)
+        viewFlash = viewFlashLevel != 0
         sendView(userQuality, viewFront, viewFlash, viewNight)
     }
 
@@ -603,7 +614,7 @@ object ParentEngine {
         if (!connected || !viewing) return
         sendAsync(
             c, T.VIEW_SET,
-            byteArrayOf(quality.toByte(), (if (front) 1 else 0).toByte(), (if (flash) 1 else 0).toByte(), (if (night) viewNightLevel.coerceIn(1, 2) else 0).toByte(), viewFps.toByte())
+            byteArrayOf(quality.toByte(), (if (front) 1 else 0).toByte(), (if (flash) 1 else 0).toByte(), (if (night) 1 else 0).toByte(), viewFps.toByte(), (if (flash) max(1, viewFlashLevel) else 0).toByte())
         )
     }
 

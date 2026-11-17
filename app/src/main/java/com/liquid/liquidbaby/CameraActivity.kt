@@ -118,7 +118,7 @@ class CameraActivity : android.app.Activity() {
             })
 
             flashBtn = addButton(t("Flash", "الفلاش")) {
-                ParentEngine.setView(ParentEngine.viewQuality, ParentEngine.viewFront, !ParentEngine.viewFlash)
+                cycleFlash()
             }
             switchBtn = addButton(t("Switch camera", "تبديل الكاميرا")) {
                 ParentEngine.setView(ParentEngine.viewQuality, !ParentEngine.viewFront, false)
@@ -378,7 +378,7 @@ class CameraActivity : android.app.Activity() {
         bar.orientation = LinearLayout.HORIZONTAL
         bar.gravity = Gravity.CENTER
         fullFlash = iconButton(R.drawable.ic_flash, t("Flash", "الفلاش")) {
-            ParentEngine.setView(ParentEngine.viewQuality, ParentEngine.viewFront, !ParentEngine.viewFlash)
+            cycleFlash()
         }
         bar.addView(fullFlash, barParams())
         bar.addView(iconButton(R.drawable.ic_quality, t("Quality", "الجودة")) { chooseQuality() }, barParams())
@@ -436,12 +436,21 @@ class CameraActivity : android.app.Activity() {
 
     /** Off, then low light, then pitch dark, then off again. */
     private fun cycleNight() {
-        val next = (ParentEngine.viewNightLevel + 1) % 3
+        val next = if (ParentEngine.viewNightLevel == 0) 1 else 0
         ParentEngine.setNightLevel(next)
+        val msg = if (next == 1) t("Night mode: on", "الوضع الليلي: مشغّل") else t("Night mode: off", "الوضع الليلي: إيقاف")
+        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+    }
+
+    /** Flash by hand: off, low, medium, full, then off again. */
+    private fun cycleFlash() {
+        val next = (ParentEngine.viewFlashLevel + 1) % 4
+        ParentEngine.setFlashLevel(next)
         val msg = when (next) {
-            1 -> t("Night: low light", "الوضع الليلي: إضاءة خافتة")
-            2 -> t("Night: pitch dark, black and white", "الوضع الليلي: ظلام دامس، أبيض وأسود")
-            else -> t("Night: off", "الوضع الليلي: إيقاف")
+            1 -> t("Flash: low", "الفلاش: منخفض")
+            2 -> t("Flash: medium", "الفلاش: متوسط")
+            3 -> t("Flash: full", "الفلاش: كامل")
+            else -> t("Flash: off", "الفلاش: إيقاف")
         }
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
     }
@@ -519,8 +528,12 @@ class CameraActivity : android.app.Activity() {
         statusTv?.text = sb.toString()
         nightIcon?.background = Look.glass(this, 18, if (ParentEngine.viewNight) Fx.tint(Themes.current().accent, 0x88) else Look.BUTTON)
 
-        val flashState = if (ParentEngine.viewFlash) t("on (tap to turn off)", "مشغّل (اضغط للإطفاء)")
-        else t("off (tap to turn on)", "مطفأ (اضغط للتشغيل)")
+        val flashState = when (ParentEngine.viewFlashLevel) {
+            1 -> t("low (tap for more)", "منخفض (اضغط للمزيد)")
+            2 -> t("medium (tap for more)", "متوسط (اضغط للمزيد)")
+            3 -> t("full (tap to turn off)", "كامل (اضغط للإطفاء)")
+            else -> t("off (tap to turn on)", "مطفأ (اضغط للتشغيل)")
+        }
         flashBtn?.text = t("Flash: ", "الفلاش: ") + flashState
         switchBtn?.text = t("Camera: " + (if (ParentEngine.viewFront) "front" else "back") + " (tap to switch)",
             "الكاميرا: " + (if (ParentEngine.viewFront) "أمامية" else "خلفية") + " (اضغط للتبديل)")

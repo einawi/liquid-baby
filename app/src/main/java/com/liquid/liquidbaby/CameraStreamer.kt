@@ -11,6 +11,7 @@ import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CaptureRequest
 import android.media.ImageReader
+import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.SystemClock
@@ -44,6 +45,10 @@ class CameraStreamer(
     /** 0 off, 1 low light, 2 pitch dark (black and white). Set from the parent. */
     @Volatile
     var nightLevel = 0
+    /** 0 off, 1 low, 2 medium, 3 full. Set from the parent. */
+    @Volatile
+    var flashLevel = 0
+    private var flashStrengthMax = 1
     private var prevLuma: ByteArray? = null
     private val lift = IntArray(256) { (255.0 * Math.pow(it / 255.0, 0.6)).toInt().coerceIn(0, 255) }
 
@@ -60,7 +65,15 @@ class CameraStreamer(
             for (i in 0 until n) {
                 val p = prev[i].toInt() and 255
                 val c = raw[i].toInt() and 255
-                raw[i] = ((p * 40 + c * 60) / 100).toByte()
+                // still parts of the picture keep more of the earlier frames (less grain);
+                // moving parts follow the new frame closely (no ghosting)
+                val diff = kotlin.math.abs(c - p)
+                val keepPrev = when {
+                    diff <= 8 -> 75
+                    diff >= 28 -> 15
+                    else -> 75 - (diff - 8) * 60 / 20
+                }
+                raw[i] = ((p * keepPrev + c * (100 - keepPrev)) / 100).toByte()
             }
         }
         prevLuma = raw.copyOf()
@@ -68,7 +81,6 @@ class CameraStreamer(
             raw[i] = lift[raw[i].toInt() and 255].toByte()
         }
         System.arraycopy(raw, 0, nv, 0, n)
-        if (nightLevel >= 2) java.util.Arrays.fill(nv, n, nv.size, 128.toByte())
     }
     private var exposureComp = 0
     private var fpsRanges: Array<android.util.Range<Int>>? = null
@@ -140,6 +152,7 @@ class CameraStreamer(
             val ch = cm.getCameraCharacteristics(id)
             rotation = ((ch.get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 90) / 90) % 4
             hasFlash = ch.get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
+            flashStrengthMax = if (Build.VERSION.SDK_INT >= 33) ch.get(FLASH_STRENGTH_MAX_KEY) ?: 1 else 1
             afModes = ch.get(CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES)
             fpsRanges = ch.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES)
             exposureComp = ch.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_RANGE)?.upper ?: 0
@@ -226,6 +239,13 @@ class CameraStreamer(
                 CaptureRequest.FLASH_MODE,
                 if (flash) CaptureRequest.FLASH_MODE_TORCH else CaptureRequest.FLASH_MODE_OFF
             )
+            // a dimmer torch where the phone supports strength control (Android 13 and newer)
+            if (flash && Build.VERSION.SDK_INT >= 33 && flashLevel in 1..3) {
+                try {
+                    b.set(FLASH_STRENGTH_KEY, flashLevel)
+                } catch (_: Exception) {
+                }
+            }
             s.setRepeatingRequest(b.build(), null, handler)
         } catch (e: Exception) {
             Diag.e("Camera request failed", e)
@@ -285,6 +305,10 @@ class CameraStreamer(
     }
 
     companion object {
+        /** Android 13 flash strength keys, written by name so they build on any SDK level. */
+        private val FLASH_STRENGTH_KEY = CaptureRequest.Key<Int>("android.flash.strengthLevel", Int::class.javaObjectType)
+        private val FLASH_STRENGTH_MAX_KEY = CameraCharacteristics.Key<Int>("android.flash.info.strengthMaximumLevel", Int::class.javaObjectType)
+
         /** Lists the phone's cameras for the Diagnostics report (needs no camera permission). */
         fun dump(ctx: Context): String {
             val sb = StringBuilder("Cameras:\n")
