@@ -1,3 +1,7 @@
+0.9.48 (build 115): the Talk to partner button matches the talk-to-child button: same card, colours and labels in every state. It shows why when the partner is not connected, and a notice while the partner talks to you.
+
+0.9.48 (build 115): زر التحدث مع الشريك مطابق لزر التحدث مع الطفل في الشكل والألوان والنصوص. يُظهر سبب عدم الاتصال، ويعرض تنبيهاً عندما يتحدث الشريك إليك.
+
 0.9.47 (build 114): the partner talk starts the microphone. The start signal was sent from the touch thread, which failed silently; it is now sent from the background.
 
 0.9.47 (build 114): التحدث مع الشريك يشغّل المايكروفون. كانت إشارة البدء ترسل من خيط اللمس فتفشل بصمت، وصارت ترسل من الخلفية.
