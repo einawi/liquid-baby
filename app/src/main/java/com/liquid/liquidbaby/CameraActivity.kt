@@ -123,9 +123,6 @@ class CameraActivity : android.app.Activity() {
             switchBtn = addButton(t("Switch camera", "تبديل الكاميرا")) {
                 ParentEngine.setView(ParentEngine.viewQuality, !ParentEngine.viewFront, false)
             }
-            nightBtn = addButton(t("Night mode", "وضع الليل")) {
-                ParentEngine.setView(ParentEngine.viewQuality, ParentEngine.viewFront, ParentEngine.viewFlash, !ParentEngine.viewNight)
-            }
             val controls = LinearLayout(context)
             controls.orientation = LinearLayout.HORIZONTAL
             controls.gravity = Gravity.CENTER
@@ -136,7 +133,7 @@ class CameraActivity : android.app.Activity() {
                 setPadding(dp(12), dp(12), dp(12), dp(12))
                 contentDescription = t("Night mode", "وضع الليل")
                 setOnClickListener {
-                    ParentEngine.setView(ParentEngine.viewQuality, ParentEngine.viewFront, ParentEngine.viewFlash, !ParentEngine.viewNight)
+                    cycleNight()
                     refresh()
                 }
             }
@@ -393,7 +390,7 @@ class CameraActivity : android.app.Activity() {
         fullTalk = iconButton(R.drawable.ic_mic, t("Talk to the child", "التحدث مع الطفل")) { talk?.tap() }
         bar.addView(fullTalk, barParams())
         fullNight = iconButton(R.drawable.ic_night, t("Night mode", "وضع الليل")) {
-            ParentEngine.setView(ParentEngine.viewQuality, ParentEngine.viewFront, ParentEngine.viewFlash, !ParentEngine.viewNight)
+            cycleNight()
             refreshFull()
         }
         bar.addView(fullNight, barParams())
@@ -435,6 +432,18 @@ class CameraActivity : android.app.Activity() {
             }
             .setNegativeButton(t("Cancel", "تراجع"), null)
             .show()
+    }
+
+    /** Off, then low light, then pitch dark, then off again. */
+    private fun cycleNight() {
+        val next = (ParentEngine.viewNightLevel + 1) % 3
+        ParentEngine.setNightLevel(next)
+        val msg = when (next) {
+            1 -> t("Night: low light", "الوضع الليلي: إضاءة خافتة")
+            2 -> t("Night: pitch dark, black and white", "الوضع الليلي: ظلام دامس، أبيض وأسود")
+            else -> t("Night: off", "الوضع الليلي: إيقاف")
+        }
+        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
     }
 
     /** Warns when 720p is combined with a high frame rate, which stutters on this phone. */

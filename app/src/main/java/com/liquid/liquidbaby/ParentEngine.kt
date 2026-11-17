@@ -75,6 +75,8 @@ object ParentEngine {
 
     @Volatile
     var viewNight = false
+    /** 0 = off, 1 = low light (colour), 2 = pitch dark (black and white). Chosen by hand. */
+    var viewNightLevel = 0
 
     @Volatile
     var listening = false
@@ -582,6 +584,14 @@ object ParentEngine {
     }
 
     /** The user changed the picture settings: this wins over the automatic quality. */
+    /** Night mode by hand: 0 off, 1 low light, 2 pitch dark. */
+    fun setNightLevel(level: Int) {
+        viewNightLevel = level.coerceIn(0, 2)
+        viewNight = viewNightLevel != 0
+        lowQuality = false
+        sendView(userQuality, viewFront, viewFlash, viewNight)
+    }
+
     fun setView(quality: Int, front: Boolean, flash: Boolean, night: Boolean = viewNight) {
         userQuality = quality
         lowQuality = false
@@ -593,7 +603,7 @@ object ParentEngine {
         if (!connected || !viewing) return
         sendAsync(
             c, T.VIEW_SET,
-            byteArrayOf(quality.toByte(), (if (front) 1 else 0).toByte(), (if (flash) 1 else 0).toByte(), (if (night) 1 else 0).toByte(), viewFps.toByte())
+            byteArrayOf(quality.toByte(), (if (front) 1 else 0).toByte(), (if (flash) 1 else 0).toByte(), (if (night) viewNightLevel.coerceIn(1, 2) else 0).toByte(), viewFps.toByte())
         )
     }
 

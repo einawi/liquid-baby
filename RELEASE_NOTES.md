@@ -1,3 +1,7 @@
+0.9.50 (build 117): night mode has three manual levels: off, low light (colour, gradual noise reduction and shadow lift), and pitch dark (black and white). The big night button is removed; the icon cycles through the levels. Update both phones.
+
+0.9.50 (build 117): الوضع الليلي ثلاثة مستويات يدوية: إيقاف، إضاءة خافتة (ألوان، تقليل تدريجي للضوضاء ورفع الظلال)، وظلام دامس (أبيض وأسود). حُذف الزر الكبير، والأيقونة تتنقل بين المستويات. يُفضّل تحديث الجوالين.
+
 0.9.49 (build 116): the partner talk shows "release to stop" like the child button, with the same glow while talking, and no longer lags (the whole screen was redrawn on every touch).
 
 0.9.49 (build 116): التحدث مع الشريك يعرض "ارفع إصبعك للإيقاف" مثل زر الطفل، مع التوهج نفسه أثناء الحديث، ولم يعد يتأخر (كانت الشاشة كاملة تُعاد رسمها عند كل لمسة).

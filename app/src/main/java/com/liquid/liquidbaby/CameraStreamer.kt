@@ -41,6 +41,35 @@ class CameraStreamer(
     private var quality = 1
     private var flash = false
     private var night = false
+    /** 0 off, 1 low light, 2 pitch dark (black and white). Set from the parent. */
+    @Volatile
+    var nightLevel = 0
+    private var prevLuma: ByteArray? = null
+    private val lift = IntArray(256) { (255.0 * Math.pow(it / 255.0, 0.6)).toInt().coerceIn(0, 255) }
+
+    /**
+     * Night picture, in place on the NV21 buffer: each frame blends gradually into the previous one (less grain,
+     * no lost frames), shadows are lifted, and for pitch dark the colour is neutralised (black and white).
+     */
+    private fun applyNight(nv: ByteArray, w: Int, h: Int) {
+        val n = w * h
+        val prev = prevLuma
+        val raw = ByteArray(n)
+        System.arraycopy(nv, 0, raw, 0, n)
+        if (prev != null && prev.size == n) {
+            for (i in 0 until n) {
+                val p = prev[i].toInt() and 255
+                val c = raw[i].toInt() and 255
+                raw[i] = ((p * 40 + c * 60) / 100).toByte()
+            }
+        }
+        prevLuma = raw.copyOf()
+        for (i in 0 until n) {
+            raw[i] = lift[raw[i].toInt() and 255].toByte()
+        }
+        System.arraycopy(raw, 0, nv, 0, n)
+        if (nightLevel >= 2) java.util.Arrays.fill(nv, n, nv.size, 128.toByte())
+    }
     private var exposureComp = 0
     private var fpsRanges: Array<android.util.Range<Int>>? = null
     private var rotation = 1
@@ -225,6 +254,7 @@ class CameraStreamer(
                 p[1].buffer, p[1].rowStride, p[1].pixelStride,
                 p[2].buffer, p[2].rowStride, p[2].pixelStride
             )
+            if (night) applyNight(nv, w, h) else prevLuma = null
             val out = ByteArrayOutputStream(w * h / 4)
             out.write(rotation)
             YuvImage(nv, ImageFormat.NV21, w, h, null).compressToJpeg(Rect(0, 0, w, h), when (quality) { 0 -> 50; 1 -> 60; else -> 70 }, out)
