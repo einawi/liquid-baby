@@ -780,11 +780,8 @@ object ParentEngine {
                 ", partnerSpeaking=" + partnerSpeaking + ", busy=" + (partnerSender != null))
             return false
         }
-        try {
-            c.send(T.PARTNER_START)
-        } catch (_: Exception) {
-            return false
-        }
+        // sent from the background, like every other network write: a network write on the touch thread fails
+        sendAsync(c, T.PARTNER_START, byteArrayOf())
         val s = TalkSender(c, T.PARTNER_DATA) { why ->
             Diag.i("Partner talk stopped: " + why)
             partnerSender = null
