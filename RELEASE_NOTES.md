@@ -1,3 +1,7 @@
+0.9.46 (build 113): the partner talk logs when the microphone starts and stops, and how long it ran.
+
+0.9.46 (build 113): التحدث مع الشريك يسجّل وقت بدء المايكروفون وإيقافه ومدته.
+
 0.9.45 (build 112): the partner talk writes in Diagnostics why it did or did not start (microphone permission, connection, or partner state).
 
 0.9.45 (build 112): التحدث مع الشريك يكتب في التشخيص سبب البدء أو عدمه (إذن الميكروفون، أو الاتصال، أو حالة الشريك).

@@ -39,6 +39,7 @@ class TalkSender(
     override fun run() {
         var rec: AudioRecord? = null
         var started = false
+        val t0 = System.currentTimeMillis()
         try {
             val min = AudioRecord.getMinBufferSize(Wav.RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
             rec = create(MediaRecorder.AudioSource.VOICE_COMMUNICATION, min) ?: create(MediaRecorder.AudioSource.MIC, min)
@@ -49,6 +50,7 @@ class TalkSender(
             if (dataType == T.TALK_DATA) conn.send(T.TALK_START)
             started = true
             rec.startRecording()
+            if (dataType != T.TALK_DATA) Diag.i("Partner mic: recording started")
             val frame = 640
             val buf = ShortArray(frame)
             while (!stopFlag) {
@@ -68,6 +70,7 @@ class TalkSender(
             Diag.e("Talking failed", e)
             onFail("Talking stopped: " + (e.message ?: e.javaClass.simpleName))
         } finally {
+            if (dataType != T.TALK_DATA) Diag.i("Partner mic: stopped after " + (System.currentTimeMillis() - t0) + " ms")
             if (started) {
                 try {
                     conn.send(if (dataType == T.TALK_DATA) T.TALK_STOP else T.PARTNER_STOP)
