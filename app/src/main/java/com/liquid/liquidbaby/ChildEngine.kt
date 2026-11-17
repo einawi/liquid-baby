@@ -231,7 +231,11 @@ object ChildEngine {
             reason = e.message ?: e.javaClass.simpleName
             if (id == null) Diag.i("Connection ended: $reason")
         } finally {
-            if (id != null && connected[id] === c) connected.remove(id)
+            // remove this connection by identity: the id is only known after a successful login,
+            // so a connection that dropped during login would otherwise stay counted
+            val removedId = connected.entries.firstOrNull { it.value === c }?.key
+            connected.entries.removeIf { it.value === c }
+            if (id == null) id = removedId
             if (id != null) {
                 val who = PairStore.parents().firstOrNull { it.id == id }?.name?.ifBlank { null } ?: "parent"
                 Diag.i("Parent $who disconnected: $reason. Clips waiting on this phone: ${clipCount()}")

@@ -1,3 +1,7 @@
+0.9.41 (build 108): the child phone drops a parent when its link ends, so the count is right (e.g. 1 of 2 instead of 2 of 2). Update the child phone.
+
+0.9.41 (build 108): جوال الطفل يحذف الأب عند انقطاع اتصاله، فيكون العدد صحيحاً (مثلاً 1 من 2 بدل 2 من 2). حدّث جوال الطفل.
+
 0.9.40 (build 107): the partner button turns off on its own when the link drops, even when no new message arrives. Look only; both phones should update.
 
 0.9.40 (build 107): زر الشريك يتعطّل وحده عند انقطاع الاتصال حتى لو لم تصل رسائل جديدة. يُفضّل تحديث الجوالين.
