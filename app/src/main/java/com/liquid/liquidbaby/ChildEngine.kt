@@ -240,6 +240,7 @@ object ChildEngine {
                 val who = PairStore.parents().firstOrNull { it.id == id }?.name?.ifBlank { null } ?: "parent"
                 Diag.i("Parent $who disconnected: $reason. Clips waiting on this phone: ${clipCount()}")
                 stopTalk(id)
+                if (partnerFrom == id) partnerStop(id)
                 levelSubs.remove(id)
                 if (viewers[id]?.conn === c) stopView(id)
                 if (listeners[id]?.conn === c) stopListen(id)
@@ -328,6 +329,9 @@ object ChildEngine {
                     broadcastSettings()
                 }
                 T.TALK_START -> startTalk(id)
+                T.PARTNER_START -> partnerStart(id)
+                T.PARTNER_DATA -> partnerForward(id, m.data)
+                T.PARTNER_STOP -> partnerStop(id)
                 T.TALK_DATA -> talkers[id]?.write(m.data)
                 T.TALK_STOP -> stopTalk(id)
                 T.VIEW_START -> startView(id, c, m.data)
@@ -403,6 +407,35 @@ object ChildEngine {
     private fun updateSuppression() {
         monitor?.suppressUntil =
             if (viewers.isNotEmpty() || talkers.isNotEmpty() || listeners.isNotEmpty()) Long.MAX_VALUE else System.currentTimeMillis() + 2500
+    }
+
+    // the partner relay: one parent speaks at a time; the audio goes to the other parent only, never to the room
+    @Volatile
+    private var partnerFrom: String? = null
+
+    private fun otherParent(id: String): Conn? = connected.entries.firstOrNull { it.key != id }?.value
+
+    private fun partnerStart(id: String) {
+        val busy = partnerFrom
+        if (busy != null && busy != id) {
+            connected[id]?.let { try { it.send(T.TALK_DENIED) } catch (_: Exception) {} }
+            return
+        }
+        partnerFrom = id
+        otherParent(id)?.let { try { it.send(T.PARTNER_START) } catch (_: Exception) {} }
+        Diag.i("A parent started talking to the partner")
+    }
+
+    private fun partnerForward(id: String, data: ByteArray) {
+        if (partnerFrom != id) return
+        otherParent(id)?.let { try { it.send(T.PARTNER_DATA, data) } catch (_: Exception) {} }
+    }
+
+    private fun partnerStop(id: String) {
+        if (partnerFrom != id) return
+        partnerFrom = null
+        otherParent(id)?.let { try { it.send(T.PARTNER_STOP) } catch (_: Exception) {} }
+        Diag.i("A parent stopped talking to the partner")
     }
 
     @Synchronized

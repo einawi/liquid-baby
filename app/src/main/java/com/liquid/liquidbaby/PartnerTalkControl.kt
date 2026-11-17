@@ -62,6 +62,24 @@ class PartnerTalkControl(private val host: Activity) {
         setState(connected = false, talking = false)
     }
 
+    init {
+        view.setOnTouchListener { _, ev ->
+            val press = Prefs.getString("talkMode", "hold") == "press"
+            when (ev.actionMasked) {
+                android.view.MotionEvent.ACTION_DOWN -> if (!press) ParentEngine.beginPartnerTalk()
+                android.view.MotionEvent.ACTION_UP -> {
+                    if (press) {
+                        if (ParentEngine.partnerSending) ParentEngine.endPartnerTalk() else ParentEngine.beginPartnerTalk()
+                    } else {
+                        ParentEngine.endPartnerTalk()
+                    }
+                }
+                android.view.MotionEvent.ACTION_CANCEL -> if (!press) ParentEngine.endPartnerTalk()
+            }
+            true
+        }
+    }
+
     /** Shows the state of the partner link; greyed out with the reason while the partner is not connected. */
     fun setState(connected: Boolean, talking: Boolean) {
         when {

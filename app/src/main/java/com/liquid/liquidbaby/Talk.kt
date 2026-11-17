@@ -12,7 +12,11 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 /** Walkie-talkie, parent side: records the microphone and sends it to the child phone. */
-class TalkSender(private val conn: Conn, private val onFail: (String) -> Unit) : Thread("LiquidBaby-talk") {
+class TalkSender(
+    private val conn: Conn,
+    private val dataType: Int = T.TALK_DATA,
+    private val onFail: (String) -> Unit
+) : Thread("LiquidBaby-talk") {
 
     @Volatile
     var stopFlag = false
@@ -57,7 +61,7 @@ class TalkSender(private val conn: Conn, private val onFail: (String) -> Unit) :
                 if (got < frame) break
                 val out = ByteArray(frame * 2)
                 ByteBuffer.wrap(out).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().put(buf)
-                conn.send(T.TALK_DATA, out)
+                conn.send(dataType, out)
                 ParentEngine.micSink?.invoke(buf, frame)
             }
         } catch (e: Exception) {
@@ -66,7 +70,7 @@ class TalkSender(private val conn: Conn, private val onFail: (String) -> Unit) :
         } finally {
             if (started) {
                 try {
-                    conn.send(T.TALK_STOP)
+                    conn.send(if (dataType == T.TALK_DATA) T.TALK_STOP else T.PARTNER_STOP)
                 } catch (_: Exception) {
                 }
             }

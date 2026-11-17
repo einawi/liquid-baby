@@ -247,6 +247,9 @@ object ParentEngine {
             connected = false
             partnerConnected = false
             partnerTalking = false
+            partnerSending = false
+            partnerSender?.stopFlag = true
+            partnerSender = null
             endTalk()
             dropView()
             conn?.close()
@@ -408,6 +411,9 @@ object ParentEngine {
                         dropView()
                         changed()
                     }
+                    T.PARTNER_START -> partnerIncomingStart()
+                    T.PARTNER_DATA -> partnerIncoming?.write(m.data)
+                    T.PARTNER_STOP -> partnerIncomingStop()
                     T.TALK_DENIED -> {
                         talkNote = Tr.pick("The child phone could not start the speaker", "جوال الطفل ما قدر يشغّل السماعة")
                         endTalk()
@@ -732,6 +738,64 @@ object ParentEngine {
     fun setInterval(v: Int) {
         val c = conn ?: return
         if (connected) sendAsync(c, T.SET_INTERVAL, byteArrayOf(v.toByte()))
+    }
+
+    // ---- partner talk (parent to parent, through the child phone) ----
+    @Volatile
+    var partnerSpeaking = false
+    @Volatile
+    var partnerSending = false
+    private var partnerIncoming: TalkPlayer? = null
+    private var partnerSender: TalkSender? = null
+
+    @Synchronized
+    private fun partnerIncomingStart() {
+        if (partnerIncoming != null) return
+        try {
+            val p = TalkPlayer()
+            p.start(appCtx, Prefs.getInt("talkVolume", 7), true)
+            partnerIncoming = p
+            partnerSpeaking = true
+            changed()
+        } catch (e: Exception) {
+            Diag.e("Could not play the partner", e)
+        }
+    }
+
+    @Synchronized
+    private fun partnerIncomingStop() {
+        partnerIncoming?.stop()
+        partnerIncoming = null
+        partnerSpeaking = false
+        changed()
+    }
+
+    /** Hold or tap to talk to the partner. Refused unless the partner is connected and not already speaking. */
+    fun beginPartnerTalk(): Boolean {
+        val c = conn ?: return false
+        if (!connected || !partnerConnected || partnerSpeaking || partnerSender != null) return false
+        try {
+            c.send(T.PARTNER_START)
+        } catch (_: Exception) {
+            return false
+        }
+        val s = TalkSender(c, T.PARTNER_DATA) { _ ->
+            partnerSender = null
+            partnerSending = false
+            changed()
+        }
+        partnerSender = s
+        partnerSending = true
+        s.start()
+        changed()
+        return true
+    }
+
+    fun endPartnerTalk() {
+        partnerSender?.stopFlag = true
+        partnerSender = null
+        partnerSending = false
+        changed()
     }
 
     fun setTalkVolume(v: Int) {

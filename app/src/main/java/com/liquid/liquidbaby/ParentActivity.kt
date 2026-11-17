@@ -326,7 +326,7 @@ class ParentActivity : Activity() {
     private val partnerHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private val partnerTick = object : Runnable {
         override fun run() {
-            partnerTalk?.setState(connected = ParentEngine.connected && ParentEngine.partnerConnected, talking = ParentEngine.partnerTalking)
+            partnerTalk?.setState(connected = ParentEngine.connected && ParentEngine.partnerConnected, talking = ParentEngine.partnerTalking || ParentEngine.partnerSpeaking)
             partnerHandler.postDelayed(this, 1000L)
         }
     }
@@ -493,7 +493,7 @@ class ParentActivity : Activity() {
             else -> 0xFF66BB6A.toInt()
         })
         styleLevelMeter(meter)
-        partnerTalk?.setState(connected = ParentEngine.connected && ParentEngine.partnerConnected, talking = ParentEngine.partnerTalking)
+        partnerTalk?.setState(connected = ParentEngine.connected && ParentEngine.partnerConnected, talking = ParentEngine.partnerTalking || ParentEngine.partnerSpeaking)
         val levelIsFresh = ParentEngine.connected && System.currentTimeMillis() - ParentEngine.levelAt < 2500L
         Fx.animateMeter(meter, if (levelIsFresh) ParentEngine.level else 0)
         soundVisual?.setStyle(Prefs.getString("soundVisual", "wave"))

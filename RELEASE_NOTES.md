@@ -1,3 +1,7 @@
+0.9.42 (build 109): talk to partner. Hold the button to talk to the other parent, release to listen. The voice goes through the child phone to the other parent only, never into the child's room, and is not recorded or saved. Update all three phones.
+
+0.9.42 (build 109): التحدث مع الشريك. اضغط مع الاستمرار لتتحدث مع الأب الآخر، وعند الإفلات تستمع. يمر الصوت عبر جوال الطفل إلى الأب الآخر فقط، ولا يُسمع في غرفة الطفل، ولا يُسجَّل ولا يُحفظ. يُفضّل تحديث الجوالات الثلاثة.
+
 0.9.41 (build 108): the child phone drops a parent when its link ends, so the count is right (e.g. 1 of 2 instead of 2 of 2). Update the child phone.
 
 0.9.41 (build 108): جوال الطفل يحذف الأب عند انقطاع اتصاله، فيكون العدد صحيحاً (مثلاً 1 من 2 بدل 2 من 2). حدّث جوال الطفل.
