@@ -1,6 +1,7 @@
 package com.liquid.liquidbaby
 
 import android.Manifest
+import android.animation.ObjectAnimator
 import android.app.Activity
 import android.content.pm.PackageManager
 import android.view.Gravity
@@ -30,6 +31,8 @@ class PartnerTalkControl(private val host: Activity) {
     private var connectedNow = false
     private var partnerTalking = false
     private var sending = false
+    private var glow: ObjectAnimator? = null
+    private var lastText = ""
 
     private fun t(en: String, ar: String): String = Tr.pick(en, ar)
 
@@ -59,11 +62,15 @@ class PartnerTalkControl(private val host: Activity) {
     private fun refreshLook() {
         val press = pressMode()
         val text = when {
-            sending -> if (press) t("Talking… tap to stop", "أتحدث… اضغط للإيقاف") else t("Talking…", "أتحدث…")
+            sending -> if (press) t("Talking… tap to stop", "أتحدث… اضغط للإيقاف") else t("Talking… release to stop", "أتحدث… ارفع إصبعك للإيقاف")
             press -> t("Tap to talk to partner", "اضغط للتحدث مع الشريك")
             else -> t("Hold to talk to partner", "اضغط مع الاستمرار للتحدث مع الشريك")
         }
-        button.text = if (!connectedNow && !sending) text + "\n" + t("Partner not connected", "الشريك غير متصل") else text
+        val shown = if (!connectedNow && !sending) text + "\n" + t("Partner not connected", "الشريك غير متصل") else text
+        if (shown != lastText) {
+            button.text = shown
+            lastText = shown
+        }
         button.alpha = if (connectedNow || sending) 1f else 0.45f
         button.isEnabled = true
         label.text = if (press) t("Tap", "نقرة") else t("Hold", "ضغط")
@@ -148,6 +155,8 @@ class PartnerTalkControl(private val host: Activity) {
     fun setSending(on: Boolean) {
         if (on == sending) return
         sending = on
+        glow?.cancel()
+        glow = if (on) Fx.breathe(button) else null
         refreshLook()
     }
 

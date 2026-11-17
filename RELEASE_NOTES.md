@@ -1,3 +1,7 @@
+0.9.49 (build 116): the partner talk shows "release to stop" like the child button, with the same glow while talking, and no longer lags (the whole screen was redrawn on every touch).
+
+0.9.49 (build 116): التحدث مع الشريك يعرض "ارفع إصبعك للإيقاف" مثل زر الطفل، مع التوهج نفسه أثناء الحديث، ولم يعد يتأخر (كانت الشاشة كاملة تُعاد رسمها عند كل لمسة).
+
 0.9.48 (build 115): the Talk to partner button matches the talk-to-child button: same card, colours and labels in every state. It shows why when the partner is not connected, and a notice while the partner talks to you.
 
 0.9.48 (build 115): زر التحدث مع الشريك مطابق لزر التحدث مع الطفل في الشكل والألوان والنصوص. يُظهر سبب عدم الاتصال، ويعرض تنبيهاً عندما يتحدث الشريك إليك.

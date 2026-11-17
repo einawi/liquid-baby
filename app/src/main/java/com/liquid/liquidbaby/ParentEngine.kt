@@ -786,12 +786,10 @@ object ParentEngine {
             Diag.i("Partner talk stopped: " + why)
             partnerSender = null
             partnerSending = false
-            changed()
         }
         partnerSender = s
         partnerSending = true
         s.start()
-        changed()
         return true
     }
 
@@ -799,7 +797,6 @@ object ParentEngine {
         partnerSender?.stopFlag = true
         partnerSender = null
         partnerSending = false
-        changed()
     }
 
     fun setTalkVolume(v: Int) {
