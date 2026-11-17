@@ -779,7 +779,8 @@ object ParentEngine {
         } catch (_: Exception) {
             return false
         }
-        val s = TalkSender(c, T.PARTNER_DATA) { _ ->
+        val s = TalkSender(c, T.PARTNER_DATA) { why ->
+            Diag.i("Partner talk stopped: " + why)
             partnerSender = null
             partnerSending = false
             changed()

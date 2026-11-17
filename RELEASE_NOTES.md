@@ -1,3 +1,7 @@
+0.9.44 (build 111): the partner talk now captures your voice and sends it only to the other parent. Fixed: it was also opening the room speaker on the child phone.
+
+0.9.44 (build 111): التحدث مع الشريك يلتقط صوتك ويرسله إلى الأب الآخر فقط. تم إصلاح: كان يفتح أيضاً سماعة الغرفة في جوال الطفل.
+
 0.9.43 (build 110): the Talk to partner button responds to touch: it shrinks on press, asks for the microphone the first time, and turns green while you talk.
 
 0.9.43 (build 110): زر التحدث مع الشريك يستجيب للمس: ينكمش عند الضغط، ويطلب إذن الميكروفون أول مرة، ويصير أخضر أثناء الحديث.

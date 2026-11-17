@@ -46,7 +46,7 @@ class TalkSender(
                 onFail("The microphone could not start")
                 return
             }
-            conn.send(T.TALK_START)
+            if (dataType == T.TALK_DATA) conn.send(T.TALK_START)
             started = true
             rec.startRecording()
             val frame = 640
