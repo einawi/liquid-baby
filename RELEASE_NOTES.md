@@ -1,3 +1,7 @@
+0.9.59 (build 128): the parent home is now Compose. The live camera, listen, talk and partner buttons, the child card and the recordings and settings work as before. Test build.
+
+0.9.59 (build 128): الشاشة الرئيسية للأب صارت بـ Compose. الكاميرا المباشرة والاستماع والحديث والشريك وبطاقة الطفل والتسجيلات والإعدادات تعمل كما كانت. بناء تجريبي.
+
 0.9.59 (build 127): first Compose screen (parent home) added to the build, the screens still look and behave as before. Test build.
 
 0.9.59 (build 127): أول شاشة بـ Compose (الشاشة الرئيسية للأب) أُضيفت إلى البناء، والشاشات ما زالت تبدو وتعمل كما كانت. بناء تجريبي.

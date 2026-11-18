@@ -2,18 +2,18 @@ package com.liquid.liquidbaby
 
 import android.Manifest
 import android.animation.ObjectAnimator
-import android.app.Activity
 import android.app.AlertDialog
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.MediaPlayer
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.text.InputType
-import android.view.Gravity
-import android.view.MotionEvent
 import android.view.View
+import android.view.WindowInsets
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
@@ -21,12 +21,29 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.SeekBar
 import android.widget.TextView
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import java.io.File
 import java.text.DateFormat
 import java.util.Date
 
-/** Parent screen: status first, then monitoring, then recordings, with settings folded away. */
-class ParentActivity : Activity() {
+/** Parent screen: the home part is Compose; recordings and settings are the classic views shown inside it. */
+class ParentActivity : ComponentActivity() {
 
     private val ui = Handler(Looper.getMainLooper())
     private var builtAr: Boolean? = null
@@ -35,18 +52,11 @@ class ParentActivity : Activity() {
     private var entered = false
     private var pulse: ObjectAnimator? = null
 
-    private var statusPill: TextView? = null
-    private var runBtn: Button? = null
-    private var vpnBtn: Button? = null
-    private var childLine: TextView? = null
-    private var detailLine: TextView? = null
-    private var batteryDot: View? = null
-    private var batteryTv: TextView? = null
-    private var batteryRing: BatteryRing? = null
-    private var tempDot: View? = null
-    private var tempTv: TextView? = null
+    private val state = ComposeParentHomeState()
+
     private var meter: ProgressBar? = null
     private var soundVisual: SoundVisual? = null
+    private var batteryRing: BatteryRing? = null
     private var listenBtn: Button? = null
     private var talkBtn: Button? = null
     private var talkModeLabel: TextView? = null
@@ -101,197 +111,170 @@ class ParentActivity : Activity() {
         }
     }
 
+    /** Classic views shown inside the Compose home. Each factory stores its view so refresh() can update it. */
+    private val views = ParentViews(
+        ring = { ctx -> BatteryRing(ctx).also { batteryRing = it } },
+        sound = { ctx -> SoundVisual(ctx).also { soundVisual = it } },
+        meter = { ctx ->
+            ProgressBar(ctx, null, android.R.attr.progressBarStyleHorizontal).apply {
+                max = 100
+                progress = ParentEngine.level
+            }.also { meter = it }
+        },
+        talk = { ctx -> TalkControl(this@ParentActivity).also { talkControl = it }.view },
+        partner = { ctx -> PartnerTalkControl(this@ParentActivity).also { partnerTalk = it }.view }
+    )
+
     private fun t(en: String, ar: String): String = Tr.pick(en, ar)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        build()
+        builtAr = Tr.isAr()
+        applyWindowLook()
+        syncPaired()
+        setContent { ParentRoot() }
+        lastClipsVersion = ParentEngine.clipsVersion
     }
 
-    private fun build() {
-        val t0 = System.nanoTime()
-        builtAr = Tr.isAr()
-        pulse?.cancel()
-        pulse = null
-        val paired = PairStore.paired()
-        pairedCache = paired
-        screen {
-            addTitle(t("Parent", "وحدة الأبوين"))
-            statusPill = addChip("")
-            runBtn = addButton(t("Start monitoring", "ابدأ المراقبة")) { toggle() }
-            Fx.press(runBtn!!)
-            Fx.ripple(runBtn!!)
-            vpnBtn = addButton(t("VPN is blocking the connection: open VPN settings", "الـ VPN يمنع الاتصال: افتح إعدادات الـ VPN")) {
-                openVpnSettings()
+    /** Background and blur, the same look the classic screen had. */
+    private fun applyWindowLook() {
+        val nightBits = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+        Themes.systemDark = nightBits == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        val blur = Build.VERSION.SDK_INT >= 31 && Themes.current().blur > 0
+        window.setBackgroundDrawable(Look.background(if (blur) 210 else 255))
+        if (blur) {
+            try {
+                window.setBackgroundBlurRadius(Themes.current().blur)
+            } catch (e: Throwable) {
+                Diag.i("Window blur not available: " + e.message)
             }
-            vpnBtn?.visibility = View.GONE
+        }
+    }
 
-            if (paired == null) {
-                card {
-                    addBody(t("No child phone yet", "لم يتم اقتران جوال طفل بعد"))
-                    addButton(t("Pair with the child phone", "اقرن مع جوال الطفل")) { startPairFlow() }
-                    line(t("On the child phone, tap 'Allow a new parent phone to pair'.",
-                        "على جوال الطفل، اضغط 'السماح بإقران جوال أبوين جديد'."))
-                }
-            } else {
-                if (paired.key.isEmpty()) {
-                    card {
-                        addBody(t("Pairing keys could not be read on this phone.", "تعذّر قراءة مفاتيح الاقتران على هذا الجوال."))
-                        line(t("Remove the pairing below and pair again.", "ألغِ الاقتران من الأسفل واقرن من جديد."))
-                    }
-                }
-                card {
-                    val row = addRow()
-                    batteryDot = Fx.dot(context, 0xFF8899AA.toInt())
-                    batteryRing = BatteryRing(context)
-                    row.addView(batteryRing, LinearLayout.LayoutParams(dp(44), dp(44)).apply { marginEnd = dp(10) })
-                    row.addView(batteryDot)
-                    childLine = TextView(context).apply {
-                        textSize = 17f
-                        setTextColor(Look.TEXT)
-                        setTypeface(typeface, android.graphics.Typeface.BOLD)
-                    }
-                    childLine?.text = paired.childName.ifBlank { t("Child phone", "جوال الطفل") }
-                    row.addView(childLine)
-                    detailLine = line("")
-                    batteryTv = line("", 15f)
-                    val tRow = addRow()
-                    tempDot = Fx.dot(context, 0xFF8899AA.toInt())
-                    tRow.addView(tempDot)
-                    tempTv = TextView(context).apply { textSize = 15f; setTextColor(Look.SUB) }
-                    tRow.addView(tempTv)
-                    meter = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
-                        max = 100
-                        progress = ParentEngine.level
-                    }
-                    addView(meter, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(14)).apply {
-                        topMargin = dp(10)
-                    })
-                    meter?.visibility = View.GONE
-                    soundVisual = SoundVisual(context)
-                    addView(soundVisual, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(70)).apply {
-                        topMargin = dp(10)
-                    })
-                    line(t("Sound in the room", "صوت الغرفة"), 13f)
-                }
+    /** Reads the pairing from storage and updates the Compose state. Called at start and after pairing changes. */
+    private fun syncPaired() {
+        val p = PairStore.paired()
+        pairedCache = p
+        state.paired = p != null
+        state.keysBroken = p != null && p.key.isEmpty()
+        state.childName = p?.childName?.ifBlank { null } ?: t("Child phone", "جوال الطفل")
+        refresh()
+    }
 
-                sectionLabel(t("Monitor", "المراقبة"))
-                val grid = LinearLayout(context)
-                grid.orientation = LinearLayout.HORIZONTAL
-                addView(grid)
-                tile(grid, t("Live camera", "الكاميرا المباشرة"), t("See the room", "شاهد الغرفة")) {
-                    if (ParentEngine.connected) {
-                        startActivity(Intent(this@ParentActivity, CameraActivity::class.java))
-                    } else {
-                        toast(t("Not connected to the child phone yet.", "غير متصل بجوال الطفل بعد."))
-                    }
-                }
-                val listenTile = tile(grid, t("Listen", "استماع"), t("Sound only", "صوت فقط")) { toggleListen() }
-                listenBtn = listenTile
-
-                // the shared talk control, the same one the camera screen uses
-                val tc = TalkControl(this@ParentActivity)
-                talkControl = tc
-                addView(tc.view, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-                    topMargin = dp(12)
-                })
-                // the partner button, right below the talk-to-child button (same look, different name)
-                val ptc = PartnerTalkControl(this@ParentActivity)
-                partnerTalk = ptc
-                addView(ptc.view, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-                    topMargin = dp(10)
-                })
-
-                sectionLabel(t("Recordings", "التسجيلات"))
-                val box = LinearLayout(context)
-                box.orientation = LinearLayout.VERTICAL
-                addView(box)
-                listBox = box
-
-                sectionLabel(t("Settings", "الإعدادات"))
-                settingsHead = TextView(context).apply {
-                    textSize = 16f
-                    setTextColor(Look.TEXT)
-                    setPadding(dp(4), dp(10), dp(4), dp(10))
-                    setOnClickListener { toggleSettings() }
-                }
-                addView(settingsHead)
-                val sBox = LinearLayout(context)
-                sBox.orientation = LinearLayout.VERTICAL
-                sBox.visibility = if (settingsOpen) View.VISIBLE else View.GONE
-                addView(sBox)
-                settingsBox = sBox
-                sBox.card(14) {
-                    lenLabel = line("")
-                    lenBar = addSlider(5, 60, ParentEngine.childLength, { v ->
-                        draggingLen = true
-                        lenLabel?.text = t("Clip length: $v seconds", "طول المقطع: $v ثوانٍ")
-                    }, { v ->
-                        draggingLen = false
-                        Prefs.putInt("clipSeconds", v)
-                        ParentEngine.childLength = v
-                        ParentEngine.sendSettings(v, ParentEngine.childSens)
-                    })
-                    sensLabel = line("")
-                    sensBar = addSlider(1, 5, ParentEngine.childSens, { v ->
-                        draggingSens = true
-                        sensLabel?.text = t("Sensitivity: $v of 5", "الحساسية: $v من 5")
-                    }, { v ->
-                        draggingSens = false
-                        ParentEngine.childSens = v
-                        ParentEngine.sendSettings(ParentEngine.childLength, v)
-                    })
-                    intervalLabel = line("")
-                    intervalBar = addSlider(0, 15, ParentEngine.childInterval, { v ->
-                        intervalLabel?.text = intervalText(v)
-                    }, { v ->
-                        ParentEngine.setInterval(v)
-                    })
-                    walkieLabel = line("")
-                    walkieBar = addSlider(1, 10, ParentEngine.childTalkVol, { v ->
-                        walkieLabel?.text = t("Talk volume on the child phone: $v of 10", "صوت المحادثة على جوال الطفل: $v من 10")
-                    }, { v ->
-                        ParentEngine.setTalkVolume(v)
-                    })
-                }
-
-                Button(context).apply {
-                    text = t("Remove pairing", "إلغاء الاقتران")
-                    isAllCaps = false
-                    setTextColor(0xFFFF8A8A.toInt())
-                    background = Look.glass(context, 22, 0x22FF5252)
-                    setOnClickListener { confirmRemove() }
-                    Fx.press(this)
-                }.let { b ->
-                    addView(b, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-                        topMargin = dp(28)
-                    })
+    @Composable
+    private fun ParentRoot() {
+        val dir = if (Tr.isAr()) LayoutDirection.Rtl else LayoutDirection.Ltr
+        CompositionLocalProvider(LocalLayoutDirection provides dir) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .systemBarsPadding()
+                    .verticalScroll(rememberScrollState())
+                    .padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                ParentHomeTop(
+                    state = state,
+                    views = views,
+                    onToggle = { toggle() },
+                    onVpn = { openVpnSettings() },
+                    onLive = { openLive() },
+                    onListen = { toggleListen() },
+                    onPair = { startPairFlow() }
+                )
+                if (state.paired) {
+                    AndroidView(
+                        factory = { ctx -> buildLower(ctx) },
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
         }
-        refresh()
-        fillList()
-        lastClipsVersion = ParentEngine.clipsVersion
-        Diag.limited("buildParent", "Parent screen built in ${(System.nanoTime() - t0) / 1_000_000} ms", 60_000L)
     }
 
-    /** A square tile in a two-column grid. Returns the button so it can be styled later. */
-    private fun LinearLayout.tile(grid: LinearLayout, title: String, sub: String, onClick: () -> Unit): Button {
-        val b = Button(context)
-        b.isAllCaps = false
-        b.setTextColor(Look.TEXT)
-        b.background = Look.glass(context, 22, Look.BUTTON)
-        b.text = "$title\n$sub"
-        b.textSize = 16f
-        b.minHeight = dp(104)
-        b.setOnClickListener { onClick() }
-        Fx.press(b)
-        Fx.ripple(b)
-        val lp = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        lp.marginEnd = dp(6)
-        lp.marginStart = dp(6)
-        grid.addView(b, lp)
-        return b
+    private fun openLive() {
+        if (ParentEngine.connected) {
+            startActivity(Intent(this, CameraActivity::class.java))
+        } else {
+            toast(t("Not connected to the child phone yet.", "غير متصل بجوال الطفل بعد."))
+        }
+    }
+
+    /** Recordings, settings and the remove button. These are classic views, hosted inside Compose. */
+    private fun buildLower(ctx: Context): View {
+        val col = LinearLayout(ctx)
+        col.orientation = LinearLayout.VERTICAL
+        if (Tr.isAr()) col.layoutDirection = View.LAYOUT_DIRECTION_RTL
+        col.setPadding(0, dp(4), 0, dp(4))
+
+        col.sectionLabel(t("Recordings", "التسجيلات"))
+        val box = LinearLayout(ctx)
+        box.orientation = LinearLayout.VERTICAL
+        col.addView(box)
+        listBox = box
+
+        col.sectionLabel(t("Settings", "الإعدادات"))
+        settingsHead = TextView(ctx).apply {
+            textSize = 16f
+            setTextColor(Look.TEXT)
+            setPadding(dp(4), dp(10), dp(4), dp(10))
+            setOnClickListener { toggleSettings() }
+        }
+        col.addView(settingsHead)
+        val sBox = LinearLayout(ctx)
+        sBox.orientation = LinearLayout.VERTICAL
+        sBox.visibility = if (settingsOpen) View.VISIBLE else View.GONE
+        col.addView(sBox)
+        settingsBox = sBox
+        sBox.card(14) {
+            lenLabel = line("")
+            lenBar = addSlider(5, 60, ParentEngine.childLength, { v ->
+                draggingLen = true
+                lenLabel?.text = t("Clip length: $v seconds", "طول المقطع: $v ثوانٍ")
+            }, { v ->
+                draggingLen = false
+                Prefs.putInt("clipSeconds", v)
+                ParentEngine.childLength = v
+                ParentEngine.sendSettings(v, ParentEngine.childSens)
+            })
+            sensLabel = line("")
+            sensBar = addSlider(1, 5, ParentEngine.childSens, { v ->
+                draggingSens = true
+                sensLabel?.text = t("Sensitivity: $v of 5", "الحساسية: $v من 5")
+            }, { v ->
+                draggingSens = false
+                ParentEngine.childSens = v
+                ParentEngine.sendSettings(ParentEngine.childLength, v)
+            })
+            intervalLabel = line("")
+            intervalBar = addSlider(0, 15, ParentEngine.childInterval, { v ->
+                intervalLabel?.text = intervalText(v)
+            }, { v ->
+                ParentEngine.setInterval(v)
+            })
+            walkieLabel = line("")
+            walkieBar = addSlider(1, 10, ParentEngine.childTalkVol, { v ->
+                walkieLabel?.text = t("Talk volume on the child phone: $v of 10", "صوت المحادثة على جوال الطفل: $v من 10")
+            }, { v ->
+                ParentEngine.setTalkVolume(v)
+            })
+        }
+
+        val remove = Button(ctx).apply {
+            text = t("Remove pairing", "إلغاء الاقتران")
+            isAllCaps = false
+            setTextColor(0xFFFF8A8A.toInt())
+            background = Look.glass(ctx, 22, 0x22FF5252)
+            setOnClickListener { confirmRemove() }
+            Fx.press(this)
+        }
+        col.addView(remove, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+            topMargin = dp(28)
+        })
+
+        fillList()
+        refresh()
+        return col
     }
 
     private fun intervalText(v: Int): String =
@@ -320,14 +303,14 @@ class ParentActivity : Activity() {
                 t("Remove", "إلغاء الاقتران") to {
                     UnitService.stop(this)
                     PairStore.clearPaired()
-                    build()
+                    syncPaired()
                 },
                 t("Cancel", "تراجع") to {}
             )
         )
     }
 
-    private val partnerHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val partnerHandler = Handler(Looper.getMainLooper())
     private val partnerTick = object : Runnable {
         override fun run() {
             partnerTalk?.setSending(ParentEngine.partnerSending)
@@ -340,7 +323,10 @@ class ParentActivity : Activity() {
         super.onResume()
         partnerHandler.removeCallbacks(partnerTick)
         partnerHandler.post(partnerTick)
-        if (builtAr != Tr.isAr()) build()
+        if (builtAr != Tr.isAr()) {
+            recreate()
+            return
+        }
         ParentEngine.onChange = { runOnUiThread { refresh() } }
         ParentEngine.setLevelSub(true)
         if (Vault.failed && !warnedVault) {
@@ -454,49 +440,42 @@ class ParentActivity : Activity() {
         return Pair(t("Connecting...", "جارٍ الاتصال..."), 0xFFB7791F.toInt())
     }
 
+    /** Writes the current values into the Compose state and the classic views. Runs every second. */
     private fun refresh() {
         val (label, color) = stateLabel()
-        Fx.animateChip(statusPill, label, color)
-        runBtn?.text = t(if (ParentEngine.running) "Stop monitoring" else "Start monitoring",
-            if (ParentEngine.running) "أوقف المراقبة" else "ابدأ المراقبة")
-        runBtn?.background = Look.glass(this, 22,
-            if (ParentEngine.running) Look.BUTTON else Fx.tint(Themes.current().accent, 0x66))
-        vpnBtn?.visibility = if (Net.vpnBlocksLocal(this)) View.VISIBLE else View.GONE
-
-        if (ParentEngine.connected) {
-            if (pulse == null) pulse = Fx.breathe(statusPill ?: return)
-        } else {
-            pulse?.cancel()
-            pulse = null
-            statusPill?.alpha = 1f
-        }
+        state.status = label
+        state.statusColor = color
+        state.running = ParentEngine.running
+        state.vpnWarning = Net.vpnBlocksLocal(this)
 
         val childIp = pairedCache?.lastIp?.ifBlank { null } ?: "--"
         val ago = (System.currentTimeMillis() - ParentEngine.lastContact) / 1000
-        detailLine?.text = t(
+        state.address = t(
             "Child address: $childIp" + if (ParentEngine.connected) "  ·  last contact ${ago}s ago" else "",
             "عنوان الطفل: $childIp" + if (ParentEngine.connected) "  ·  آخر اتصال منذ ${ago} ثانية" else ""
         )
         val pct = ParentEngine.batteryPct
         val tc = ParentEngine.tempC
-        batteryTv?.text = if (pct < 0) t("Battery: --", "البطارية: --")
+        state.battery = if (pct < 0) t("Battery: --", "البطارية: --")
         else t("Battery ", "البطارية ") + pct + "%" +
             (if (ParentEngine.charging) t(" (charging)", " (تشحن)") else "")
-        tempTv?.text = if (pct < 0) t("Temperature: --", "الحرارة: --")
+        state.temp = if (pct < 0) t("Temperature: --", "الحرارة: --")
         else t("Temperature ", "الحرارة ") + String.format(java.util.Locale.US, "%.1f", tc) + " °C"
+
         val fresh = ParentEngine.connected && System.currentTimeMillis() - ParentEngine.lastStatusMs < 45_000L
-        Fx.animateDot(batteryDot, when {
+        state.batteryDot = when {
             !fresh || pct < 0 -> 0xFF8899AA.toInt()
             !ParentEngine.charging && pct < 20 -> 0xFFE53935.toInt()
             !ParentEngine.charging && pct < 40 -> 0xFFFFA726.toInt()
             else -> 0xFF66BB6A.toInt()
-        })
-        Fx.animateDot(tempDot, when {
+        }
+        state.tempDot = when {
             !fresh || pct < 0 -> 0xFF8899AA.toInt()
             tc >= 42.0 -> 0xFFE53935.toInt()
             tc >= 38.0 -> 0xFFFFA726.toInt()
             else -> 0xFF66BB6A.toInt()
-        })
+        }
+
         styleLevelMeter(meter)
         partnerTalk?.setState(connected = ParentEngine.connected && ParentEngine.partnerConnected, talking = ParentEngine.partnerTalking || ParentEngine.partnerSpeaking)
         val levelIsFresh = ParentEngine.connected && System.currentTimeMillis() - ParentEngine.levelAt < 2500L
@@ -505,12 +484,7 @@ class ParentActivity : Activity() {
         soundVisual?.setLevel(if (levelIsFresh) ParentEngine.level else 0)
         batteryRing?.setPercent(ParentEngine.batteryPct)
 
-        listenBtn?.text = t(if (ParentEngine.listening) "Stop" else "Listen",
-            if (ParentEngine.listening) "أوقف" else "استماع") + "\n" +
-            t(if (ParentEngine.listening) "Listening to the room" else "Sound only",
-                if (ParentEngine.listening) "يستمع للغرفة الآن" else "صوت فقط")
-        listenBtn?.background = Look.glass(this, 22,
-            if (ParentEngine.listening) Fx.tint(Themes.current().accent, 0x40) else Look.BUTTON)
+        state.listening = ParentEngine.listening
 
         settingsHead?.text = (if (settingsOpen) "▾  " else "▸  ") + t("Clip length, sensitivity, volume", "طول المقطع والحساسية والصوت")
         if (!draggingLen) {
@@ -890,7 +864,7 @@ class ParentActivity : Activity() {
                 runOnUiThread {
                     toast(message)
                     if (ok) {
-                        build()
+                        syncPaired()
                         UnitService.start(this@ParentActivity)
                     }
                 }
