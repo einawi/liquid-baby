@@ -1,46 +1,60 @@
 package com.liquid.liquidbaby
 
-import android.app.Activity
-import android.content.ContentValues
-import android.content.Intent
 import android.media.MediaPlayer
-import android.net.Uri
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.provider.MediaStore
-import android.view.Gravity
 import android.view.SurfaceHolder
 import android.view.SurfaceView
-import android.view.View
 import android.view.WindowManager
-import android.widget.FrameLayout
-import android.widget.ImageButton
-import android.widget.LinearLayout
-import android.widget.ProgressBar
-import android.widget.SeekBar
-import android.widget.TextView
-import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import kotlinx.coroutines.delay
 import java.io.File
 
 /**
  * Plays an encrypted recording. The decrypted copy lives in the app cache only while this screen is open.
- * Controls: play/pause, a seek bar with time, share and save. The picture keeps its proportions.
+ * Built with Compose: the picture fills the top area and the controls sit in a fixed bar underneath.
+ * The picture keeps its proportions (MediaPlayer scales it to fit the surface).
  */
-class VideoPlayerActivity : Activity() {
+class VideoPlayerActivity : ComponentActivity() {
 
-    private val ui = Handler(Looper.getMainLooper())
     private var player: MediaPlayer? = null
     private var clear: File? = null
     private var encFile: File? = null
     private var ready = false
-    private var surface: SurfaceView? = null
-    private var root: FrameLayout? = null
-    private var loading: ProgressBar? = null
-    private var status: TextView? = null
-    private var playBtn: ImageButton? = null
-    private var seek: SeekBar? = null
-    private var timeTv: TextView? = null
+    private var prepareStarted = false
+
+    private var playing by mutableStateOf(false)
+    private var loading by mutableStateOf(true)
+    private var status by mutableStateOf("")
+    private var posMs by mutableStateOf(0)
+    private var durMs by mutableStateOf(0)
+    private var seekFraction by mutableStateOf(0f)
     private var userSeeking = false
 
     private fun t(en: String, ar: String): String = Tr.pick(en, ar)
@@ -48,20 +62,6 @@ class VideoPlayerActivity : Activity() {
     private fun ms(v: Int): String {
         val s = v / 1000
         return String.format(java.util.Locale.US, "%d:%02d", s / 60, s % 60)
-    }
-
-    private val tick = object : Runnable {
-        override fun run() {
-            val p = player
-            if (p != null && ready) {
-                val d = try { p.duration } catch (e: Exception) { 0 }
-                val pos = try { p.currentPosition } catch (e: Exception) { 0 }
-                if (!userSeeking && d > 0) seek?.progress = (pos.toLong() * 1000 / d).toInt()
-                timeTv?.text = ms(pos) + " / " + ms(d)
-                playBtn?.setImageResource(if (p.isPlaying) R.drawable.ic_btn_pause else R.drawable.ic_btn_play)
-            }
-            ui.postDelayed(this, 250)
-        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -72,102 +72,125 @@ class VideoPlayerActivity : Activity() {
             return
         }
         encFile = File(path)
-        val r = FrameLayout(this)
-        r.setBackgroundColor(0xFF000000.toInt())
-        root = r
+        status = t("Preparing the video...", "جارٍ تجهيز الفيديو...")
+        setContent { VideoScreen() }
+    }
 
-        val sv = SurfaceView(this)
-        surface = sv
-        r.addView(sv, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT, Gravity.CENTER))
-
-        val pb = ProgressBar(this)
-        loading = pb
-        r.addView(pb, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
-
-        val st = TextView(this).apply {
-            textSize = 14f
-            setTextColor(0xFFFFFFFF.toInt())
-            text = t("Preparing the video...", "جارٍ تجهيز الفيديو...")
-            setPadding(dp(16), dp(16), dp(16), dp(16))
-        }
-        status = st
-        r.addView(st, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.START))
-
-        // bottom bar: play/pause, seek bar with time, share, save
-        val bar = LinearLayout(this)
-        bar.orientation = LinearLayout.HORIZONTAL
-        bar.gravity = Gravity.CENTER_VERTICAL
-        bar.background = Look.glass(this, 22, 0xB3000000.toInt())
-        bar.setPadding(dp(10), dp(8), dp(10), dp(8))
-
-        val play = ImageButton(this).apply {
-            setImageResource(R.drawable.ic_btn_play)
-            setColorFilter(0xFFFFFFFF.toInt())
-            background = null
-            contentDescription = t("Play or pause", "تشغيل أو إيقاف")
-            setOnClickListener { togglePlay() }
-        }
-        playBtn = play
-        bar.addView(play, LinearLayout.LayoutParams(dp(52), dp(52)))
-
-        val sb = SeekBar(this).apply {
-            max = 1000
-            val accent = android.content.res.ColorStateList.valueOf(Themes.current().accent)
-            progressTintList = accent
-            thumbTintList = accent
-            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(s: SeekBar?, progress: Int, fromUser: Boolean) {}
-                override fun onStartTrackingTouch(s: SeekBar?) { userSeeking = true }
-                override fun onStopTrackingTouch(s: SeekBar?) {
-                    userSeeking = false
-                    val p = player ?: return
-                    val d = try { p.duration } catch (e: Exception) { 0 }
-                    if (ready && d > 0) p.seekTo((d.toLong() * (s?.progress ?: 0) / 1000).toInt())
-                }
-            })
-        }
-        seek = sb
-        bar.addView(sb, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-
-        val time = TextView(this).apply {
-            textSize = 12f
-            setTextColor(0xFFFFFFFF.toInt())
-            textSize = 13f
-            text = "0:00 / 0:00"
-            setPadding(dp(8), 0, dp(8), 0)
-        }
-        timeTv = time
-        bar.addView(time)
-
-        bar.addView(ImageButton(this).apply {
-            setImageResource(R.drawable.ic_share)
-            setColorFilter(0xFFFFFFFF.toInt())
-            background = null
-            contentDescription = t("Share", "مشاركة")
-            setOnClickListener { exportVideo(share = true) }
-        }, LinearLayout.LayoutParams(dp(48), dp(48)).apply { marginStart = dp(6) })
-
-        bar.addView(ImageButton(this).apply {
-            setImageResource(R.drawable.ic_save)
-            setColorFilter(0xFFFFFFFF.toInt())
-            background = null
-            contentDescription = t("Save to gallery", "حفظ في المعرض")
-            setOnClickListener { exportVideo(share = false) }
-        }, LinearLayout.LayoutParams(dp(48), dp(48)).apply { marginStart = dp(6) })
-
-        r.addView(bar, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM))
-        setContentView(r)
-        Fx.feedbackAll(r)
-
-        sv.holder.addCallback(object : SurfaceHolder.Callback {
-            override fun surfaceCreated(holder: SurfaceHolder) {
-                if (player != null || clear != null) return
-                Thread { prepare(holder) }.start()
+    @Composable
+    private fun VideoScreen() {
+        val accent = Color(Themes.current().accent)
+        LaunchedEffect(Unit) {
+            while (true) {
+                delay(250)
+                tickPlayer()
             }
-            override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {}
-            override fun surfaceDestroyed(holder: SurfaceHolder) {}
-        })
-        ui.post(tick)
+        }
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+                .systemBarsPadding()
+        ) {
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                AndroidView(
+                    factory = { c ->
+                        SurfaceView(c).also { sv ->
+                            sv.holder.addCallback(object : SurfaceHolder.Callback {
+                                override fun surfaceCreated(holder: SurfaceHolder) {
+                                    if (player != null || clear != null || prepareStarted) return
+                                    prepareStarted = true
+                                    Thread { prepare(holder) }.start()
+                                }
+                                override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {}
+                                override fun surfaceDestroyed(holder: SurfaceHolder) {}
+                            })
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+                if (loading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.Center),
+                        color = Color.White
+                    )
+                }
+                if (status.isNotEmpty()) {
+                    Text(
+                        status,
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        modifier = Modifier.align(Alignment.TopStart).padding(16.dp)
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xB3000000))
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = { togglePlay() }) {
+                    Icon(
+                        painter = painterResource(if (playing) R.drawable.ic_btn_pause else R.drawable.ic_btn_play),
+                        contentDescription = t("Play or pause", "تشغيل أو إيقاف"),
+                        tint = Color.White
+                    )
+                }
+                Slider(
+                    value = seekFraction,
+                    onValueChange = {
+                        userSeeking = true
+                        seekFraction = it
+                    },
+                    onValueChangeFinished = {
+                        seekTo(seekFraction)
+                        userSeeking = false
+                    },
+                    colors = SliderDefaults.colors(thumbColor = accent, activeTrackColor = accent),
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    ms(posMs) + " / " + ms(durMs),
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                )
+                IconButton(onClick = { exportVideo(share = true) }) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_share),
+                        contentDescription = t("Share", "مشاركة"),
+                        tint = Color.White
+                    )
+                }
+                IconButton(onClick = { exportVideo(share = false) }) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_save),
+                        contentDescription = t("Save to gallery", "حفظ في المعرض"),
+                        tint = Color.White
+                    )
+                }
+            }
+        }
+    }
+
+    /** Runs on the UI thread every 250 ms: keeps the time, the slider and the play icon in step. */
+    private fun tickPlayer() {
+        val p = player ?: return
+        if (!ready) return
+        val d = try { p.duration } catch (e: Exception) { 0 }
+        val pos = try { p.currentPosition } catch (e: Exception) { 0 }
+        durMs = d
+        posMs = pos
+        if (!userSeeking && d > 0) seekFraction = pos.toFloat() / d
+        playing = try { p.isPlaying } catch (e: Exception) { false }
+    }
+
+    private fun seekTo(fraction: Float) {
+        val p = player ?: return
+        val d = try { p.duration } catch (e: Exception) { 0 }
+        if (ready && d > 0) p.seekTo((d * fraction).toInt().coerceIn(0, d))
     }
 
     private fun prepare(holder: SurfaceHolder) {
@@ -175,8 +198,8 @@ class VideoPlayerActivity : Activity() {
         val ok = VideoVault.decryptFile(encFile ?: return, out)
         runOnUiThread {
             if (!ok) {
-                loading?.visibility = View.GONE
-                status?.text = t("This video could not be opened.", "تعذّر فتح هذا الفيديو.")
+                loading = false
+                status = t("This video could not be opened.", "تعذّر فتح هذا الفيديو.")
                 return@runOnUiThread
             }
             clear = out
@@ -184,47 +207,32 @@ class VideoPlayerActivity : Activity() {
                 val mp = MediaPlayer()
                 mp.setDataSource(out.absolutePath)
                 mp.setDisplay(holder)
+                mp.setVideoScalingMode(MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT)
                 mp.setOnPreparedListener {
                     Diag.i("Video playing: " + it.videoWidth + "x" + it.videoHeight + ", " + it.duration + " ms")
                     ready = true
-                    loading?.visibility = View.GONE
-                    status?.text = ""
-                    fitPicture(it.videoWidth, it.videoHeight)
+                    loading = false
+                    status = ""
                     startPlayback()
                 }
                 mp.setOnCompletionListener {
                     window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-                    playBtn?.setImageResource(R.drawable.ic_btn_play)
-                    status?.text = t("Finished", "انتهى")
+                    playing = false
+                    status = t("Finished", "انتهى")
                 }
                 mp.setOnErrorListener { _, what, extra ->
                     Diag.i("Video playback error: what=" + what + ", extra=" + extra)
-                    loading?.visibility = View.GONE
-                    status?.text = t("Playback error.", "خطأ في التشغيل.")
+                    loading = false
+                    status = t("Playback error.", "خطأ في التشغيل.")
                     true
                 }
                 mp.prepareAsync()
                 player = mp
             } catch (e: Exception) {
                 Diag.i("Video playback problem: " + e.message)
-                loading?.visibility = View.GONE
-                status?.text = t("This video could not be played.", "تعذّر تشغيل هذا الفيديو.")
+                loading = false
+                status = t("This video could not be played.", "تعذّر تشغيل هذا الفيديو.")
             }
-        }
-    }
-
-    /** Keeps the whole picture visible with its own proportions (black edges where needed). */
-    private fun fitPicture(vw: Int, vh: Int) {
-        val r = root ?: return
-        val sv = surface ?: return
-        if (vw <= 0 || vh <= 0) return
-        r.post {
-            val aw = r.width.toFloat()
-            val ah = (r.height - dp(72)).toFloat().coerceAtLeast(1f)
-            val scale = minOf(aw / vw, ah / vh)
-            val w = (vw * scale).toInt()
-            val h = (vh * scale).toInt()
-            sv.layoutParams = FrameLayout.LayoutParams(w, h, Gravity.CENTER).apply { bottomMargin = dp(72) }
         }
     }
 
@@ -232,7 +240,7 @@ class VideoPlayerActivity : Activity() {
         val p = player ?: return
         p.start()
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        playBtn?.setImageResource(R.drawable.ic_btn_pause)
+        playing = true
     }
 
     private fun togglePlay() {
@@ -241,9 +249,10 @@ class VideoPlayerActivity : Activity() {
         if (p.isPlaying) {
             p.pause()
             window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            status?.text = t("Paused", "متوقف مؤقتاً")
+            playing = false
+            status = t("Paused", "متوقف مؤقتاً")
         } else {
-            status?.text = ""
+            status = ""
             startPlayback()
         }
     }
@@ -257,11 +266,11 @@ class VideoPlayerActivity : Activity() {
         super.onPause()
         try { player?.pause() } catch (_: Exception) {}
         window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        playing = false
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        ui.removeCallbacks(tick)
         try { player?.release() } catch (_: Exception) {}
         player = null
         clear?.delete()

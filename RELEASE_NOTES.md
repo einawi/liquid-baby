@@ -1,3 +1,7 @@
+0.9.59 (build 140): the video player is now built with Compose: the picture on top, and a fixed control bar (play, seek, time, share, save) below. Playback is unchanged.
+
+0.9.59 (build 140): مشغّل الفيديو مبني الآن بـ Compose: الصورة في الأعلى، وشريط تحكم ثابت في الأسفل (تشغيل، وتقدّم، ووقت، ومشاركة، وحفظ). التشغيل كما هو.
+
 0.9.59 (build 139): Settings is now built with real Compose (language, mode, themes, sound visuals, alerts, advanced options, PIN and restore), with the same behavior.
 
 0.9.59 (build 139): شاشة الإعدادات مبنية الآن بـ Compose فعلياً (اللغة، والوضع، والسمات، وشكل الصوت، والتنبيهات، والخيارات المتقدمة، والرمز، والاستعادة)، بنفس السلوك.
