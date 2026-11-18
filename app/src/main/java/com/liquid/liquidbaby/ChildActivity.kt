@@ -1,9 +1,8 @@
 package com.liquid.liquidbaby
 
 import android.Manifest
-import android.animation.ObjectAnimator
-import android.app.Activity
 import android.app.AlertDialog
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -15,31 +14,35 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 
-/** Child screen: one status card, the monitoring switch, and the parent phones it serves. */
-class ChildActivity : Activity() {
+/** Child screen: the status card, the monitoring switch and the parent phones it serves. Compose hosts the layout. */
+class ChildActivity : ComponentActivity() {
 
     private val ui = Handler(Looper.getMainLooper())
     private var builtAr: Boolean? = null
-    private var pulse: ObjectAnimator? = null
     private var dialogShown = false
     private var dark: View? = null
     private var lastParentCount = -1
     private var entered = false
 
-    private var statusPill: TextView? = null
-    private var mainBtn: Button? = null
-    private var vpnBtn: Button? = null
-    private var camBtn: Button? = null
-    private var hero: TextView? = null
-    private var heroSub: TextView? = null
-    private var addressLine: TextView? = null
+    private val state = ChildHomeState()
     private var meter: ProgressBar? = null
     private var soundVisual: SoundVisual? = null
-    private var pairBtn: Button? = null
-    private var pairNote: TextView? = null
-    private var infoLine: TextView? = null
-    private var batteryWarn: TextView? = null
     private var listBox: LinearLayout? = null
 
     private val tick = object : Runnable {
@@ -49,92 +52,81 @@ class ChildActivity : Activity() {
         }
     }
 
+    /** Classic views shown inside the Compose home. Each factory stores its view so refresh() can update it. */
+    private val views = ChildViews(
+        meter = { ctx ->
+            ProgressBar(ctx, null, android.R.attr.progressBarStyleHorizontal).apply {
+                max = 100
+                visibility = View.GONE
+            }.also { meter = it }
+        },
+        sound = { ctx -> SoundVisual(ctx).also { soundVisual = it } },
+        parents = { ctx -> buildParentsBox(ctx) }
+    )
+
     private fun t(en: String, ar: String): String = Tr.pick(en, ar)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        build()
-    }
-
-    private fun build() {
         val t0 = System.nanoTime()
         builtAr = Tr.isAr()
-        pulse?.cancel()
-        pulse = null
-        screen {
-            addTitle(t("Child", "وحدة الطفل"))
-            statusPill = addChip("")
-            vpnBtn = addButton(t("VPN is blocking the connection: open VPN settings", "الـ VPN يمنع الاتصال: افتح إعدادات الـ VPN")) {
-                openVpnSettings()
-            }
-            vpnBtn?.visibility = View.GONE
-
-            card {
-                hero = TextView(context).apply {
-                    textSize = 22f
-                    setTextColor(Look.TEXT)
-                    setTypeface(typeface, android.graphics.Typeface.BOLD)
-                }
-                addView(hero)
-                heroSub = line("")
-                addressLine = line("")
-                meter = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
-                    max = 100
-                }
-                addView(meter, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(14)).apply {
-                    topMargin = dp(12)
-                })
-                meter?.visibility = View.GONE
-                soundVisual = SoundVisual(context)
-                addView(soundVisual, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(70)).apply {
-                    topMargin = dp(12)
-                })
-                line(t("Sound in the room", "صوت الغرفة"), 13f)
-            }
-
-            mainBtn = addButton(t("Start monitoring", "ابدأ المراقبة")) { toggle() }
-            Fx.press(mainBtn!!)
-
-            camBtn = addButton(t("Allow the camera (needed for the live camera)", "اسمح بالكاميرا (لازمة للكاميرا المباشرة)")) {
-                requestPermissions(arrayOf(Manifest.permission.CAMERA), 21)
-            }
-            camBtn?.visibility = View.GONE
-
-            card {
-                pairNote = line(t("Let a parent phone pair with this phone for 2 minutes.",
-                    "اسمح لجوال أبوين بالاقتران مع هذا الجوال لمدة دقيقتين."))
-                pairBtn = addButton(t("Allow a new parent phone to pair", "السماح بإقران جوال أبوين جديد")) { allowPairing() }
-            }
-
-            sectionLabel(t("Paired parent phones", "جوالات الأبوين المقترنة"))
-            val box = LinearLayout(context)
-            box.orientation = LinearLayout.VERTICAL
-            addView(box)
-            listBox = box
-
-            sectionLabel(t("Options", "خيارات"))
-            addButton(t("Dark screen (touch to wake)", "شاشة مطفأة (المس للعودة)")) { showDark() }
-            addButton(t("Keep running: battery settings", "البقاء في الخلفية: إعدادات البطارية")) {
-                try {
-                    startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
-                } catch (e: Exception) {
-                    toast(t("Turn battery optimization off for Liquid Baby in phone settings.",
-                        "أوقف تحسين البطارية لتطبيق Liquid Baby من إعدادات الجوال."))
-                }
-            }
-            batteryWarn = line(t("Keep this phone on the charger and on the same Wi-Fi as the parent phones.",
-                "خلّ هذا الجوال على الشاحن وعلى نفس الواي فاي مع جوالات الأبوين."))
-        }
-        fillParents()
-        refresh()
+        setContent { ChildRoot() }
         entered = true
         Diag.limited("buildChild", "Child screen built in ${(System.nanoTime() - t0) / 1_000_000} ms", 60_000L)
+    }
+
+    @Composable
+    private fun ChildRoot() {
+        val dir = if (Tr.isAr()) LayoutDirection.Rtl else LayoutDirection.Ltr
+        CompositionLocalProvider(LocalLayoutDirection provides dir) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .systemBarsPadding()
+                    .verticalScroll(rememberScrollState())
+                    .padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                ChildHomeTop(
+                    state = state,
+                    views = views,
+                    onMain = { toggle() },
+                    onVpn = { openVpnSettings() },
+                    onCam = { requestPermissions(arrayOf(Manifest.permission.CAMERA), 21) },
+                    onPair = { allowPairing() },
+                    onDark = { showDark() },
+                    onBattery = { openBatterySettings() }
+                )
+            }
+        }
+    }
+
+    /** The paired parent phones list, built as classic views. */
+    private fun buildParentsBox(ctx: Context): View {
+        val box = LinearLayout(ctx)
+        box.orientation = LinearLayout.VERTICAL
+        if (Tr.isAr()) box.layoutDirection = View.LAYOUT_DIRECTION_RTL
+        listBox = box
+        fillParents()
+        return box
+    }
+
+    private fun openBatterySettings() {
+        try {
+            startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+        } catch (e: Exception) {
+            toast(t("Turn battery optimization off for Liquid Baby in phone settings.",
+                "أوقف تحسين البطارية لتطبيق Liquid Baby من إعدادات الجوال."))
+        }
     }
 
     override fun onResume() {
         super.onResume()
         overridePendingTransition(R.anim.screen_in, R.anim.screen_out)
-        if (builtAr != Tr.isAr()) build()
+        if (builtAr != Tr.isAr()) {
+            recreate()
+            return
+        }
         ChildEngine.onChange = { runOnUiThread { refresh() } }
         if (Prefs.getBool("serviceWanted", false) && !ChildEngine.running &&
             checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
@@ -182,7 +174,7 @@ class ChildActivity : Activity() {
 
     private fun ignoringBattery(): Boolean {
         return try {
-            val pm = getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager
+            val pm = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
             pm.isIgnoringBatteryOptimizations(packageName)
         } catch (e: Exception) {
             true
@@ -268,61 +260,53 @@ class ChildActivity : Activity() {
         Fx.feedbackAll(box)
     }
 
+    /** Writes the current values into the Compose state and the classic views. Runs every second. */
     private fun refresh() {
         val running = ChildEngine.running
         val connected = ChildEngine.connectedCount()
         val paired = lastParentCount.coerceAtLeast(0)
 
-        when {
-            !running -> Fx.animateChip(statusPill, t("Stopped", "متوقف"), 0xFF6B7785.toInt())
-            connected > 0 -> Fx.animateChip(statusPill, t("Connected", "متصل"), 0xFF2E9E6A.toInt())
-            else -> Fx.animateChip(statusPill, t("Searching", "جارٍ البحث"), 0xFFB7791F.toInt())
+        val (label, color) = when {
+            !running -> Pair(t("Stopped", "متوقف"), 0xFF6B7785.toInt())
+            connected > 0 -> Pair(t("Connected", "متصل"), 0xFF2E9E6A.toInt())
+            else -> Pair(t("Searching", "جارٍ البحث"), 0xFFB7791F.toInt())
         }
-        if (running) {
-            if (pulse == null) statusPill?.let { pulse = Fx.breathe(it) }
-        } else {
-            pulse?.cancel()
-            pulse = null
-            statusPill?.alpha = 1f
-        }
+        state.statusText = label
+        state.statusColor = color
+        state.running = running
 
-        hero?.text = when {
+        state.hero = when {
             !running -> t("Not listening", "غير مستمع")
             ChildEngine.talking -> t("A parent is talking", "أحد الأبوين يتحدث")
-            running && connected > 0 -> t("Listening, parent connected", "يستمع، والأب متصل")
+            connected > 0 -> t("Listening, parent connected", "يستمع، والأب متصل")
             else -> t("Listening", "يستمع")
         }
         val last = if (ChildEngine.lastClipMs > 0)
             java.text.DateFormat.getTimeInstance().format(java.util.Date(ChildEngine.lastClipMs)) else "--"
-        heroSub?.text = if (running) t(
+        state.heroSub = if (running) t(
             "Parents connected: $connected of $paired  ·  last clip $last",
             "الأبوين المتصلين: $connected من $paired  ·  آخر مقطع $last"
         ) else t("Tap Start monitoring to begin.", "اضغط ابدأ المراقبة للبدء.")
+        state.address = t("Wi-Fi address: ", "عنوان الواي فاي: ") + (Net.wifiIp(this) ?: "--")
+
         styleLevelMeter(meter)
         meter?.progress = ChildEngine.soundPercent()
         soundVisual?.setStyle(Prefs.getString("soundVisual", "wave"))
         soundVisual?.setLevel(ChildEngine.soundPercent())
-        addressLine?.text = t("Wi-Fi address: ", "عنوان الواي فاي: ") + (Net.wifiIp(this) ?: "--")
 
-        mainBtn?.text = if (running) t("Stop monitoring", "أوقف المراقبة") else t("Start monitoring", "ابدأ المراقبة")
-        mainBtn?.background = Look.glass(this, 22,
-            if (running) Look.BUTTON else Fx.tint(Themes.current().accent, 0x66))
-
-        vpnBtn?.visibility = if (Net.vpnBlocksLocal(this)) View.VISIBLE else View.GONE
-        val camOk = checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
-        camBtn?.visibility = if (camOk) View.GONE else View.VISIBLE
+        state.vpnWarn = Net.vpnBlocksLocal(this)
+        state.camNeeded = checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED
 
         val left = (ChildEngine.pairingUntil - System.currentTimeMillis()) / 1000
-        pairNote?.text = if (left > 0)
+        state.pairNote = if (left > 0)
             t("Pairing is open for $left more seconds.", "الإقران مفتوح لمدة $left ثانية أخرى.")
         else t("Let a parent phone pair with this phone for 2 minutes.", "اسمح لجوال أبوين بالاقتران مع هذا الجوال لمدة دقيقتين.")
 
-        batteryWarn?.text = if (ignoringBattery())
+        state.batteryWarn = if (ignoringBattery())
             t("Keep this phone on the charger and on the same Wi-Fi as the parent phones.",
                 "خلّ هذا الجوال على الشاحن وعلى نفس الواي فاي مع جوالات الأبوين.")
         else t("Battery is restricted: the phone may stop monitoring. Tap 'Keep running' below.",
             "البطارية مقيّدة: قد يتوقف الجوال عن المراقبة. اضغط 'البقاء في الخلفية' بالأسفل.")
-
 
         val req = ChildEngine.pendingPair
         if (req != null && !dialogShown) {

@@ -1,3 +1,7 @@
+0.9.59 (build 130): the child home is now Compose. Monitoring, the sound meter, pairing, the parent list, the dark screen and the battery settings work as before. Test build.
+
+0.9.59 (build 130): الشاشة الرئيسية للطفل صارت بـ Compose. المراقبة ومؤشر الصوت والإقران وقائمة الأبوين والشاشة المطفأة وإعدادات البطارية تعمل كما كانت. بناء تجريبي.
+
 0.9.59 (build 129): fixed child phone recordings staying paused after a parent that was listening or watching disconnected.
 
 0.9.59 (build 129): إصلاح توقف تسجيلات جهاز الطفل بعد انقطاع وحدة الأبوين وهي تستمع أو تشاهد.
