@@ -1,3 +1,7 @@
+0.9.59 (build 127): first Compose screen (parent home) added to the build, the screens still look and behave as before. Test build.
+
+0.9.59 (build 127): أول شاشة بـ Compose (الشاشة الرئيسية للأب) أُضيفت إلى البناء، والشاشات ما زالت تبدو وتعمل كما كانت. بناء تجريبي.
+
 0.9.59 (build 126): preparation for the new interface (Jetpack Compose). The screens look and behave exactly as before.
 
 0.9.59 (build 126): تجهيز الواجهة الجديدة (Jetpack Compose). الشاشات تبدو وتعمل تماماً كما كانت.
