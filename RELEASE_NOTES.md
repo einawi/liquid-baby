@@ -1,3 +1,7 @@
+0.9.59 (build 126): preparation for the new interface (Jetpack Compose). The screens look and behave exactly as before.
+
+0.9.59 (build 126): تجهيز الواجهة الجديدة (Jetpack Compose). الشاشات تبدو وتعمل تماماً كما كانت.
+
 0.9.58 (build 125): liquid glass look. The background shows soft pools of the theme's colours drifting slowly, and the glass cards have a light highlight at the top.
 
 0.9.58 (build 125): شكل الزجاج السائل. الخلفية تُظهر بقعاً ناعمة من ألوان السمة تتحرك ببطء، والبطاقات الزجاجية فيها لمعة خفيفة أعلاها.
