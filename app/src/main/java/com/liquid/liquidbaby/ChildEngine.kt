@@ -481,7 +481,8 @@ object ChildEngine {
         (if (viewFlash) 1 else 0).toByte(),
         (if (streamer?.hasFlash == true) 1 else 0).toByte(),
         viewers.size.toByte(),
-        (if (viewNight) 1 else 0).toByte()
+        (if (viewNight) 1 else 0).toByte(),
+        (if (viewFlash) maxOf(1, streamer?.flashLevel ?: 1) else 0).toByte()
     )
 
     private fun broadcastViewState() {

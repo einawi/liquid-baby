@@ -1,0 +1,56 @@
+package com.liquid.liquidbaby
+
+import android.app.Activity
+import android.content.Context
+import android.content.res.Configuration
+import android.os.Build
+import android.view.View
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+
+/**
+ * Compose page for a classic screen: Compose provides the scrolling, the system-bar padding and the
+ * text direction; the screen's own views are built inside by makeRoot.
+ */
+@Composable
+fun ClassicPage(makeRoot: (Context) -> View) {
+    val dir = if (Tr.isAr()) LayoutDirection.Rtl else LayoutDirection.Ltr
+    CompositionLocalProvider(LocalLayoutDirection provides dir) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .systemBarsPadding()
+                .verticalScroll(rememberScrollState())
+                .padding(18.dp)
+        ) {
+            AndroidView(factory = makeRoot, modifier = Modifier.fillMaxWidth())
+        }
+    }
+}
+
+/** Same background, blur and night-mode setup the classic screens used. */
+fun Activity.applyLookTo() {
+    val nightBits = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+    Themes.systemDark = nightBits == Configuration.UI_MODE_NIGHT_YES
+    val blur = Build.VERSION.SDK_INT >= 31 && Themes.current().blur > 0
+    window.setBackgroundDrawable(Look.background(if (blur) 210 else 255))
+    if (blur) {
+        try {
+            window.setBackgroundBlurRadius(Themes.current().blur)
+        } catch (e: Throwable) {
+            Diag.i("Window blur not available: " + e.message)
+        }
+    }
+}

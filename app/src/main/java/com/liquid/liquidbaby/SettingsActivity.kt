@@ -12,7 +12,9 @@ import android.view.View
 
 import android.view.Gravity
 
-import android.app.Activity
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import android.view.View
 import android.app.AlertDialog
 import android.content.ClipboardManager
 import android.content.Context
@@ -24,25 +26,40 @@ import android.text.InputType
 import android.widget.EditText
 
 /** Settings in three groups: appearance and language, alerts, and advanced. */
-class SettingsActivity : Activity() {
+class SettingsActivity : ComponentActivity() {
+
+    private var root: LinearLayout? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         overridePendingTransition(R.anim.screen_in, R.anim.screen_out)
-        build()
+        applyLookTo()
+        setContent {
+            ClassicPage { ctx ->
+                LinearLayout(ctx).apply {
+                    orientation = LinearLayout.VERTICAL
+                    if (Tr.isAr()) layoutDirection = View.LAYOUT_DIRECTION_RTL
+                }.also {
+                    root = it
+                    build()
+                }
+            }
+        }
     }
 
     private fun t(en: String, ar: String): String = Tr.pick(en, ar)
 
     private fun build() {
-        screen {
+        val r = root ?: return
+        r.removeAllViews()
+        r.apply {
             addTitle(t("Settings", "الإعدادات"))
 
             sectionLabel(t("Appearance and language", "المظهر واللغة"))
             card(14) {
                 addButton(if (Tr.isAr()) "اللغة: العربية (اضغط للتغيير)" else "Language: English (tap to change)") {
                     Tr.toggle()
-                    build()
+                    recreate()
                 }
                 addBody(t("Mode", "الوضع"))
                 for (m in listOf("system", "dark", "light")) {

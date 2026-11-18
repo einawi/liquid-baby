@@ -1,16 +1,33 @@
 package com.liquid.liquidbaby
 
-import android.app.Activity
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import android.view.View
+import android.widget.LinearLayout
 import android.os.Bundle
 
 /** Diagnostics: filter the log, and copy or share it with secrets removed. */
-class DiagnosticsActivity : Activity() {
+class DiagnosticsActivity : ComponentActivity() {
+
+    private var root: LinearLayout? = null
 
     private var filter = "all"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        build()
+        applyLookTo()
+        applyLookTo()
+        setContent {
+            ClassicPage { ctx ->
+                LinearLayout(ctx).apply {
+                    orientation = LinearLayout.VERTICAL
+                    if (Tr.isAr()) layoutDirection = View.LAYOUT_DIRECTION_RTL
+                }.also {
+                    root = it
+                    build()
+                }
+            }
+        }
     }
 
     private fun t(en: String, ar: String): String = Tr.pick(en, ar)
@@ -27,7 +44,9 @@ class DiagnosticsActivity : Activity() {
 
     private fun build() {
         val log = filtered(Diag.readTail(30_000))
-        screen {
+        val r = root ?: return
+        r.removeAllViews()
+        r.apply {
             addTitle(t("Diagnostics", "التشخيص"))
             addBody(t("Last errors and crashes. Secrets are removed before you copy or share.",
                 "آخر الأخطاء والأعطال. تُحذف الأسرار قبل النسخ أو المشاركة."))

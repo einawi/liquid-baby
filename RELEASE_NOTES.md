@@ -1,3 +1,11 @@
+0.9.59 (build 133): Settings, Diagnostics and App updates now run inside the Compose page host. Their content and behavior are unchanged.
+
+0.9.59 (build 133): شاشات الإعدادات والتشخيص والتحديثات صارت تعمل داخل الإطار الجديد بـ Compose. المحتوى والسلوك كما هما.
+
+0.9.59 (build 132): flash on the live camera: one tap turns it on or off, a long press chooses the strength. The parent and the child now share the same flash level.
+
+0.9.59 (build 132): الفلاش في الكاميرا المباشرة: لمسة تشغّل أو تطفئ، واللمسة الطويلة تختار الشدة. الأب والطفل صار عندهما نفس مستوى الفلاش.
+
 0.9.59 (build 131): build fix for the child home (permission answers now use the Activity Result API).
 
 0.9.59 (build 131): إصلاح بناء الشاشة الرئيسية للطفل (نتائج الصلاحيات صارت تستخدم Activity Result API).

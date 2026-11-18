@@ -1,6 +1,9 @@
 package com.liquid.liquidbaby
 
-import android.app.Activity
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import android.view.View
+import android.widget.LinearLayout
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -8,7 +11,9 @@ import android.os.Bundle
 import android.provider.Settings
 import android.widget.TextView
 
-class UpdatesActivity : Activity() {
+class UpdatesActivity : ComponentActivity() {
+
+    private var root: LinearLayout? = null
 
     private var statusView: TextView? = null
     private var message = ""
@@ -16,7 +21,19 @@ class UpdatesActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        build()
+        applyLookTo()
+        applyLookTo()
+        setContent {
+            ClassicPage { ctx ->
+                LinearLayout(ctx).apply {
+                    orientation = LinearLayout.VERTICAL
+                    if (Tr.isAr()) layoutDirection = View.LAYOUT_DIRECTION_RTL
+                }.also {
+                    root = it
+                    build()
+                }
+            }
+        }
     }
 
     override fun onResume() {
@@ -32,7 +49,9 @@ class UpdatesActivity : Activity() {
     private fun build() {
         val local = AppInfo.versionCode(this)
         val info = Updater.cached()
-        screen {
+        val r = root ?: return
+        r.removeAllViews()
+        r.apply {
             addTitle("App updates")
             addBody("Installed: " + AppInfo.versionName(this@UpdatesActivity) + " (build " + local + ")")
             statusView = addBody(message)

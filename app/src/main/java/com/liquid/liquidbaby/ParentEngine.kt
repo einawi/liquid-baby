@@ -410,6 +410,8 @@ object ParentEngine {
                         viewHasFlash = m.data[3].toInt() == 1
                         viewers = m.data[4].toInt()
                         viewNight = m.data.size > 5 && m.data[5].toInt() == 1
+                        // The child reports the real flash level too, so the parent never disagrees with it.
+                        if (m.data.size >= 7) viewFlashLevel = if (viewFlash) m.data[6].toInt().coerceIn(1, 3) else 0
                         changed()
                     }
                     T.VIEW_ERROR -> {
