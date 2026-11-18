@@ -219,7 +219,7 @@ class SoundVisual(ctx: Context) : View(ctx) {
                 fill.clearShadowLayer()
             }
             "orb" -> {
-                val r = (8f + level * 18f + kotlin.math.sin(phase * 2f) * 1.2f * (0.2f + level)) * dpi
+                val r = (16f + level * 22f + kotlin.math.sin(phase * 2f) * 1.5f * (0.2f + level)) * dpi
                 val col = mix(level)
                 fill.color = col
                 fill.alpha = 217

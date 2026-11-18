@@ -90,6 +90,10 @@ fun Activity.screen(build: LinearLayout.() -> Unit) {
         insets
     }
     setContentView(sv)
+    // keep the scroll position when the screen is rebuilt (for example after a choice in Settings)
+    val screenKey = javaClass.name
+    sv.setOnScrollChangeListener { _, _, y, _, _ -> scrollMemory[screenKey] = y }
+    sv.post { sv.scrollTo(0, scrollMemory[screenKey] ?: 0) }
     Fx.feedbackAll(sv)
     // Blur only AFTER the window exists (setting it earlier caused a null-window crash on Android 12+).
     if (blur) {
@@ -262,3 +266,6 @@ fun Context.openVpnSettings() {
         toast("Open the phone settings and turn the VPN off.")
     }
 }
+
+/** Last scroll position of each screen, so a rebuild does not jump back to the top. */
+private val scrollMemory = HashMap<String, Int>()

@@ -1,3 +1,7 @@
+0.9.57 (build 124): Settings keeps its scroll position when you choose something (no more jumping to the top). The glowing orb on the home screen is larger.
+
+0.9.57 (build 124): شاشة الإعدادات تحافظ على موضع التمرير عند الاختيار (بلا قفز للأعلى). الكرة المتوهجة في الشاشة الرئيسية أكبر.
+
 0.9.56 (build 123): six new looks (Midnight, Aurora, Sunset, Rose, Forest, Graphite), each in dark and light, shown as swatches in Settings. The background drifts slowly with the theme colours.
 
 0.9.56 (build 123): ستة سمات جديدة (منتصف الليل، الشفق، الغروب، وردي، غابة، جرافيت) بالوضعين الداكن والفاتح، وتظهر دوائر في الإعدادات. الخلفية تتحرك ببطء بألوان السمة.
