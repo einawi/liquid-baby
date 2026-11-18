@@ -1,3 +1,7 @@
+0.9.59 (build 131): build fix for the child home (permission answers now use the Activity Result API).
+
+0.9.59 (build 131): إصلاح بناء الشاشة الرئيسية للطفل (نتائج الصلاحيات صارت تستخدم Activity Result API).
+
 0.9.59 (build 130): the child home is now Compose. Monitoring, the sound meter, pairing, the parent list, the dark screen and the battery settings work as before. Test build.
 
 0.9.59 (build 130): الشاشة الرئيسية للطفل صارت بـ Compose. المراقبة ومؤشر الصوت والإقران وقائمة الأبوين والشاشة المطفأة وإعدادات البطارية تعمل كما كانت. بناء تجريبي.

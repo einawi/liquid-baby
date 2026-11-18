@@ -16,6 +16,7 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -44,6 +45,11 @@ class ChildActivity : ComponentActivity() {
     private var meter: ProgressBar? = null
     private var soundVisual: SoundVisual? = null
     private var listBox: LinearLayout? = null
+
+    /** Permission answers arrive here; ComponentActivity no longer delivers onRequestPermissionsResult. */
+    private val permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        onPermissionsAnswered()
+    }
 
     private val tick = object : Runnable {
         override fun run() {
@@ -92,7 +98,7 @@ class ChildActivity : ComponentActivity() {
                     views = views,
                     onMain = { toggle() },
                     onVpn = { openVpnSettings() },
-                    onCam = { requestPermissions(arrayOf(Manifest.permission.CAMERA), 21) },
+                    onCam = { permissionLauncher.launch(arrayOf(Manifest.permission.CAMERA)) },
                     onPair = { allowPairing() },
                     onDark = { showDark() },
                     onBattery = { openBatterySettings() }
@@ -148,15 +154,13 @@ class ChildActivity : ComponentActivity() {
             return
         }
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA), 20)
+            permissionLauncher.launch(arrayOf(Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA))
             return
         }
         UnitService.start(this)
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode != 20 && requestCode != 21) return
+    private fun onPermissionsAnswered() {
         val mic = checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
         if (!mic) {
             toast(t("The microphone permission is needed to listen to the child.",
