@@ -273,3 +273,6 @@ fun Context.openVpnSettings() {
 
 /** Last scroll position of each screen, so a rebuild does not jump back to the top. */
 private val scrollMemory = HashMap<String, Int>()
+
+/** Same as dp(v), under a name that Compose's dp import cannot shadow. */
+fun Context.dpInt(v: Int): Int = dp(v)

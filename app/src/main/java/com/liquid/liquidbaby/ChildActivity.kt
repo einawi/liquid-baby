@@ -242,7 +242,7 @@ class ChildActivity : ComponentActivity() {
                 b.isAllCaps = false
                 b.setTextColor(0xFFFF8A8A.toInt())
                 b.background = Look.glass(context, 18, 0x22FF5252)
-                b.minHeight = dp(44)
+                b.minHeight = dpInt(44)
                 b.setOnClickListener {
                     Dialogs.show(
                         this@ChildActivity,

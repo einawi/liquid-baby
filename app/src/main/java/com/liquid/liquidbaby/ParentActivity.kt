@@ -544,8 +544,8 @@ class ParentActivity : ComponentActivity(), MicHost {
             .setAdapter(object : android.widget.ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, items) {
                 override fun getView(position: Int, convertView: android.view.View?, parent: android.view.ViewGroup): android.view.View {
                     val v = super.getView(position, convertView, parent) as android.widget.TextView
-                    v.minHeight = dp(60)
-                    v.setPadding(dp(20), dp(14), dp(20), dp(14))
+                    v.minHeight = dpInt(60)
+                    v.setPadding(dpInt(20), dpInt(14), dpInt(20), dpInt(14))
                     v.textSize = 16f
                     return v
                 }

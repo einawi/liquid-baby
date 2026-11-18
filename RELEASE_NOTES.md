@@ -1,3 +1,7 @@
+0.9.7 (build 151): version renamed to 0.9.7. Build fix: the Compose dp import no longer clashes with the classic dp helper in the camera and other screens.
+
+0.9.7 (build 151): تغيير رقم الإصدار إلى 0.9.7. إصلاح البناء: استيراد dp من Compose لم يعد يتعارض مع دالة dp الكلاسيكية في الكاميرا وبقية الشاشات.
+
 0.9.59 (build 150): the parent screen's talk-to-child and talk-to-partner buttons are built with Compose, sharing one talk card with the Hold / Tap switch. The microphone request, the 60-second limit and the partner status notice work as before.
 
 0.9.59 (build 150): زرا الحديث مع الطفل ومع الشريك في شاشة الأب مبنيان الآن بـ Compose ببطاقة حديث مشتركة فيها مفتاح ضغط/نقرة. طلب الميكروفون والحد 60 ثانية وإشعار حالة الشريك تعمل كما كانت.

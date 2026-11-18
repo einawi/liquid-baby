@@ -66,6 +66,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import java.io.File
@@ -267,7 +268,7 @@ class CameraActivity : androidx.activity.ComponentActivity(), MicHost {
         b.setColorFilter(Look.TEXT)
         b.background = Look.glass(this, 25, Look.BUTTON)
         b.scaleType = ImageView.ScaleType.CENTER
-        b.setPadding(dp(12), dp(12), dp(12), dp(12))
+        b.setPadding(dpInt(12), dpInt(12), dpInt(12), dpInt(12))
         b.contentDescription = desc
         b.setOnClickListener { onTap() }
         b.setOnLongClickListener {

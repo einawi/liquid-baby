@@ -30,7 +30,7 @@ object Dialogs {
         val root = LinearLayout(activity)
         root.orientation = LinearLayout.VERTICAL
         root.background = Look.glass(activity, 22, Look.GLASS)
-        root.setPadding(dp(22), dp(20), dp(22), dp(16))
+        root.setPadding(dpInt(22), dpInt(20), dpInt(22), dpInt(16))
 
         val head = TextView(activity)
         head.text = title
@@ -45,7 +45,7 @@ object Dialogs {
             body.textSize = 14f
             body.setTextColor(Look.TEXT)
             body.alpha = 0.85f
-            body.setPadding(0, dp(12), 0, dp(4))
+            body.setPadding(0, dpInt(12), 0, dpInt(4))
             root.addView(body)
         }
 
@@ -56,13 +56,13 @@ object Dialogs {
             b.textSize = 15f
             b.setTextColor(Look.TEXT)
             b.background = Look.glass(activity, 16, Look.BUTTON)
-            b.minHeight = dp(52)
+            b.minHeight = dpInt(52)
             b.setOnClickListener {
                 d.dismiss()
                 action()
             }
             val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-            lp.topMargin = dp(10)
+            lp.topMargin = dpInt(10)
             root.addView(b, lp)
         }
 
