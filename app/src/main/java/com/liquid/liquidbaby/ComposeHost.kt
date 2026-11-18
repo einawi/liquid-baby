@@ -54,3 +54,34 @@ fun Activity.applyLookTo() {
         }
     }
 }
+
+/** A screen that can ask for the microphone and get the answer back through the Activity Result API. */
+interface MicHost {
+    fun askMic(onGranted: () -> Unit)
+}
+
+/** Holds one microphone request at a time: the callback runs only if the permission is granted. */
+class MicAsk(private val host: androidx.activity.ComponentActivity) : MicHost {
+    private var pending: (() -> Unit)? = null
+
+    private val launcher = host.registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        val callback = pending
+        pending = null
+        if (granted) {
+            callback?.invoke()
+        } else {
+            android.widget.Toast.makeText(
+                host,
+                Tr.pick("Allow the microphone to talk.", "اسمح بالميكروفون للتحدث."),
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    override fun askMic(onGranted: () -> Unit) {
+        pending = onGranted
+        launcher.launch(android.Manifest.permission.RECORD_AUDIO)
+    }
+}

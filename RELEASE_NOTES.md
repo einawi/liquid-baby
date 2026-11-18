@@ -1,3 +1,39 @@
+0.9.59 (build 150): the parent screen's talk-to-child and talk-to-partner buttons are built with Compose, sharing one talk card with the Hold / Tap switch. The microphone request, the 60-second limit and the partner status notice work as before.
+
+0.9.59 (build 150): زرا الحديث مع الطفل ومع الشريك في شاشة الأب مبنيان الآن بـ Compose ببطاقة حديث مشتركة فيها مفتاح ضغط/نقرة. طلب الميكروفون والحد 60 ثانية وإشعار حالة الشريك تعمل كما كانت.
+
+0.9.59 (build 149): the talk-to-child button in the live camera is built with Compose: hold or tap, the Hold / Tap switch in its corner, the 60-second limit in tap mode, and the microphone request. The parent screen's talk button is unchanged.
+
+0.9.59 (build 149): زر الحديث مع الطفل في الكاميرا المباشرة مبني بـ Compose: الضغط المطوّل أو النقر، ومفتاح ضغط/نقرة في الزاوية، والحد 60 ثانية في وضع النقر، وطلب الميكروفون. زر الحديث في شاشة الأب كما هو.
+
+0.9.59 (build 148): the live camera's full-screen view is built with Compose: pinch to zoom, rotate, back, and the bottom controls (flash, quality, sound, talk, night, frame rate, record). The camera now uses a single screen layer for full screen instead of a separate overlay.
+
+0.9.59 (build 148): عرض ملء الشاشة في الكاميرا المباشرة مبني بـ Compose: تكبير بإصبعين، وتدوير، ورجوع، والأزرار السفلية (الفلاش، والجودة، والصوت، والحديث، والليل، والفريمات، والتسجيل). صار ملء الشاشة طبقة واحدة داخل الشاشة بدل نافذة منفصلة.
+
+0.9.59 (build 147): the live camera's bottom bar is built with Compose (flash with tap and long press, camera switch, rotate, room sound, stop, and the notes). The talk button is unchanged.
+
+0.9.59 (build 147): الشريط السفلي للكاميرا المباشرة مبني بـ Compose (الفلاش باللمسة واللمسة الطويلة، وتبديل الكاميرا، والتدوير، وصوت الغرفة، والإيقاف، والملاحظات). زر الحديث كما هو.
+
+0.9.59 (build 146): the live camera's top area (title, picture, status, quality, night, record, frame rate and full screen) is built with Compose. The talk, flash, camera switch, rotate, room sound and stop controls are unchanged.
+
+0.9.59 (build 146): الجزء العلوي من الكاميرا المباشرة (العنوان والصورة والحالة والجودة والليل والتسجيل وعدد الفريمات وملء الشاشة) مبني بـ Compose. أزرار الحديث والفلاش وتبديل الكاميرا والتدوير وصوت الغرفة والإيقاف كما هي.
+
+0.9.59 (build 145): the parent screen's recordings list, settings and remove-pairing button are now built with real Compose. Play, delete, share, save and the settings sliders work as before.
+
+0.9.59 (build 145): قائمة التسجيلات والإعدادات وزر إلغاء الاقتران في شاشة الأب مبنية الآن بـ Compose فعلياً. التشغيل والحذف والمشاركة والحفظ ومنزلقات الإعدادات تعمل كما كانت.
+
+0.9.59 (build 144): added unit tests for PIN hashing, IPv4 entry and size formatting. They run with the release tests (testDebugUnitTest).
+
+0.9.59 (build 144): أضيفت اختبارات وحدات لتجزئة الرمز PIN، وإدخال عنوان IPv4، وتنسيق الحجم. تعمل مع اختبارات الإصدار (testDebugUnitTest).
+
+0.9.59 (build 143): the Lock screen and the start screen use real Compose. The start screen now shows the role buttons when no role is chosen. Update screen text is in Arabic and English. Added a pre-upload checklist.
+
+0.9.59 (build 143): شاشة القفل وشاشة البداية مبنيتان الآن بـ Compose فعلياً. تظهر أزرار اختيار الدور عند عدم اختيار دور. نصوص شاشة التحديثات بالعربية والإنجليزية. أضيفت قائمة تحقق قبل كل رفع.
+
+0.9.59 (build 142): every talk button (parent, partner and camera) asks for the microphone with the Activity Result API, and starts talking right after it is allowed.
+
+0.9.59 (build 142): كل أزرار الحديث (الأب والشريك والكاميرا) تطلب الميكروفون عبر Activity Result API، وتبدأ الحديث فور السماح به.
+
 0.9.59 (build 140): the video player is now built with Compose: the picture on top, and a fixed control bar (play, seek, time, share, save) below. Playback is unchanged.
 
 0.9.59 (build 140): مشغّل الفيديو مبني الآن بـ Compose: الصورة في الأعلى، وشريط تحكم ثابت في الأسفل (تشغيل، وتقدّم، ووقت، ومشاركة، وحفظ). التشغيل كما هو.

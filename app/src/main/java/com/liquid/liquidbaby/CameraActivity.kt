@@ -1,7 +1,7 @@
 package com.liquid.liquidbaby
 
 import android.app.AlertDialog
-import java.io.File
+import android.content.Context
 import android.content.pm.ActivityInfo
 import android.graphics.Bitmap
 import android.graphics.Color
@@ -16,21 +16,66 @@ import android.view.ScaleGestureDetector
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
-import android.widget.ArrayAdapter
 import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.Button
-import android.widget.Spinner
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
-import androidx.activity.compose.setContent
+import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button as ComposeButton
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color as ComposeColor
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** Parent unit: live camera. Normal view, and a separate full-screen layer with pinch zoom and icon controls. */
-class CameraActivity : androidx.activity.ComponentActivity() {
+class CameraActivity : androidx.activity.ComponentActivity(), MicHost {
+
+    private val mic = MicAsk(this)
+    override fun askMic(onGranted: () -> Unit) = mic.askMic(onGranted)
 
     private var hostRoot: LinearLayout? = null
 
@@ -38,7 +83,6 @@ class CameraActivity : androidx.activity.ComponentActivity() {
     private var picture: ImageView? = null
     private var fullPicture: ImageView? = null
     private var statusTv: TextView? = null
-    private var talk: TalkControl? = null
     private var soundBtn: Button? = null
     private var flashBtn: Button? = null
     private var switchBtn: Button? = null
@@ -82,130 +126,9 @@ class CameraActivity : androidx.activity.ComponentActivity() {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         applyLookTo()
-        setContent {
-            ClassicPage { ctx ->
-                LinearLayout(ctx).apply {
-                    orientation = LinearLayout.VERTICAL
-                    if (Tr.isAr()) layoutDirection = View.LAYOUT_DIRECTION_RTL
-                }.also {
-                    hostRoot = it
-                    buildCamera()
-                    refresh()
-                }
-            }
-        }
-    }
-
-    private fun buildCamera() {
-        val r = hostRoot ?: return
-        r.removeAllViews()
-        r.apply {
-            addTitle("Live camera")
-            val iv = ImageView(context)
-            iv.background = Look.glass(context, 18, Color.BLACK)
-            iv.clipToOutline = true
-            iv.scaleType = ImageView.ScaleType.FIT_CENTER
-            addView(iv, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(340)))
-            picture = iv
-            statusTv = addBody("")
-
-            // quality: four levels side by side; the chosen one has a tick
-            val row = LinearLayout(context)
-            row.orientation = LinearLayout.HORIZONTAL
-            for (q in 0..3) {
-                val b = Button(context)
-                b.isAllCaps = false
-                b.textSize = 13f
-                b.minHeight = dp(44)
-                b.setTextColor(Look.TEXT)
-                b.background = Look.glass(context, 14, Look.BUTTON)
-                b.setOnClickListener {
-                    ParentEngine.setView(q, ParentEngine.viewFront, ParentEngine.viewFlash)
-                    checkHeavy(q, ParentEngine.viewFps)
-                    refresh()
-                }
-                qualityBtns[q] = b
-                row.addView(b, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                    marginEnd = dp(4)
-                })
-            }
-            addView(row)
-
-            // the same talk control as the main screen
-            val tc = TalkControl(this@CameraActivity)
-            talk = tc
-            addView(tc.view, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-                topMargin = dp(12)
-            })
-
-            flashBtn = addButton(t("Flash", "الفلاش")) {
-                tapFlash()
-            }
-            flashBtn?.setOnLongClickListener {
-                showFlashChoice()
-                true
-            }
-            switchBtn = addButton(t("Switch camera", "تبديل الكاميرا")) {
-                ParentEngine.setView(ParentEngine.viewQuality, !ParentEngine.viewFront, false)
-            }
-            val controls = LinearLayout(context)
-            controls.orientation = LinearLayout.HORIZONTAL
-            controls.gravity = Gravity.CENTER
-            nightIcon = ImageButton(context).apply {
-                setImageResource(R.drawable.ic_night)
-                setColorFilter(Look.TEXT)
-                background = Look.glass(context, 18, Look.BUTTON)
-                setPadding(dp(12), dp(12), dp(12), dp(12))
-                contentDescription = t("Night mode", "وضع الليل")
-                setOnClickListener {
-                    cycleNight()
-                    refresh()
-                }
-            }
-            controls.addView(nightIcon, LinearLayout.LayoutParams(dp(52), dp(52)).apply { marginEnd = dp(16) })
-            recordIcon = ImageButton(context).apply {
-                setImageResource(R.drawable.ic_record)
-                background = Look.glass(context, 18, Look.BUTTON)
-                setPadding(dp(12), dp(12), dp(12), dp(12))
-                contentDescription = t("Record video", "تسجيل فيديو")
-                setOnClickListener { toggleRecording() }
-            }
-            controls.addView(recordIcon, LinearLayout.LayoutParams(dp(52), dp(52)).apply { marginEnd = dp(16) })
-            fpsSpinner = Spinner(context).apply {
-                adapter = ArrayAdapter(context, android.R.layout.simple_spinner_dropdown_item, (10..30).map { "$it fps" })
-                setSelection(ParentEngine.viewFps - 10, false)
-                onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                    override fun onItemSelected(p: AdapterView<*>?, v: View?, pos: Int, id: Long) {
-                        val fps = pos + 10
-                        if (fps != ParentEngine.viewFps) {
-                            ParentEngine.setFps(fps)
-                            checkHeavy(ParentEngine.viewQuality, fps)
-                        }
-                    }
-                    override fun onNothingSelected(p: AdapterView<*>?) {}
-                }
-            }
-            controls.addView(fpsSpinner, LinearLayout.LayoutParams(dp(112), dp(52)).apply { marginEnd = dp(16) })
-            controls.addView(Button(context).apply {
-                isAllCaps = false
-                text = t("Full screen", "ملء الشاشة")
-                setTextColor(Look.TEXT)
-                background = Look.glass(context, 22, Look.BUTTON)
-                setOnClickListener { enterFull() }
-            }, LinearLayout.LayoutParams(0, dp(52), 1f))
-            addView(controls, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-                topMargin = dp(14)
-                bottomMargin = dp(6)
-            })
-            addButton(t("Rotate the picture", "تدوير الصورة")) { ParentEngine.viewRotate = (ParentEngine.viewRotate + 1) and 3 }
-            soundBtn = addButton(t("Room sound", "صوت الغرفة")) {
-                ParentEngine.liveSound = !ParentEngine.liveSound
-                refresh()
-            }
-            addButton(t("Stop and close", "إيقاف وإغلاق")) { finish() }
-            addBody(t("Night mode: the picture is slower and brighter, which helps in a dark room but can blur fast movement. While someone watches, the child phone does not record clips. The live view stops by itself after 15 minutes, and the flash after 2 minutes.",
-                "وضع الليل: الصورة أبطأ وأسطع، يساعد في الغرفة المظلمة لكن قد يطمس الحركة السريعة. أثناء المشاهدة لا يسجل جوال الطفل مقاطع. يتوقف البث المباشر وحده بعد 15 دقيقة، والفلاش بعد دقيقتين."))
-        }
+        camState.pressMode = Prefs.getString("talkMode", "hold") == "press"
+        setContent { CameraPage() }
+        refresh()
     }
 
     override fun onResume() {
@@ -238,7 +161,7 @@ class CameraActivity : androidx.activity.ComponentActivity() {
         super.onPause()
         stopRecording()
         exitFull()
-        talk?.up()
+        talkUp()
         ui.removeCallbacks(tick)
         ParentEngine.frameListener = null
         ParentEngine.onChange = null
@@ -247,7 +170,7 @@ class CameraActivity : androidx.activity.ComponentActivity() {
 
     override fun onBackPressed() {
         when {
-            overlay != null -> exitFull()
+            camState.fullOpen -> exitFull()
             recorder != null -> Dialogs.show(
                 this,
                 t("Stop the recording and leave?", "إيقاف التسجيل والخروج؟"),
@@ -329,12 +252,11 @@ class CameraActivity : androidx.activity.ComponentActivity() {
 
     private fun updateRecordIcons() {
         val recording = recorder != null
+        camState.recording = recording
         val red = (0xAA shl 24) or 0xE53935
         val icon = if (recording) R.drawable.ic_stop_record else R.drawable.ic_record
         recordIcon?.setImageResource(icon)
         recordIcon?.background = Look.glass(this, 18, if (recording) red else Look.BUTTON)
-        fullRecord?.setImageResource(icon)
-        fullRecord?.background = Look.glass(this, 24, if (recording) red else Look.BUTTON)
     }
 
     // ---------- full-screen layer ----------
@@ -356,23 +278,20 @@ class CameraActivity : androidx.activity.ComponentActivity() {
     }
 
     private fun enterFull() {
-        if (overlay != null) return
-        val root = FrameLayout(this)
-        root.setBackgroundColor(Color.BLACK)
+        if (camState.fullOpen) return
+        camState.fullOpen = true
+        window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_FULLSCREEN or
+            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
+            View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+        refreshFull()
+    }
 
-        // the picture, zoomed by pinch only
-        val pic = ImageView(this)
-        pic.scaleType = ImageView.ScaleType.FIT_CENTER
-        pic.setBackgroundColor(Color.BLACK)
-        pic.setImageBitmap(latest)
-        pic.rotation = fullTurn * 90f
-        pic.scaleX = zoom
-        pic.scaleY = zoom
-        root.addView(pic, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-        fullPicture = pic
-
-        // the layer takes every touch: two fingers zoom, anything else does nothing
-        val detector = ScaleGestureDetector(this, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+    /** Two fingers zoom the picture, between 1x and 4x. */
+    private val fullDetector: ScaleGestureDetector by lazy {
+        ScaleGestureDetector(this, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
             override fun onScale(d: ScaleGestureDetector): Boolean {
                 val p = fullPicture ?: return true
                 zoom = (zoom * d.scaleFactor).coerceIn(1f, 4f)
@@ -383,75 +302,6 @@ class CameraActivity : androidx.activity.ComponentActivity() {
                 return true
             }
         })
-        root.setOnTouchListener { _, ev ->
-            if (ev.pointerCount >= 2 || ev.actionMasked == MotionEvent.ACTION_POINTER_UP) detector.onTouchEvent(ev)
-            true
-        }
-
-        // top: back and rotate
-        val back = iconButton(R.drawable.ic_back, t("Back", "رجوع")) { exitFull() }
-        root.addView(back, FrameLayout.LayoutParams(dp(52), dp(52), Gravity.TOP or Gravity.START).apply {
-            topMargin = dp(14); marginStart = dp(14)
-        })
-        val rotate = iconButton(R.drawable.ic_rotate, t("Rotate the picture", "تدوير الصورة")) {
-            fullTurn = (fullTurn + 1) and 3
-            fullPicture?.rotation = fullTurn * 90f
-        }
-        root.addView(rotate, FrameLayout.LayoutParams(dp(52), dp(52), Gravity.TOP or Gravity.END).apply {
-            topMargin = dp(14); marginEnd = dp(14)
-        })
-
-        // bottom: icons in one row
-        val bar = LinearLayout(this)
-        bar.orientation = LinearLayout.HORIZONTAL
-        bar.gravity = Gravity.CENTER
-        fullFlash = iconButton(R.drawable.ic_flash, t("Flash", "الفلاش")) {
-            tapFlash()
-        }
-        fullFlash?.setOnLongClickListener {
-            showFlashChoice()
-            true
-        }
-        bar.addView(fullFlash, barParams())
-        bar.addView(iconButton(R.drawable.ic_quality, t("Quality", "الجودة")) { chooseQuality() }, barParams())
-        fullSound = iconButton(R.drawable.ic_speaker, t("Room sound", "صوت الغرفة")) {
-            ParentEngine.liveSound = !ParentEngine.liveSound
-            refreshFull()
-        }
-        bar.addView(fullSound, barParams())
-        fullTalk = iconButton(R.drawable.ic_mic, t("Talk to the child", "التحدث مع الطفل")) { talk?.tap() }
-        bar.addView(fullTalk, barParams())
-        fullNight = iconButton(R.drawable.ic_night, t("Night mode", "وضع الليل")) {
-            cycleNight()
-            refreshFull()
-        }
-        bar.addView(fullNight, barParams())
-        bar.addView(iconButton(R.drawable.ic_fps, t("Frame rate", "معدل الفريمات")) { chooseFps() }, barParams())
-        fullRecord = iconButton(R.drawable.ic_record, t("Record video", "تسجيل فيديو")) { toggleRecording() }
-        bar.addView(fullRecord, barParams())
-        root.addView(bar, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT,
-            Gravity.BOTTOM).apply {
-            bottomMargin = dp(20)
-            marginStart = dp(10)
-            marginEnd = dp(10)
-        })
-
-        addContentView(root, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-        Fx.feedbackAll(root)
-        overlay = root
-        window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_FULLSCREEN or
-            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
-            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
-            View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
-            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
-            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-        refreshFull()
-    }
-
-    /** Equal shares of the bar's width, so all seven icons fit on any screen. */
-    private fun barParams() = LinearLayout.LayoutParams(0, dp(50), 1f).apply {
-        marginStart = dp(6)
-        marginEnd = dp(6)
     }
 
     private fun chooseFps() {
@@ -464,6 +314,7 @@ class CameraActivity : androidx.activity.ComponentActivity() {
                     ParentEngine.setFps(n)
                     checkHeavy(ParentEngine.viewQuality, n)
                     fpsSpinner?.setSelection(n - 10, false)
+                    camState.fps = n
                     Unit
                 }
             } + listOf(t("Cancel", "تراجع") to {})
@@ -547,30 +398,22 @@ class CameraActivity : androidx.activity.ComponentActivity() {
 
     /** Leaves full screen: stops any talk that is running and restores the normal screen. */
     private fun exitFull() {
-        val root = overlay ?: return
-        talk?.up()
-        (root.parent as? ViewGroup)?.removeView(root)
-        overlay = null
+        if (!camState.fullOpen) return
+        talkUp()
+        camState.fullOpen = false
         fullPicture = null
-        fullFlash = null
-        fullSound = null
-        fullTalk = null
-        fullNight = null
         zoom = 1f
         window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
     }
 
     private fun refreshFull() {
-        val accent = Themes.current().accent
-        fullFlash?.background = Look.glass(this, 18, if (ParentEngine.viewFlash) Fx.tint(accent, 0x88) else Look.BUTTON)
-        fullSound?.setImageResource(if (ParentEngine.liveSound) R.drawable.ic_speaker else R.drawable.ic_speaker_off)
-        fullSound?.background = Look.glass(this, 18, if (ParentEngine.liveSound) Look.BUTTON else Fx.tint(accent, 0x88))
-        fullTalk?.background = Look.glass(this, 18, if (ParentEngine.talking) Fx.tint(accent, 0xAA) else Look.BUTTON)
-        fullNight?.background = Look.glass(this, 18, if (ParentEngine.viewNight) Fx.tint(accent, 0x88) else Look.BUTTON)
+        camState.fullFlash = ParentEngine.viewFlash
+        camState.fullSound = ParentEngine.liveSound
+        camState.fullTalk = ParentEngine.talking
+        camState.talking = ParentEngine.talking
+        camState.fullNight = ParentEngine.viewNight
     }
-
-    // ---------- refresh ----------
 
     private fun refresh() {
         if (!ending && !ParentEngine.connected) {
@@ -591,7 +434,11 @@ class CameraActivity : androidx.activity.ComponentActivity() {
         if (ParentEngine.talkNote.isNotEmpty()) sb.append(ParentEngine.talkNote).append("\n")
         frames = 0
         statusTv?.text = sb.toString()
+        camState.status = sb.toString()
         nightIcon?.background = Look.glass(this, 18, if (ParentEngine.viewNight) Fx.tint(Themes.current().accent, 0x88) else Look.BUTTON)
+        camState.night = ParentEngine.viewNight
+        camState.quality = ParentEngine.viewQuality
+        camState.fps = ParentEngine.viewFps
 
         val flashState = when (ParentEngine.viewFlashLevel) {
             1 -> t("low (tap for more)", "منخفض (اضغط للمزيد)")
@@ -630,5 +477,406 @@ class CameraActivity : androidx.activity.ComponentActivity() {
             fullPicture?.colorFilter = filter
         }
         refreshFull()
+        camState.flashText = t("Flash: ", "الفلاش: ") + flashState
+        camState.switchText = t("Camera: " + (if (ParentEngine.viewFront) "front" else "back") + " (tap to switch)",
+            "الكاميرا: " + (if (ParentEngine.viewFront) "أمامية" else "خلفية") + " (اضغط للتبديل)")
+        camState.soundText = t("Room sound: " + (if (ParentEngine.liveSound) "on" else "muted"),
+            "صوت الغرفة: " + (if (ParentEngine.liveSound) "مشغّل" else "مكتوم"))
     }
+
+    private val camState = CamTopState()
+
+    @Composable
+    private fun CameraPage() {
+        val dir = if (Tr.isAr()) LayoutDirection.Rtl else LayoutDirection.Ltr
+        CompositionLocalProvider(LocalLayoutDirection provides dir) {
+            Box(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .systemBarsPadding()
+                    .verticalScroll(rememberScrollState())
+                    .padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                CameraTop()
+                CameraBottom()
+            }
+            if (camState.fullOpen) FullScreenLayer()
+            }
+        }
+    }
+
+    /** Top area in Compose: title, live picture, status, quality, night, record, frame rate and full screen. */
+    @Composable
+    private fun CameraTop() {
+        val text = ComposeColor(Look.TEXT)
+        val sub = ComposeColor(Look.SUB)
+        val accent = ComposeColor(Themes.current().accent)
+        val glass = RoundedCornerShape(18.dp)
+        val chipBg = ComposeColor(Look.BUTTON)
+        val glassColors = ButtonDefaults.buttonColors(containerColor = chipBg, contentColor = text)
+        val labels = qualityLabels
+        var fpsOpen by remember { mutableStateOf(false) }
+
+        Text(t("Live camera", "الكاميرا المباشرة"), fontSize = 28.sp, color = text)
+
+        AndroidView(
+            factory = { c ->
+                ImageView(c).apply {
+                    background = Look.glass(c, 18, Color.BLACK)
+                    clipToOutline = true
+                    scaleType = ImageView.ScaleType.FIT_CENTER
+                }.also { picture = it }
+            },
+            modifier = Modifier.fillMaxWidth().height(340.dp)
+        )
+
+        Text(camState.status, fontSize = 14.sp, color = sub)
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            for (q in 0..3) {
+                val chosen = camState.quality == q
+                ComposeButton(
+                    onClick = {
+                        ParentEngine.setView(q, ParentEngine.viewFront, ParentEngine.viewFlash)
+                        checkHeavy(q, ParentEngine.viewFps)
+                        refresh()
+                    },
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    shape = glass,
+                    colors = if (chosen) ButtonDefaults.buttonColors(containerColor = accent, contentColor = ComposeColor.White)
+                    else glassColors
+                ) {
+                    Text((if (chosen) "✓ " else "") + labels[q], fontSize = 13.sp)
+                }
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            IconButton(
+                onClick = {
+                    cycleNight()
+                    refresh()
+                },
+                modifier = Modifier.size(52.dp).background(if (camState.night) accent else chipBg, RoundedCornerShape(18.dp))
+            ) {
+                Icon(painterResource(R.drawable.ic_night), t("Night mode", "وضع الليل"), tint = text)
+            }
+            IconButton(
+                onClick = { toggleRecording() },
+                modifier = Modifier.size(52.dp).background(
+                    if (camState.recording) ComposeColor(0xAAE53935.toInt()) else chipBg,
+                    RoundedCornerShape(18.dp)
+                )
+            ) {
+                Icon(painterResource(R.drawable.ic_record), t("Record video", "تسجيل فيديو"), tint = text)
+            }
+            Box {
+                ComposeButton(
+                    onClick = { fpsOpen = true },
+                    modifier = Modifier.width(112.dp).height(52.dp),
+                    shape = glass,
+                    colors = glassColors
+                ) { Text("${camState.fps} fps", fontSize = 14.sp) }
+                DropdownMenu(expanded = fpsOpen, onDismissRequest = { fpsOpen = false }) {
+                    for (n in 10..30) {
+                        DropdownMenuItem(
+                            text = { Text("$n fps") },
+                            onClick = {
+                                fpsOpen = false
+                                ParentEngine.setFps(n)
+                                checkHeavy(ParentEngine.viewQuality, n)
+                                camState.fps = n
+                            }
+                        )
+                    }
+                }
+            }
+            ComposeButton(
+                onClick = { enterFull() },
+                modifier = Modifier.weight(1f).height(52.dp),
+                shape = RoundedCornerShape(22.dp),
+                colors = glassColors
+            ) { Text(t("Full screen", "ملء الشاشة"), fontSize = 14.sp) }
+        }
+    }
+
+
+    /** Bottom bar in Compose. The talk control stays a classic view: it has its own press-and-hold logic. */
+    @Composable
+    private fun CameraBottom() {
+        val text = ComposeColor(Look.TEXT)
+        val sub = ComposeColor(Look.SUB)
+        val glass = RoundedCornerShape(18.dp)
+        val glassColors = ButtonDefaults.buttonColors(containerColor = ComposeColor(Look.BUTTON), contentColor = text)
+
+        ChildTalkButton()
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp)
+                .background(ComposeColor(Look.BUTTON), glass)
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onTap = { tapFlash() },
+                        onLongPress = { showFlashChoice() }
+                    )
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Text(camState.flashText, fontSize = 15.sp, color = text)
+        }
+
+        ComposeButton(
+            onClick = { ParentEngine.setView(ParentEngine.viewQuality, !ParentEngine.viewFront, false) },
+            modifier = Modifier.fillMaxWidth().height(52.dp),
+            shape = glass,
+            colors = glassColors
+        ) { Text(camState.switchText, fontSize = 15.sp) }
+
+        ComposeButton(
+            onClick = { ParentEngine.viewRotate = (ParentEngine.viewRotate + 1) and 3 },
+            modifier = Modifier.fillMaxWidth().height(52.dp),
+            shape = glass,
+            colors = glassColors
+        ) { Text(t("Rotate the picture", "تدوير الصورة"), fontSize = 15.sp) }
+
+        ComposeButton(
+            onClick = {
+                ParentEngine.liveSound = !ParentEngine.liveSound
+                refresh()
+            },
+            modifier = Modifier.fillMaxWidth().height(52.dp),
+            shape = glass,
+            colors = glassColors
+        ) { Text(camState.soundText, fontSize = 15.sp) }
+
+        ComposeButton(
+            onClick = { finish() },
+            modifier = Modifier.fillMaxWidth().height(52.dp),
+            shape = glass,
+            colors = glassColors
+        ) { Text(t("Stop and close", "إيقاف وإغلاق"), fontSize = 15.sp) }
+
+        Text(
+            t("Night mode: the picture is slower and brighter, which helps in a dark room but can blur fast movement. While someone watches, the child phone does not record clips. The live view stops by itself after 15 minutes, and the flash after 2 minutes.",
+                "وضع الليل: الصورة أبطأ وأسطع، يساعد في الغرفة المظلمة لكن قد يطمس الحركة السريعة. أثناء المشاهدة لا يسجل جوال الطفل مقاطع. يتوقف البث المباشر وحده بعد 15 دقيقة، والفلاش بعد دقيقتين."),
+            fontSize = 13.sp,
+            color = sub
+        )
+    }
+
+    /** Full-screen view in Compose: the picture (pinch to zoom) with the controls on top and at the bottom. */
+    @Composable
+    private fun FullScreenLayer() {
+        val glass = RoundedCornerShape(18.dp)
+        val accent = ComposeColor(Themes.current().accent)
+        val chip = ComposeColor(Look.BUTTON)
+        val text = ComposeColor(Look.TEXT)
+        val on = accent.copy(alpha = 0.55f)
+
+        Box(modifier = Modifier.fillMaxSize().background(ComposeColor.Black)) {
+            AndroidView(
+                factory = { c ->
+                    ImageView(c).apply {
+                        scaleType = ImageView.ScaleType.FIT_CENTER
+                        setBackgroundColor(Color.BLACK)
+                        setImageBitmap(latest)
+                        rotation = fullTurn * 90f
+                        scaleX = zoom
+                        scaleY = zoom
+                        setOnTouchListener { _, ev ->
+                            if (ev.pointerCount >= 2 || ev.actionMasked == MotionEvent.ACTION_POINTER_UP) fullDetector.onTouchEvent(ev)
+                            true
+                        }
+                    }.also { fullPicture = it }
+                },
+                modifier = Modifier.fillMaxSize()
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter).padding(14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                FullIcon(R.drawable.ic_back, t("Back", "رجوع"), chip, text, Modifier.size(52.dp)) { exitFull() }
+                FullIcon(R.drawable.ic_rotate, t("Rotate the picture", "تدوير الصورة"), chip, text, Modifier.size(52.dp)) {
+                    fullTurn = (fullTurn + 1) and 3
+                    fullPicture?.rotation = fullTurn * 90f
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter).padding(start = 10.dp, end = 10.dp, bottom = 20.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(50.dp)
+                        .background(if (camState.fullFlash) on else chip, glass)
+                        .pointerInput(Unit) {
+                            detectTapGestures(onTap = { tapFlash() }, onLongPress = { showFlashChoice() })
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(painterResource(R.drawable.ic_flash), t("Flash", "الفلاش"), tint = text, modifier = Modifier.size(22.dp))
+                }
+                FullIcon(R.drawable.ic_quality, t("Quality", "الجودة"), chip, text, Modifier.weight(1f).height(50.dp)) { chooseQuality() }
+                FullIcon(
+                    if (camState.fullSound) R.drawable.ic_speaker else R.drawable.ic_speaker_off,
+                    t("Room sound", "صوت الغرفة"),
+                    if (camState.fullSound) chip else on, text, Modifier.weight(1f).height(50.dp)
+                ) {
+                    ParentEngine.liveSound = !ParentEngine.liveSound
+                    refreshFull()
+                }
+                FullIcon(R.drawable.ic_mic, t("Talk to the child", "التحدث مع الطفل"),
+                    if (camState.fullTalk) accent.copy(alpha = 0.7f) else chip, text,
+                    Modifier.weight(1f).height(50.dp)) { talkTap() }
+                FullIcon(R.drawable.ic_night, t("Night mode", "وضع الليل"), if (camState.fullNight) on else chip, text, Modifier.weight(1f).height(50.dp)) {
+                    cycleNight()
+                    refreshFull()
+                }
+                FullIcon(R.drawable.ic_fps, t("Frame rate", "معدل الفريمات"), chip, text, Modifier.weight(1f).height(50.dp)) { chooseFps() }
+                FullIcon(R.drawable.ic_record, t("Record video", "تسجيل فيديو"),
+                    if (camState.recording) ComposeColor(0xAAE53935.toInt()) else chip, text,
+                    Modifier.weight(1f).height(50.dp)) { toggleRecording() }
+            }
+        }
+    }
+
+    @Composable
+    private fun FullIcon(
+        icon: Int,
+        desc: String,
+        background: ComposeColor,
+        tint: ComposeColor,
+        modifier: Modifier,
+        onClick: () -> Unit
+    ) {
+        Box(
+            modifier = modifier
+                .background(background, RoundedCornerShape(18.dp))
+                .clickable { onClick() },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(painterResource(icon), desc, tint = tint, modifier = Modifier.size(22.dp))
+        }
+    }
+
+    /** Talk-to-child logic, the same rules as the classic control: hold or tap, 60 seconds in tap mode. */
+    private val talkLimit = Runnable {
+        talkUp()
+        toast(t("Talk stopped after 60 seconds.", "توقف الحديث بعد 60 ثانية."))
+    }
+
+    private fun talkDown() {
+        if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            askMic { talkDown() }
+            return
+        }
+        if (ParentEngine.beginTalk()) {
+            camState.talking = true
+            if (camState.pressMode) ui.postDelayed(talkLimit, 60_000L)
+        } else {
+            toast(ParentEngine.talkNote)
+        }
+    }
+
+    private fun talkUp() {
+        ui.removeCallbacks(talkLimit)
+        ParentEngine.endTalk()
+        camState.talking = false
+    }
+
+    private fun talkTap() {
+        if (ParentEngine.talking) talkUp() else talkDown()
+    }
+
+    private fun applyTalkMode(press: Boolean) {
+        Diag.i("Talk mode changed to " + (if (press) "tap" else "hold"))
+        Prefs.putString("talkMode", if (press) "press" else "hold")
+        if (ParentEngine.talking) talkUp()
+        camState.pressMode = press
+    }
+
+    /** The talk-to-child button in Compose, with the Hold / Tap switch in its corner. */
+    @Composable
+    private fun ChildTalkButton() {
+        val text = ComposeColor(Look.TEXT)
+        val glass = RoundedCornerShape(26.dp)
+        var pressed by remember { mutableStateOf(false) }
+        val press = camState.pressMode
+        val idle = if (press) t("Tap to talk", "اضغط للتحدث") else t("Hold to talk", "اضغط مع الاستمرار للتحدث")
+        val talkingLabel = if (press) t("Talking… tap to stop", "تتحدث… اضغط للإيقاف")
+        else t("Talking… release to stop", "تتحدث… ارفع إصبعك للإيقاف")
+        val bg = if (camState.talking) ComposeColor(Themes.current().accent).copy(alpha = 0.6f) else ComposeColor(Look.BUTTON)
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(104.dp)
+                .scale(if (pressed) 0.97f else 1f)
+                .background(bg, glass)
+                .pointerInput(press) {
+                    detectTapGestures(
+                        onPress = {
+                            pressed = true
+                            try {
+                                if (!press) {
+                                    talkDown()
+                                    tryAwaitRelease()
+                                    talkUp()
+                                } else {
+                                    tryAwaitRelease()
+                                }
+                            } finally {
+                                pressed = false
+                            }
+                        },
+                        onTap = { if (press) talkTap() }
+                    )
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Text(if (camState.talking) talkingLabel else idle, fontSize = 18.sp, color = text)
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 8.dp, end = 12.dp)
+                    .background(ComposeColor(0x66000000), RoundedCornerShape(14.dp))
+                    .padding(start = 8.dp, end = 6.dp, top = 4.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(if (press) t("Tap", "نقرة") else t("Hold", "ضغط"), fontSize = 13.sp, color = ComposeColor.White)
+                Switch(checked = press, onCheckedChange = { applyTalkMode(it) })
+            }
+        }
+    }
+}
+
+/** What the Compose top area of the live camera shows. The classic flows write into it. */
+class CamTopState {
+    var status by mutableStateOf("")
+    var quality by mutableStateOf(0)
+    var night by mutableStateOf(false)
+    var recording by mutableStateOf(false)
+    var fps by mutableStateOf(10)
+    var flashText by mutableStateOf("Flash")
+    var switchText by mutableStateOf("Switch camera")
+    var soundText by mutableStateOf("Room sound")
+    var fullOpen by mutableStateOf(false)
+    var fullFlash by mutableStateOf(false)
+    var fullSound by mutableStateOf(true)
+    var fullTalk by mutableStateOf(false)
+    var fullNight by mutableStateOf(false)
+    var talking by mutableStateOf(false)
+    var pressMode by mutableStateOf(false)
 }

@@ -14,7 +14,7 @@ object Lock {
         Prefs.getString("role") == "parent" && pinSet() &&
             (!unlockedOnce || System.currentTimeMillis() - leftAt > 120_000L)
 
-    private fun hash(salt: String, pin: String): String =
+    internal fun hash(salt: String, pin: String): String =
         Hex.encode(Crypto.sha256(salt.toByteArray(), pin.toByteArray()))
 
     fun setPin(pin: String) {

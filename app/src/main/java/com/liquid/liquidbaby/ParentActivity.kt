@@ -23,27 +23,48 @@ import android.widget.SeekBar
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import java.io.File
 import java.text.DateFormat
 import java.util.Date
+import kotlin.math.roundToInt
 
 /** Parent screen: the home part is Compose; recordings and settings are the classic views shown inside it. */
-class ParentActivity : ComponentActivity() {
+class ParentActivity : ComponentActivity(), MicHost {
 
     private val ui = Handler(Looper.getMainLooper())
     private var builtAr: Boolean? = null
@@ -58,32 +79,6 @@ class ParentActivity : ComponentActivity() {
     private var soundVisual: SoundVisual? = null
     private var batteryRing: BatteryRing? = null
     private var listenBtn: Button? = null
-    private var talkBtn: Button? = null
-    private var talkModeLabel: TextView? = null
-    private var talkControl: TalkControl? = null
-    private var partnerTalk: PartnerTalkControl? = null
-    private var talkModeToggle: ModeToggle? = null
-    private var modeRowView: View? = null
-    private var talkPulse: ObjectAnimator? = null
-    private val talkLimit = Runnable {
-        onTalkUp()
-        toast(t("Talk stopped after 60 seconds.", "توقف الحديث بعد 60 ثانية."))
-    }
-    private var settingsHead: TextView? = null
-    private var settingsBox: LinearLayout? = null
-    private var settingsOpen = false
-    private var lenLabel: TextView? = null
-    private var lenBar: SeekBar? = null
-    private var sensLabel: TextView? = null
-    private var sensBar: SeekBar? = null
-    private var intervalLabel: TextView? = null
-    private var intervalBar: SeekBar? = null
-    private var walkieLabel: TextView? = null
-    private var walkieBar: SeekBar? = null
-    private var listBox: LinearLayout? = null
-    private var lastClipCount = -1
-    private var draggingLen = false
-    private var draggingSens = false
     private var warnedVault = false
 
     private var player: MediaPlayer? = null
@@ -121,15 +116,17 @@ class ParentActivity : ComponentActivity() {
                 progress = ParentEngine.level
             }.also { meter = it }
         },
-        talk = { ctx -> TalkControl(this@ParentActivity).also { talkControl = it }.view },
-        partner = { ctx -> PartnerTalkControl(this@ParentActivity).also { partnerTalk = it }.view }
     )
+
+    private val mic = MicAsk(this)
+    override fun askMic(onGranted: () -> Unit) = mic.askMic(onGranted)
 
     private fun t(en: String, ar: String): String = Tr.pick(en, ar)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         builtAr = Tr.isAr()
+        state.pressMode = Prefs.getString("talkMode", "hold") == "press"
         applyWindowLook()
         syncPaired()
         setContent { ParentRoot() }
@@ -180,13 +177,17 @@ class ParentActivity : ComponentActivity() {
                     onVpn = { openVpnSettings() },
                     onLive = { openLive() },
                     onListen = { toggleListen() },
-                    onPair = { startPairFlow() }
+                    onPair = { startPairFlow() },
+                    onChildHoldStart = { parentTalkDown() },
+                    onChildHoldEnd = { parentTalkUp() },
+                    onChildTap = { parentTalkTap() },
+                    onPartnerStart = { partnerStart() },
+                    onPartnerEnd = { ParentEngine.endPartnerTalk() },
+                    onPartnerTap = { if (ParentEngine.partnerSending) ParentEngine.endPartnerTalk() else partnerStart() },
+                    onTalkMode = { applyTalkMode(it) }
                 )
                 if (state.paired) {
-                    AndroidView(
-                        factory = { ctx -> buildLower(ctx) },
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    ParentLowerSection()
                 }
             }
         }
@@ -198,100 +199,6 @@ class ParentActivity : ComponentActivity() {
         } else {
             toast(t("Not connected to the child phone yet.", "غير متصل بجوال الطفل بعد."))
         }
-    }
-
-    /** Recordings, settings and the remove button. These are classic views, hosted inside Compose. */
-    private fun buildLower(ctx: Context): View {
-        val col = LinearLayout(ctx)
-        col.orientation = LinearLayout.VERTICAL
-        if (Tr.isAr()) col.layoutDirection = View.LAYOUT_DIRECTION_RTL
-        col.setPadding(0, dp(4), 0, dp(4))
-
-        col.sectionLabel(t("Recordings", "التسجيلات"))
-        val box = LinearLayout(ctx)
-        box.orientation = LinearLayout.VERTICAL
-        col.addView(box)
-        listBox = box
-
-        col.sectionLabel(t("Settings", "الإعدادات"))
-        settingsHead = TextView(ctx).apply {
-            textSize = 16f
-            setTextColor(Look.TEXT)
-            setPadding(dp(4), dp(10), dp(4), dp(10))
-            setOnClickListener { toggleSettings() }
-        }
-        col.addView(settingsHead)
-        val sBox = LinearLayout(ctx)
-        sBox.orientation = LinearLayout.VERTICAL
-        sBox.visibility = if (settingsOpen) View.VISIBLE else View.GONE
-        col.addView(sBox)
-        settingsBox = sBox
-        sBox.card(14) {
-            lenLabel = line("")
-            lenBar = addSlider(5, 60, ParentEngine.childLength, { v ->
-                draggingLen = true
-                lenLabel?.text = t("Clip length: $v seconds", "طول المقطع: $v ثوانٍ")
-            }, { v ->
-                draggingLen = false
-                Prefs.putInt("clipSeconds", v)
-                ParentEngine.childLength = v
-                ParentEngine.sendSettings(v, ParentEngine.childSens)
-            })
-            sensLabel = line("")
-            sensBar = addSlider(1, 5, ParentEngine.childSens, { v ->
-                draggingSens = true
-                sensLabel?.text = t("Sensitivity: $v of 5", "الحساسية: $v من 5")
-            }, { v ->
-                draggingSens = false
-                ParentEngine.childSens = v
-                ParentEngine.sendSettings(ParentEngine.childLength, v)
-            })
-            intervalLabel = line("")
-            intervalBar = addSlider(0, 15, ParentEngine.childInterval, { v ->
-                intervalLabel?.text = intervalText(v)
-            }, { v ->
-                ParentEngine.setInterval(v)
-            })
-            walkieLabel = line("")
-            walkieBar = addSlider(1, 10, ParentEngine.childTalkVol, { v ->
-                walkieLabel?.text = t("Talk volume on the child phone: $v of 10", "صوت المحادثة على جوال الطفل: $v من 10")
-            }, { v ->
-                ParentEngine.setTalkVolume(v)
-            })
-        }
-
-        val remove = Button(ctx).apply {
-            text = t("Remove pairing", "إلغاء الاقتران")
-            isAllCaps = false
-            setTextColor(0xFFFF8A8A.toInt())
-            background = Look.glass(ctx, 22, 0x22FF5252)
-            setOnClickListener { confirmRemove() }
-            Fx.press(this)
-        }
-        col.addView(remove, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-            topMargin = dp(28)
-        })
-
-        fillList()
-        refresh()
-        return col
-    }
-
-    private fun intervalText(v: Int): String =
-        if (v == 0) t("Listening: continuously", "الاستماع: متواصل")
-        else t("Checks every $v seconds (listens 5 s each time)", "يفحص كل $v ثوانٍ (يستمع 5 ثوانٍ في كل مرة)")
-
-    private fun toggleSettings() {
-        settingsOpen = !settingsOpen
-        val box = settingsBox ?: return
-        if (settingsOpen) {
-            box.alpha = 0f
-            box.visibility = View.VISIBLE
-            box.animate().alpha(1f).setDuration(250).start()
-        } else {
-            box.visibility = View.GONE
-        }
-        refresh()
     }
 
     private fun confirmRemove() {
@@ -313,8 +220,7 @@ class ParentActivity : ComponentActivity() {
     private val partnerHandler = Handler(Looper.getMainLooper())
     private val partnerTick = object : Runnable {
         override fun run() {
-            partnerTalk?.setSending(ParentEngine.partnerSending)
-            partnerTalk?.setState(connected = ParentEngine.connected && ParentEngine.partnerConnected, talking = ParentEngine.partnerTalking || ParentEngine.partnerSpeaking)
+            syncPartnerState()
             partnerHandler.postDelayed(this, 1000L)
         }
     }
@@ -348,71 +254,62 @@ class ParentActivity : ComponentActivity() {
         super.onPause()
         ParentEngine.onChange = null
         ui.removeCallbacks(tick)
-        talkControl?.up()
-        onTalkUp()
+        parentTalkUp()
         ParentEngine.endListen()
         ParentEngine.setLevelSub(false)
         stopPlayer()
     }
 
-    private fun talkMode(): String = Prefs.getString("talkMode", "hold")
-
-    /** Short label on the pill inside the talk button. */
-    private fun modePillText(): String =
-        if (talkMode() == "press") t("Tap", "نقرة") else t("Hold", "ضغط")
-
-    /** Applies hold or tap mode from the toggle. Stops any talk that is running. */
-    private fun applyTalkMode(press: Boolean) {
-        Diag.i("Talk mode changed to " + (if (press) "tap" else "hold"))
-        Prefs.putString("talkMode", if (press) "press" else "hold")
-        if (ParentEngine.talking) onTalkUp()
-        talkModeLabel?.text = modePillText()
-        talkBtn?.text = idleTalkText()
+    /** The child talk button: hold or tap, 60 seconds in tap mode, the same rules as before. */
+    private val talkLimit = Runnable {
+        parentTalkUp()
+        toast(t("Talk stopped after 60 seconds.", "توقف الحديث بعد 60 ثانية."))
     }
 
-    private fun idleTalkText(): String =
-        if (talkMode() == "press") t("Tap to talk", "اضغط للتحدث")
-        else t("Hold to talk", "اضغط مع الاستمرار للتحدث")
-
-    private fun talkingText(): String =
-        if (talkMode() == "press") t("Talking… tap to stop", "تتحدث… اضغط للإيقاف")
-        else t("Talking… release to stop", "تتحدث… ارفع إصبعك للإيقاف")
-
-    private fun togglePressTalk() {
-        if (ParentEngine.talking) {
-            onTalkUp()
-        } else {
-            onTalkDown()
-            if (ParentEngine.talking) ui.postDelayed(talkLimit, 60_000L)
-        }
-    }
-
-    private fun onTalkDown() {
+    private fun parentTalkDown() {
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), 30)
-            toast(t("Allow the microphone, then hold the button again.", "اسمح بالميكروفون ثم اضغط الزر مرة أخرى."))
+            askMic { parentTalkDown() }
             return
         }
         if (ParentEngine.beginTalk()) {
-            talkBtn?.text = talkingText()
-            talkBtn?.background = Look.glass(this, 26, Fx.tint(Themes.current().accent, 0x66))
-            talkPulse?.cancel()
-            talkBtn?.let { talkPulse = Fx.breathe(it) }
-            talkBtn?.animate()?.scaleX(1.02f)?.scaleY(1.02f)?.setDuration(200)?.start()
+            state.talking = true
+            if (state.pressMode) ui.postDelayed(talkLimit, 60_000L)
         } else {
             toast(ParentEngine.talkNote)
         }
     }
 
-    private fun onTalkUp() {
+    private fun parentTalkUp() {
         ui.removeCallbacks(talkLimit)
-        talkPulse?.cancel()
-        talkPulse = null
-        talkBtn?.alpha = 1f
         ParentEngine.endTalk()
-        talkBtn?.text = idleTalkText()
-        talkBtn?.background = Look.glass(this, 26, Look.BUTTON)
-        talkBtn?.animate()?.scaleX(1f)?.scaleY(1f)?.setDuration(200)?.start()
+        state.talking = false
+    }
+
+    private fun parentTalkTap() {
+        if (ParentEngine.talking) parentTalkUp() else parentTalkDown()
+    }
+
+    /** The partner button starts talking only once the microphone is allowed. */
+    private fun partnerStart() {
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            askMic { partnerStart() }
+            return
+        }
+        ParentEngine.beginPartnerTalk()
+    }
+
+    private fun applyTalkMode(press: Boolean) {
+        Diag.i("Talk mode changed to " + (if (press) "tap" else "hold"))
+        Prefs.putString("talkMode", if (press) "press" else "hold")
+        if (ParentEngine.talking) parentTalkUp()
+        state.pressMode = press
+    }
+
+    /** Copies the partner link into the Compose state. Called every second. */
+    private fun syncPartnerState() {
+        state.partnerConnected = ParentEngine.connected && ParentEngine.partnerConnected
+        state.partnerTalking = ParentEngine.partnerTalking || ParentEngine.partnerSpeaking
+        state.partnerSending = ParentEngine.partnerSending
     }
 
     private fun toggle() {
@@ -477,7 +374,7 @@ class ParentActivity : ComponentActivity() {
         }
 
         styleLevelMeter(meter)
-        partnerTalk?.setState(connected = ParentEngine.connected && ParentEngine.partnerConnected, talking = ParentEngine.partnerTalking || ParentEngine.partnerSpeaking)
+        syncPartnerState()
         val levelIsFresh = ParentEngine.connected && System.currentTimeMillis() - ParentEngine.levelAt < 2500L
         Fx.animateMeter(meter, if (levelIsFresh) ParentEngine.level else 0)
         soundVisual?.setStyle(Prefs.getString("soundVisual", "wave"))
@@ -486,22 +383,9 @@ class ParentActivity : ComponentActivity() {
 
         state.listening = ParentEngine.listening
 
-        settingsHead?.text = (if (settingsOpen) "▾  " else "▸  ") + t("Clip length, sensitivity, volume", "طول المقطع والحساسية والصوت")
-        if (!draggingLen) {
-            lenLabel?.text = t("Clip length: ${ParentEngine.childLength} seconds", "طول المقطع: ${ParentEngine.childLength} ثوانٍ")
-            lenBar?.progress = ParentEngine.childLength - 5
-        }
-        if (!draggingSens) {
-            sensLabel?.text = t("Sensitivity: ${ParentEngine.childSens} of 5", "الحساسية: ${ParentEngine.childSens} من 5")
-            sensBar?.progress = ParentEngine.childSens - 1
-        }
-        intervalLabel?.text = intervalText(ParentEngine.childInterval)
-        walkieLabel?.text = t("Talk volume on the child phone: ${ParentEngine.childTalkVol} of 10",
-            "صوت المحادثة على جوال الطفل: ${ParentEngine.childTalkVol} من 10")
-
-        if (listBox != null && ParentEngine.clipsVersion != lastClipsVersion) {
+        if (ParentEngine.clipsVersion != lastClipsVersion) {
             lastClipsVersion = ParentEngine.clipsVersion
-            fillList()
+            lowerTick++
         }
     }
 
@@ -533,7 +417,7 @@ class ParentActivity : ComponentActivity() {
                     for (c in ParentEngine.clips(this)) {
                         if (c.ts < cutoff) ParentEngine.deleteClip(this, c.ts)
                     }
-                    fillList()
+                    lowerTick++
                 },
                 t("Cancel", "تراجع") to {}
             )
@@ -555,134 +439,6 @@ class ParentActivity : ComponentActivity() {
                 label to { confirmDelete(label + "?", days[idx] * 24L * 60 * 60 * 1000) }
             } + listOf(t("Cancel", "تراجع") to {})
         )
-    }
-
-    private fun fillList() {
-        val box = listBox ?: return
-        box.removeAllViews()
-        val clips = ParentEngine.clips(this)
-        lastClipCount = clips.size
-        val videos = videoFiles()
-        if (clips.isEmpty() && videos.isEmpty()) {
-            box.card(14) {
-                addBody(t("No recordings yet.", "لا توجد تسجيلات بعد."))
-                line(t("The child phone sends a clip when it hears sound, and only while this phone is connected.",
-                    "جوال الطفل يرسل مقطعاً عند سماع صوت، وفقط عندما يكون هذا الجوال متصلاً."))
-            }
-            return
-        }
-        box.addButton(t("Delete older than...", "حذف الأقدم من...")) { chooseOlder() }.apply {
-            textSize = 14f
-            isSingleLine = true
-            ellipsize = android.text.TextUtils.TruncateAt.END
-        }
-        box.addButton(t("Delete all recordings", "حذف كل التسجيلات")) { confirmDelete(t("Delete all recordings?", "حذف كل التسجيلات؟"), null) }
-        val fmt = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.MEDIUM)
-        var lastGroup = ""
-        for ((index, c) in clips.withIndex()) {
-            val group = groupOf(c.ts)
-            if (group != lastGroup) {
-                box.sectionLabel(group)
-                lastGroup = group
-            }
-            val card = box.card(20) {
-                val row = addRow()
-                val info = TextView(context)
-                info.text = fmt.format(Date(c.ts)) + "  ·  " + (c.durationMs / 1000) + " s"
-                info.textSize = 15f
-                info.setTextColor(Look.TEXT)
-                row.addView(info, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-                val playBtn = ImageButton(context)
-                playBtn.setImageResource(if (playingTs == c.ts) R.drawable.ic_btn_pause else R.drawable.ic_btn_play)
-                playBtn.background = Look.glass(context, 18, Look.BUTTON)
-                playBtn.setColorFilter(Look.TEXT)
-                playBtn.setPadding(dp(10), dp(10), dp(10), dp(10))
-                playBtn.contentDescription = t("Play recording", "تشغيل التسجيل")
-                playBtn.setOnClickListener {
-                    if (playingTs == c.ts) stopPlayer() else play(c)
-                    fillList()
-                }
-                row.addView(playBtn, LinearLayout.LayoutParams(dp(46), dp(46)).apply { marginStart = dp(12) })
-                val del = ImageButton(context)
-                del.setImageResource(R.drawable.ic_btn_delete)
-                del.background = Look.glass(context, 18, Look.BUTTON)
-                del.setColorFilter(Look.TEXT)
-                del.setPadding(dp(10), dp(10), dp(10), dp(10))
-                del.contentDescription = t("Delete recording", "حذف التسجيل")
-                del.setOnClickListener {
-                    if (playingTs == c.ts) stopPlayer()
-                    ParentEngine.deleteClip(this@ParentActivity, c.ts)
-                    fillList()
-                }
-                row.addView(del, LinearLayout.LayoutParams(dp(46), dp(46)).apply { marginStart = dp(12) })
-                if (playingTs == c.ts) {
-                    val wv = WaveView(context)
-                    wv.setBars(waveBars)
-                    wv.playing = true
-                    waveView = wv
-                    addView(wv, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(34)).apply {
-                        topMargin = dp(8)
-                    })
-                }
-            }
-            if (!entered) Fx.enter(card, index.coerceAtMost(6))
-        }
-        Fx.feedbackAll(box)
-        if (videos.isNotEmpty()) {
-            box.sectionLabel(t("Videos (encrypted)", "الفيديوهات (مشفّرة)"))
-            for (f in videos) {
-                val card = box.card(20) {
-                    val row = addRow()
-                    val info = TextView(context)
-                    val kb = f.length() / 1024.0
-                    val size = if (kb < 1024) String.format(java.util.Locale.US, "%.0f KB", kb) else String.format(java.util.Locale.US, "%.1f MB", kb / 1024.0)
-                    info.text = fmt.format(Date(f.lastModified())) + "  ·  " + size
-                    info.textSize = 15f
-                    info.setTextColor(Look.TEXT)
-                    row.addView(info, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-                    val playBtn = ImageButton(context)
-                    playBtn.setImageResource(R.drawable.ic_btn_play)
-                    playBtn.background = Look.glass(context, 18, Look.BUTTON)
-                    playBtn.setColorFilter(Look.TEXT)
-                    playBtn.setPadding(dp(10), dp(10), dp(10), dp(10))
-                    playBtn.contentDescription = t("Play video", "تشغيل الفيديو")
-                    playBtn.setOnClickListener {
-                        startActivity(Intent(this@ParentActivity, VideoPlayerActivity::class.java).putExtra("path", f.absolutePath))
-                    }
-                    row.addView(playBtn, LinearLayout.LayoutParams(dp(46), dp(46)).apply { marginStart = dp(12) })
-                    val del = ImageButton(context)
-                    del.setImageResource(R.drawable.ic_btn_delete)
-                    del.background = Look.glass(context, 18, Look.BUTTON)
-                    del.setColorFilter(Look.TEXT)
-                    del.setPadding(dp(10), dp(10), dp(10), dp(10))
-                    del.contentDescription = t("Delete video", "حذف الفيديو")
-                    del.setOnClickListener {
-                        Dialogs.show(
-                            this@ParentActivity,
-                            t("Delete this video?", "حذف هذا الفيديو؟"),
-                            null,
-                            listOf(
-                                t("Delete", "حذف") to {
-                                    f.delete()
-                                    fillList()
-                                },
-                                t("Cancel", "تراجع") to {}
-                            )
-                        )
-                    }
-                    row.addView(del, LinearLayout.LayoutParams(dp(46), dp(46)).apply { marginStart = dp(12) })
-                    val share = ImageButton(context)
-                    share.setImageResource(R.drawable.ic_share)
-                    share.background = Look.glass(context, 18, Look.BUTTON)
-                    share.setColorFilter(Look.TEXT)
-                    share.setPadding(dp(10), dp(10), dp(10), dp(10))
-                    share.contentDescription = t("Share or save video", "مشاركة أو حفظ الفيديو")
-                    share.setOnClickListener { chooseExport(f) }
-                    row.addView(share, LinearLayout.LayoutParams(dp(46), dp(46)).apply { marginStart = dp(12) })
-                }
-                Fx.enter(card, 0)
-            }
-        }
     }
 
     private fun chooseExport(f: File) {
@@ -714,7 +470,7 @@ class ParentActivity : ComponentActivity() {
             mp.prepare()
             mp.setOnCompletionListener {
                 stopPlayer()
-                fillList()
+                lowerTick++
             }
             waveBars = Wave.envelope(c.file)
             mp.start()
@@ -870,5 +626,246 @@ class ParentActivity : ComponentActivity() {
                 }
             }
         })
+    }
+
+    private var lowerTick by mutableStateOf(0)
+
+    private fun intervalText(v: Int): String =
+        if (v == 0) t("Listening: continuously", "الاستماع: متواصل")
+        else t("Checks every $v seconds (listens 5 s each time)", "يفحص كل $v ثوانٍ (يستمع 5 ثوانٍ في كل مرة)")
+
+    @Composable
+    private fun SectionLabel(label: String, color: Color) {
+        Text(label, fontSize = 13.sp, color = color, modifier = Modifier.padding(top = 4.dp))
+    }
+
+    @Composable
+    private fun Panel(content: @Composable ColumnScope.() -> Unit) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(Look.BUTTON), RoundedCornerShape(20.dp))
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            content = content
+        )
+    }
+
+    @Composable
+    private fun IconAction(icon: Int, desc: String, tint: Color, onClick: () -> Unit) {
+        IconButton(onClick = onClick, modifier = Modifier.size(46.dp)) {
+            Icon(painter = painterResource(icon), contentDescription = desc, tint = tint, modifier = Modifier.size(22.dp))
+        }
+    }
+
+    @Composable
+    private fun SettingSlider(
+        label: String,
+        value: Float,
+        range: ClosedFloatingPointRange<Float>,
+        steps: Int,
+        accent: Color,
+        text: Color,
+        onChange: (Float) -> Unit,
+        onDone: () -> Unit
+    ) {
+        Text(label, color = text, fontSize = 14.sp)
+        Slider(
+            value = value,
+            onValueChange = onChange,
+            valueRange = range,
+            steps = steps,
+            onValueChangeFinished = onDone,
+            colors = SliderDefaults.colors(thumbColor = accent, activeTrackColor = accent)
+        )
+    }
+
+    @Composable
+    private fun ParentLowerSection() {
+        val ticket = lowerTick
+        val text = Color(Look.TEXT)
+        val sub = Color(Look.SUB)
+        val accent = Color(Themes.current().accent)
+        val glass = RoundedCornerShape(18.dp)
+        val glassColors = ButtonDefaults.buttonColors(containerColor = Color(Look.BUTTON), contentColor = text)
+        val dangerColors = ButtonDefaults.buttonColors(containerColor = Color(0x22FF5252), contentColor = Color(0xFFFF8A8A))
+        val clips = remember(ticket) { ParentEngine.clips(this@ParentActivity) }
+        val videos = remember(ticket) { videoFiles() }
+        val fmt = remember { DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.MEDIUM) }
+        var settingsOpen by remember { mutableStateOf(false) }
+        var len by remember { mutableStateOf(ParentEngine.childLength.toFloat()) }
+        var sens by remember { mutableStateOf(ParentEngine.childSens.toFloat()) }
+        var interval by remember { mutableStateOf(ParentEngine.childInterval.toFloat()) }
+        var talkVol by remember { mutableStateOf(ParentEngine.childTalkVol.toFloat()) }
+        val playing = playingTs
+
+        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            SectionLabel(t("Recordings", "التسجيلات"), sub)
+            if (clips.isEmpty() && videos.isEmpty()) {
+                Panel {
+                    Text(t("No recordings yet.", "لا توجد تسجيلات بعد."), color = text, fontSize = 15.sp)
+                    Text(
+                        t("The child phone sends a clip when it hears sound, and only while this phone is connected.",
+                            "جوال الطفل يرسل مقطعاً عند سماع صوت، وفقط عندما يكون هذا الجوال متصلاً."),
+                        color = sub,
+                        fontSize = 13.sp
+                    )
+                }
+            } else {
+                if (clips.isNotEmpty()) {
+                    androidx.compose.material3.Button(
+                        onClick = { chooseOlder() },
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                        shape = glass,
+                        colors = glassColors
+                    ) { Text(t("Delete older than...", "حذف الأقدم من..."), fontSize = 14.sp) }
+                    androidx.compose.material3.Button(
+                        onClick = { confirmDelete(t("Delete all recordings?", "حذف كل التسجيلات؟"), null) },
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                        shape = glass,
+                        colors = glassColors
+                    ) { Text(t("Delete all recordings", "حذف كل التسجيلات"), fontSize = 14.sp) }
+                }
+                var lastGroup = ""
+                clips.forEach { c ->
+                    val group = groupOf(c.ts)
+                    if (group != lastGroup) {
+                        SectionLabel(group, sub)
+                        lastGroup = group
+                    }
+                    Panel {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                fmt.format(Date(c.ts)) + "  ·  " + (c.durationMs / 1000) + " s",
+                                color = text,
+                                fontSize = 15.sp,
+                                modifier = Modifier.weight(1f)
+                            )
+                            IconAction(
+                                if (playing == c.ts) R.drawable.ic_btn_pause else R.drawable.ic_btn_play,
+                                t("Play recording", "تشغيل التسجيل"),
+                                text
+                            ) {
+                                if (playingTs == c.ts) stopPlayer() else play(c)
+                                lowerTick++
+                            }
+                            IconAction(R.drawable.ic_btn_delete, t("Delete recording", "حذف التسجيل"), text) {
+                                if (playingTs == c.ts) stopPlayer()
+                                ParentEngine.deleteClip(this@ParentActivity, c.ts)
+                                lowerTick++
+                            }
+                        }
+                        if (playing == c.ts) {
+                            AndroidView(
+                                factory = { ctx ->
+                                    WaveView(ctx).also {
+                                        waveView = it
+                                        it.setBars(waveBars)
+                                        it.playing = true
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth().height(34.dp)
+                            )
+                        }
+                    }
+                }
+                if (videos.isNotEmpty()) {
+                    SectionLabel(t("Videos (encrypted)", "الفيديوهات (مشفّرة)"), sub)
+                    videos.forEach { f ->
+                        val kb = f.length() / 1024.0
+                        val size = if (kb < 1024) String.format(java.util.Locale.US, "%.0f KB", kb)
+                        else String.format(java.util.Locale.US, "%.1f MB", kb / 1024.0)
+                        Panel {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(
+                                    fmt.format(Date(f.lastModified())) + "  ·  " + size,
+                                    color = text,
+                                    fontSize = 15.sp,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                IconAction(R.drawable.ic_btn_play, t("Play video", "تشغيل الفيديو"), text) {
+                                    startActivity(Intent(this@ParentActivity, VideoPlayerActivity::class.java).putExtra("path", f.absolutePath))
+                                }
+                                IconAction(R.drawable.ic_share, t("Share or save video", "مشاركة أو حفظ الفيديو"), text) {
+                                    chooseExport(f)
+                                }
+                                IconAction(R.drawable.ic_btn_delete, t("Delete video", "حذف الفيديو"), text) {
+                                    Dialogs.show(
+                                        this@ParentActivity,
+                                        t("Delete this video?", "حذف هذا الفيديو؟"),
+                                        null,
+                                        listOf(
+                                            t("Delete", "حذف") to {
+                                                f.delete()
+                                                lowerTick++
+                                            },
+                                            t("Cancel", "تراجع") to {}
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            SectionLabel(t("Settings", "الإعدادات"), sub)
+            androidx.compose.material3.Button(
+                onClick = { settingsOpen = !settingsOpen },
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                shape = glass,
+                colors = glassColors
+            ) {
+                Text(
+                    (if (settingsOpen) "▾  " else "▸  ") + t("Clip length, sensitivity, volume", "طول المقطع والحساسية والصوت"),
+                    fontSize = 15.sp
+                )
+            }
+            if (settingsOpen) {
+                Panel {
+                    SettingSlider(
+                        label = t("Clip length: ${len.roundToInt()} seconds", "طول المقطع: ${len.roundToInt()} ثوانٍ"),
+                        value = len, range = 5f..60f, steps = 54, accent = accent, text = text,
+                        onChange = { len = it },
+                        onDone = {
+                            val v = len.roundToInt()
+                            Prefs.putInt("clipSeconds", v)
+                            ParentEngine.childLength = v
+                            ParentEngine.sendSettings(v, ParentEngine.childSens)
+                        }
+                    )
+                    SettingSlider(
+                        label = t("Sensitivity: ${sens.roundToInt()} of 5", "الحساسية: ${sens.roundToInt()} من 5"),
+                        value = sens, range = 1f..5f, steps = 3, accent = accent, text = text,
+                        onChange = { sens = it },
+                        onDone = {
+                            val v = sens.roundToInt()
+                            ParentEngine.childSens = v
+                            ParentEngine.sendSettings(ParentEngine.childLength, v)
+                        }
+                    )
+                    SettingSlider(
+                        label = intervalText(interval.roundToInt()),
+                        value = interval, range = 0f..15f, steps = 14, accent = accent, text = text,
+                        onChange = { interval = it },
+                        onDone = { ParentEngine.setInterval(interval.roundToInt()) }
+                    )
+                    SettingSlider(
+                        label = t("Talk volume on the child phone: ${talkVol.roundToInt()} of 10",
+                            "صوت المحادثة على جوال الطفل: ${talkVol.roundToInt()} من 10"),
+                        value = talkVol, range = 1f..10f, steps = 8, accent = accent, text = text,
+                        onChange = { talkVol = it },
+                        onDone = { ParentEngine.setTalkVolume(talkVol.roundToInt()) }
+                    )
+                }
+            }
+
+            androidx.compose.material3.Button(
+                onClick = { confirmRemove() },
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                shape = glass,
+                colors = dangerColors
+            ) { Text(t("Remove pairing", "إلغاء الاقتران"), fontSize = 15.sp) }
+        }
     }
 }

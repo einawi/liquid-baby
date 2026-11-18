@@ -3,6 +3,7 @@ package com.liquid.liquidbaby
 import android.content.Context
 import android.view.View
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,14 +16,20 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -42,15 +49,18 @@ class ComposeParentHomeState {
     var temp by mutableStateOf("")
     var tempDot by mutableStateOf(0xFF8899AA.toInt())
     var listening by mutableStateOf(false)
+    var talking by mutableStateOf(false)
+    var pressMode by mutableStateOf(false)
+    var partnerConnected by mutableStateOf(false)
+    var partnerSending by mutableStateOf(false)
+    var partnerTalking by mutableStateOf(false)
 }
 
 /** Classic views that Compose shows through AndroidView. Each factory runs once and stores its view in ParentActivity. */
 class ParentViews(
     val ring: (Context) -> View,
     val sound: (Context) -> View,
-    val meter: (Context) -> View,
-    val talk: (Context) -> View,
-    val partner: (Context) -> View
+    val meter: (Context) -> View
 )
 
 @Composable
@@ -61,7 +71,14 @@ fun ParentHomeTop(
     onVpn: () -> Unit,
     onLive: () -> Unit,
     onListen: () -> Unit,
-    onPair: () -> Unit
+    onPair: () -> Unit,
+    onChildHoldStart: () -> Unit,
+    onChildHoldEnd: () -> Unit,
+    onChildTap: () -> Unit,
+    onPartnerStart: () -> Unit,
+    onPartnerEnd: () -> Unit,
+    onPartnerTap: () -> Unit,
+    onTalkMode: (Boolean) -> Unit
 ) {
     val text = Color(Look.TEXT)
     val sub = Color(Look.SUB)
@@ -186,6 +203,117 @@ fun ParentHomeTop(
         }
     }
 
-    AndroidView(factory = { ctx -> views.talk(ctx) }, modifier = Modifier.fillMaxWidth())
-    AndroidView(factory = { ctx -> views.partner(ctx) }, modifier = Modifier.fillMaxWidth())
+    val childIdle = if (state.pressMode) Tr.pick("Tap to talk", "اضغط للتحدث")
+    else Tr.pick("Hold to talk", "اضغط مع الاستمرار للتحدث")
+    val childTalking = if (state.pressMode) Tr.pick("Talking… tap to stop", "تتحدث… اضغط للإيقاف")
+    else Tr.pick("Talking… release to stop", "تتحدث… ارفع إصبعك للإيقاف")
+    TalkCard(
+        text = if (state.talking) childTalking else childIdle,
+        pressMode = state.pressMode,
+        active = state.talking,
+        enabled = true,
+        dim = false,
+        onHoldStart = onChildHoldStart,
+        onHoldEnd = onChildHoldEnd,
+        onTap = onChildTap,
+        onMode = onTalkMode,
+        notice = ""
+    )
+
+    val partnerSending = state.partnerSending
+    val partnerIdle = if (state.pressMode) Tr.pick("Tap to talk to partner", "اضغط للتحدث مع الشريك")
+    else Tr.pick("Hold to talk to partner", "اضغط مع الاستمرار للتحدث مع الشريك")
+    val partnerTalkingText = if (state.pressMode) Tr.pick("Talking… tap to stop", "أتحدث… اضغط للإيقاف")
+    else Tr.pick("Talking… release to stop", "أتحدث… ارفع إصبعك للإيقاف")
+    val partnerText = when {
+        partnerSending -> partnerTalkingText
+        !state.partnerConnected -> partnerIdle + "\n" + Tr.pick("Partner not connected", "الشريك غير متصل")
+        else -> partnerIdle
+    }
+    TalkCard(
+        text = partnerText,
+        pressMode = state.pressMode,
+        active = partnerSending,
+        enabled = state.partnerConnected || partnerSending,
+        dim = !state.partnerConnected && !partnerSending,
+        onHoldStart = onPartnerStart,
+        onHoldEnd = onPartnerEnd,
+        onTap = onPartnerTap,
+        onMode = onTalkMode,
+        notice = if (state.partnerTalking) Tr.pick("Partner is talking to you", "الشريك يتحدث إليك") else ""
+    )
+}
+
+/**
+ * One talk card, shared by the child and partner buttons: hold or tap, the Hold / Tap switch in its corner,
+ * dimmed when disabled, and an optional notice line below it.
+ */
+@Composable
+fun TalkCard(
+    text: String,
+    pressMode: Boolean,
+    active: Boolean,
+    enabled: Boolean,
+    dim: Boolean,
+    onHoldStart: () -> Unit,
+    onHoldEnd: () -> Unit,
+    onTap: () -> Unit,
+    onMode: (Boolean) -> Unit,
+    notice: String
+) {
+    var pressed by remember { mutableStateOf(false) }
+    val textColor = Color(Look.TEXT)
+    val bg = if (active) Color(Themes.current().accent).copy(alpha = 0.6f) else Color(Look.BUTTON)
+    val pointer = if (enabled) Modifier.pointerInput(pressMode) {
+        detectTapGestures(
+            onPress = {
+                pressed = true
+                try {
+                    if (!pressMode) {
+                        onHoldStart()
+                        tryAwaitRelease()
+                        onHoldEnd()
+                    } else {
+                        tryAwaitRelease()
+                    }
+                } finally {
+                    pressed = false
+                }
+            },
+            onTap = { if (pressMode) onTap() }
+        )
+    } else Modifier
+
+    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(104.dp)
+                .alpha(if (dim) 0.45f else 1f)
+                .scale(if (pressed) 0.97f else 1f)
+                .background(bg, RoundedCornerShape(26.dp))
+                .then(pointer),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(text, fontSize = 18.sp, color = textColor, textAlign = TextAlign.Center)
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 8.dp, end = 12.dp)
+                    .background(Color(0x66000000), RoundedCornerShape(14.dp))
+                    .padding(start = 8.dp, end = 6.dp, top = 4.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    if (pressMode) Tr.pick("Tap", "نقرة") else Tr.pick("Hold", "ضغط"),
+                    fontSize = 13.sp,
+                    color = Color.White
+                )
+                Switch(checked = pressMode, onCheckedChange = onMode)
+            }
+        }
+        if (notice.isNotEmpty()) {
+            Text(notice, fontSize = 12.sp, color = Color(0xFFB4C0DC), textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+        }
+    }
 }

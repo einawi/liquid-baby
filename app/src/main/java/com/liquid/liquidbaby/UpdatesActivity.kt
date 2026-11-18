@@ -63,30 +63,43 @@ class UpdatesActivity : ComponentActivity() {
         refreshTick++
     }
 
-    private fun setStatus(text: String) {
-        message = text
+    /** Sets the status line in the language the screen is using right now. */
+    private fun setStatus(en: String, ar: String) {
+        message = Tr.pick(en, ar)
     }
 
     private fun check() {
         if (busy) return
         busy = true
-        setStatus("Checking...")
+        setStatus("Checking...", "جارٍ التحقق...")
         Thread {
-            var result: String
+            var en: String
+            var ar: String
             try {
                 val info = Updater.backgroundCheck(applicationContext, true)
-                result = when {
-                    info == null -> "No release found yet."
-                    info.code > AppInfo.versionCode(this) -> "Update found: " + info.name
-                    else -> "You have the latest version."
+                val local = AppInfo.versionCode(this)
+                when {
+                    info == null -> {
+                        en = "No release found yet."
+                        ar = "لم يُعثر على إصدار بعد."
+                    }
+                    info.code > local -> {
+                        en = "Update found: " + info.name
+                        ar = "تم العثور على تحديث: " + info.name
+                    }
+                    else -> {
+                        en = "You have the latest version."
+                        ar = "أنت على أحدث إصدار."
+                    }
                 }
             } catch (e: Exception) {
                 Diag.e("Update check failed", e)
-                result = "Check failed: " + (e.message ?: e.javaClass.simpleName)
+                en = "Check failed: " + (e.message ?: e.javaClass.simpleName)
+                ar = "فشل التحقق: " + (e.message ?: e.javaClass.simpleName)
             }
             runOnUiThread {
                 busy = false
-                message = result
+                setStatus(en, ar)
                 refreshTick++
             }
         }.start()
@@ -95,20 +108,22 @@ class UpdatesActivity : ComponentActivity() {
     private fun download(info: Updater.Info) {
         if (busy) return
         busy = true
-        setStatus("Downloading...")
+        setStatus("Downloading...", "جارٍ التنزيل...")
         Thread {
-            var result = "Download finished."
+            var en = "Download finished."
+            var ar = "اكتمل التنزيل."
             try {
                 Updater.download(applicationContext, info) { pct ->
-                    runOnUiThread { message = "Downloading... $pct%" }
+                    runOnUiThread { message = Tr.pick("Downloading... $pct%", "جارٍ التنزيل... $pct%") }
                 }
             } catch (e: Exception) {
                 Diag.e("Download failed", e)
-                result = "Download failed: " + (e.message ?: e.javaClass.simpleName)
+                en = "Download failed: " + (e.message ?: e.javaClass.simpleName)
+                ar = "فشل التنزيل: " + (e.message ?: e.javaClass.simpleName)
             }
             runOnUiThread {
                 busy = false
-                message = result
+                setStatus(en, ar)
                 refreshTick++
             }
         }.start()
@@ -116,7 +131,10 @@ class UpdatesActivity : ComponentActivity() {
 
     private fun install(info: Updater.Info) {
         if (Build.VERSION.SDK_INT >= 26 && !packageManager.canRequestPackageInstalls()) {
-            setStatus("Allow Liquid Baby to install apps on the next screen, then come back and tap Install again.")
+            setStatus(
+                "Allow Liquid Baby to install apps on the next screen, then come back and tap Install again.",
+                "اسمح لـ Liquid Baby بتثبيت التطبيقات في الشاشة التالية، ثم ارجع واضغط تثبيت مرة أخرى."
+            )
             try {
                 startActivity(
                     Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName"))
@@ -128,16 +146,19 @@ class UpdatesActivity : ComponentActivity() {
         }
         try {
             Updater.install(this, Updater.apkFile(this, info))
-            setStatus("Opening the installer...")
+            setStatus("Opening the installer...", "جارٍ فتح المثبّت...")
         } catch (e: Exception) {
             Diag.e("Install failed", e)
-            setStatus("Install failed: " + (e.message ?: e.javaClass.simpleName))
+            setStatus(
+                "Install failed: " + (e.message ?: e.javaClass.simpleName),
+                "فشل التثبيت: " + (e.message ?: e.javaClass.simpleName)
+            )
         }
     }
 
     private fun skip(info: Updater.Info) {
         Prefs.putInt("skippedCode", info.code)
-        setStatus("Version " + info.name + " skipped.")
+        setStatus("Version " + info.name + " skipped.", "تم تخطي الإصدار " + info.name + ".")
         refreshTick++
     }
 
@@ -152,9 +173,10 @@ class UpdatesActivity : ComponentActivity() {
         val accentColors = ButtonDefaults.buttonColors(containerColor = Color(Themes.current().accent), contentColor = Color.White)
         val panel = Modifier.fillMaxWidth().background(Color(Look.BUTTON), RoundedCornerShape(22.dp)).padding(16.dp)
 
-        val local = AppInfo.versionCode(ctx)
-        val info = remember(refreshTick) { Updater.cached() }
-        val installed = remember(refreshTick) { AppInfo.versionName(ctx) }
+        val tick = refreshTick
+        val local = remember(tick) { AppInfo.versionCode(ctx) }
+        val info = remember(tick) { Updater.cached() }
+        val installed = remember(tick) { AppInfo.versionName(ctx) }
         val haveFile = info != null && Updater.apkFile(ctx, info).exists()
 
         androidx.compose.runtime.CompositionLocalProvider(LocalLayoutDirection provides dir) {
@@ -166,22 +188,35 @@ class UpdatesActivity : ComponentActivity() {
                     .padding(18.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text("App updates", fontSize = 28.sp, color = text)
-                Text("Installed: $installed (build $local)", fontSize = 15.sp, color = sub)
-                Text(Tr.t(message), fontSize = 15.sp, color = text)
+                Text(Tr.pick("App updates", "تحديثات التطبيق"), fontSize = 28.sp, color = text)
+                Text(
+                    Tr.pick("Installed: ", "المثبّت: ") + installed + " (build $local)",
+                    fontSize = 15.sp,
+                    color = sub
+                )
+                Text(message, fontSize = 15.sp, color = text)
 
                 if (info != null && info.code > local) {
-                    val req = if (info.required) " - REQUIRED" else ""
+                    val req = if (info.required) Tr.pick(" - REQUIRED", " - إلزامي") else ""
                     Column(modifier = panel, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
-                            "New version: " + info.name + " (build " + info.code + ")" + req,
-                            fontSize = 16.sp, color = text
+                            Tr.pick("New version: ", "إصدار جديد: ") + info.name + " (build " + info.code + ")" + req,
+                            fontSize = 16.sp,
+                            color = text
                         )
-                        Text("Size: " + VersionUtil.formatSize(info.apkSize), fontSize = 14.sp, color = sub)
+                        Text(
+                            Tr.pick("Size: ", "الحجم: ") + VersionUtil.formatSize(info.apkSize),
+                            fontSize = 14.sp,
+                            color = sub
+                        )
                     }
                     Column(modifier = panel) {
-                        Text("Release notes:", fontSize = 14.sp, color = sub)
-                        Text(if (info.notes.isBlank()) "(none)" else info.notes, fontSize = 15.sp, color = text)
+                        Text(Tr.pick("Release notes:", "ملاحظات الإصدار:"), fontSize = 14.sp, color = sub)
+                        Text(
+                            if (info.notes.isBlank()) Tr.pick("(none)", "(لا توجد)") else info.notes,
+                            fontSize = 15.sp,
+                            color = text
+                        )
                     }
                     Button(
                         onClick = { if (haveFile) install(info) else download(info) },
@@ -189,7 +224,11 @@ class UpdatesActivity : ComponentActivity() {
                         shape = glass,
                         colors = accentColors
                     ) {
-                        Text(if (haveFile) "Install update" else "Download update", fontSize = 16.sp)
+                        Text(
+                            if (haveFile) Tr.pick("Install update", "تثبيت التحديث")
+                            else Tr.pick("Download update", "تنزيل التحديث"),
+                            fontSize = 16.sp
+                        )
                     }
                     if (!info.required) {
                         Button(
@@ -197,11 +236,11 @@ class UpdatesActivity : ComponentActivity() {
                             modifier = Modifier.fillMaxWidth().height(52.dp),
                             shape = glass,
                             colors = glassColors
-                        ) { Text("Skip this version", fontSize = 15.sp) }
+                        ) { Text(Tr.pick("Skip this version", "تخطي هذا الإصدار"), fontSize = 15.sp) }
                     }
                 } else if (info != null) {
                     Column(modifier = panel) {
-                        Text("You have the latest version.", fontSize = 16.sp, color = text)
+                        Text(Tr.pick("You have the latest version.", "أنت على أحدث إصدار."), fontSize = 16.sp, color = text)
                     }
                 }
 
@@ -210,12 +249,9 @@ class UpdatesActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxWidth().height(52.dp),
                     shape = glass,
                     colors = glassColors
-                ) { Text("Check now", fontSize = 15.sp) }
+                ) { Text(Tr.pick("Check now", "تحقق الآن"), fontSize = 15.sp) }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(
                         checked = wifiPredownload,
                         onCheckedChange = {
@@ -223,7 +259,7 @@ class UpdatesActivity : ComponentActivity() {
                             Prefs.putBool("wifiPredownload", it)
                         }
                     )
-                    Text("Pre-download updates on Wi-Fi", fontSize = 15.sp, color = text)
+                    Text(Tr.pick("Pre-download updates on Wi-Fi", "التنزيل المسبق للتحديثات عبر Wi-Fi"), fontSize = 15.sp, color = text)
                 }
             }
         }
