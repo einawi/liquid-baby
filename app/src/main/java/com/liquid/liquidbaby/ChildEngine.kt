@@ -244,8 +244,13 @@ object ChildEngine {
                 stopTalk(id)
                 if (partnerFrom == id) partnerStop(id)
                 levelSubs.remove(id)
-                if (viewers[id]?.conn === c) stopView(id)
-                if (listeners[id]?.conn === c) stopListen(id)
+                // Clear live view and listening for this parent once it has no connection left.
+                // Matching by connection identity missed a listener that was started on an earlier
+                // connection, which left recording paused on the child phone.
+                if (!connected.containsKey(id)) {
+                    if (viewers.containsKey(id)) stopView(id)
+                    if (listeners.containsKey(id)) stopListen(id)
+                }
             }
             c.close()
             changed()

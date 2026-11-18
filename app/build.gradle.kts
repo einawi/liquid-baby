@@ -4,7 +4,7 @@ plugins {
 }
 
 val appVersionName = "0.9.59"
-val appVersionCode = 128
+val appVersionCode = 129
 
 val keystoreFile: String? = System.getenv("KEYSTORE_FILE")
 
