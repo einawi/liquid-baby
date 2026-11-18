@@ -24,12 +24,15 @@ import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
+import androidx.activity.compose.setContent
 import android.widget.TextView
 import android.widget.Toast
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** Parent unit: live camera. Normal view, and a separate full-screen layer with pinch zoom and icon controls. */
-class CameraActivity : android.app.Activity() {
+class CameraActivity : androidx.activity.ComponentActivity() {
+
+    private var hostRoot: LinearLayout? = null
 
     private val ui = Handler(Looper.getMainLooper())
     private var picture: ImageView? = null
@@ -78,7 +81,25 @@ class CameraActivity : android.app.Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        screen {
+        applyLookTo()
+        setContent {
+            ClassicPage { ctx ->
+                LinearLayout(ctx).apply {
+                    orientation = LinearLayout.VERTICAL
+                    if (Tr.isAr()) layoutDirection = View.LAYOUT_DIRECTION_RTL
+                }.also {
+                    hostRoot = it
+                    buildCamera()
+                    refresh()
+                }
+            }
+        }
+    }
+
+    private fun buildCamera() {
+        val r = hostRoot ?: return
+        r.removeAllViews()
+        r.apply {
             addTitle("Live camera")
             val iv = ImageView(context)
             iv.background = Look.glass(context, 18, Color.BLACK)
@@ -185,7 +206,6 @@ class CameraActivity : android.app.Activity() {
             addBody(t("Night mode: the picture is slower and brighter, which helps in a dark room but can blur fast movement. While someone watches, the child phone does not record clips. The live view stops by itself after 15 minutes, and the flash after 2 minutes.",
                 "وضع الليل: الصورة أبطأ وأسطع، يساعد في الغرفة المظلمة لكن قد يطمس الحركة السريعة. أثناء المشاهدة لا يسجل جوال الطفل مقاطع. يتوقف البث المباشر وحده بعد 15 دقيقة، والفلاش بعد دقيقتين."))
         }
-        refresh()
     }
 
     override fun onResume() {

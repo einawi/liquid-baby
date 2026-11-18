@@ -1,3 +1,23 @@
+0.9.59 (build 139): Settings is now built with real Compose (language, mode, themes, sound visuals, alerts, advanced options, PIN and restore), with the same behavior.
+
+0.9.59 (build 139): شاشة الإعدادات مبنية الآن بـ Compose فعلياً (اللغة، والوضع، والسمات، وشكل الصوت، والتنبيهات، والخيارات المتقدمة، والرمز، والاستعادة)، بنفس السلوك.
+
+0.9.59 (build 138): App updates is now built with real Compose (check, download, install, skip, Wi-Fi pre-download), with the same behavior.
+
+0.9.59 (build 138): شاشة تحديثات التطبيق مبنية الآن بـ Compose فعلياً (التحقق، والتنزيل، والتثبيت، والتخطي، والتنزيل المسبق عبر Wi-Fi)، بنفس السلوك.
+
+0.9.59 (build 137): Diagnostics is now built with real Compose (filters, copy, share, refresh, clear), with the same content.
+
+0.9.59 (build 137): شاشة التشخيص مبنية الآن بـ Compose فعلياً (الفلاتر، والنسخ، والمشاركة، والتحديث، والمسح)، بنفس المحتوى.
+
+0.9.59 (build 136): the live camera screen now runs inside the Compose page host. Streaming, flash, sound, zoom, recording and fullscreen work as before.
+
+0.9.59 (build 136): شاشة الكاميرا المباشرة صارت تعمل داخل الإطار الجديد بـ Compose. البث والفلاش والصوت والتكبير والتسجيل وملء الشاشة تعمل كما كانت.
+
+0.9.59 (build 135): the lock screen and the role chooser now run inside the Compose page host, with the same content and behavior.
+
+0.9.59 (build 135): شاشة القفل واختيار دور الجوال صارت تعمل داخل الإطار الجديد بـ Compose، بنفس المحتوى والسلوك.
+
 0.9.59 (build 134): build fix: removed a duplicate import in Settings.
 
 0.9.59 (build 134): إصلاح البناء: إزالة استيراد مكرر في الإعدادات.

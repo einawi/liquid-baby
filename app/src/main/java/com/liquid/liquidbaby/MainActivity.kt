@@ -1,15 +1,32 @@
 package com.liquid.liquidbaby
 
-import android.app.Activity
+import android.view.View
+import android.widget.LinearLayout
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import android.app.AlertDialog
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 
-class MainActivity : Activity() {
+class MainActivity : ComponentActivity() {
+
+    private var root: LinearLayout? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        applyLookTo()
+        setContent {
+            ClassicPage { ctx ->
+                LinearLayout(ctx).apply {
+                    orientation = LinearLayout.VERTICAL
+                    if (Tr.isAr()) layoutDirection = View.LAYOUT_DIRECTION_RTL
+                }.also {
+                    root = it
+                    render()
+                }
+            }
+        }
         try {
             startMain()
         } catch (t: Throwable) {
@@ -80,7 +97,9 @@ class MainActivity : Activity() {
     private fun renderUnsafe() {
         val local = AppInfo.versionCode(this)
         val info = Updater.cached()
-        screen {
+        val r = root ?: return
+        r.removeAllViews()
+        r.apply {
             addTitle("Liquid Baby")
             if (info != null && VersionUtil.shouldOffer(info.code, local, Prefs.getInt("skippedCode"), info.required)) {
                 val label = if (info.required) "Required update " else "New version "

@@ -1,6 +1,10 @@
 package com.liquid.liquidbaby
 
 import android.app.Activity
+import android.view.View
+import android.widget.LinearLayout
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import android.hardware.biometrics.BiometricPrompt
 import android.os.Build
 import android.os.Bundle
@@ -8,11 +12,31 @@ import android.os.CancellationSignal
 import android.text.InputType
 import android.widget.EditText
 
-class LockActivity : Activity() {
+class LockActivity : ComponentActivity() {
+
+    private var root: LinearLayout? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        screen {
+        applyLookTo()
+        setContent {
+            ClassicPage { ctx ->
+                LinearLayout(ctx).apply {
+                    orientation = LinearLayout.VERTICAL
+                    if (Tr.isAr()) layoutDirection = View.LAYOUT_DIRECTION_RTL
+                }.also {
+                    root = it
+                    buildLock()
+                }
+            }
+        }
+        if (Build.VERSION.SDK_INT >= 28) askFingerprint()
+    }
+
+    private fun buildLock() {
+        val r = root ?: return
+        r.removeAllViews()
+        r.apply {
             addTitle("Liquid Baby is locked")
             addBody("Enter your PIN to open the parent screen.")
             val input = EditText(context)
@@ -33,7 +57,6 @@ class LockActivity : Activity() {
                 addButton("Use fingerprint") { askFingerprint() }
             }
         }
-        if (Build.VERSION.SDK_INT >= 28) askFingerprint()
     }
 
     private fun askFingerprint() {
