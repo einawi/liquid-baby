@@ -312,15 +312,19 @@ class ParentActivity : Activity() {
     }
 
     private fun confirmRemove() {
-        AlertDialog.Builder(this)
-            .setTitle(t("Remove pairing with the child phone?", "هل تريد إلغاء الاقتران مع جوال الطفل؟"))
-            .setPositiveButton(t("Remove", "إلغاء الاقتران")) { _, _ ->
-                UnitService.stop(this)
-                PairStore.clearPaired()
-                build()
-            }
-            .setNegativeButton(t("Cancel", "تراجع"), null)
-            .show()
+        Dialogs.show(
+            this,
+            t("Remove pairing with the child phone?", "هل تريد إلغاء الاقتران مع جوال الطفل؟"),
+            null,
+            listOf(
+                t("Remove", "إلغاء الاقتران") to {
+                    UnitService.stop(this)
+                    PairStore.clearPaired()
+                    build()
+                },
+                t("Cancel", "تراجع") to {}
+            )
+        )
     }
 
     private val partnerHandler = android.os.Handler(android.os.Looper.getMainLooper())
@@ -544,18 +548,22 @@ class ParentActivity : Activity() {
     }
 
     private fun confirmDelete(title: String, olderThanMs: Long?) {
-        AlertDialog.Builder(this)
-            .setTitle(title)
-            .setPositiveButton(t("Delete", "حذف")) { _, _ ->
-                stopPlayer()
-                val cutoff = if (olderThanMs == null) Long.MAX_VALUE else System.currentTimeMillis() - olderThanMs
-                for (c in ParentEngine.clips(this)) {
-                    if (c.ts < cutoff) ParentEngine.deleteClip(this, c.ts)
-                }
-                fillList()
-            }
-            .setNegativeButton(t("Cancel", "تراجع"), null)
-            .show()
+        Dialogs.show(
+            this,
+            title,
+            null,
+            listOf(
+                t("Delete", "حذف") to {
+                    stopPlayer()
+                    val cutoff = if (olderThanMs == null) Long.MAX_VALUE else System.currentTimeMillis() - olderThanMs
+                    for (c in ParentEngine.clips(this)) {
+                        if (c.ts < cutoff) ParentEngine.deleteClip(this, c.ts)
+                    }
+                    fillList()
+                },
+                t("Cancel", "تراجع") to {}
+            )
+        )
     }
 
     private fun chooseOlder() {
@@ -565,13 +573,14 @@ class ParentActivity : Activity() {
             t("Older than 7 days", "أقدم من 7 أيام"),
             t("Older than 30 days", "أقدم من 30 يوماً")
         )
-        AlertDialog.Builder(this)
-            .setTitle(t("Delete recordings", "حذف التسجيلات"))
-            .setItems(labels) { _, which ->
-                confirmDelete(labels[which] + "?", days[which] * 24L * 60 * 60 * 1000)
-            }
-            .setNegativeButton(t("Cancel", "تراجع"), null)
-            .show()
+        Dialogs.show(
+            this,
+            t("Delete recordings", "حذف التسجيلات"),
+            null,
+            labels.mapIndexed { idx, label ->
+                label to { confirmDelete(label + "?", days[idx] * 24L * 60 * 60 * 1000) }
+            } + listOf(t("Cancel", "تراجع") to {})
+        )
     }
 
     private fun fillList() {
@@ -674,14 +683,18 @@ class ParentActivity : Activity() {
                     del.setPadding(dp(10), dp(10), dp(10), dp(10))
                     del.contentDescription = t("Delete video", "حذف الفيديو")
                     del.setOnClickListener {
-                        AlertDialog.Builder(this@ParentActivity)
-                            .setTitle(t("Delete this video?", "حذف هذا الفيديو؟"))
-                            .setPositiveButton(t("Delete", "حذف")) { _, _ ->
-                                f.delete()
-                                fillList()
-                            }
-                            .setNegativeButton(t("Cancel", "تراجع"), null)
-                            .show()
+                        Dialogs.show(
+                            this@ParentActivity,
+                            t("Delete this video?", "حذف هذا الفيديو؟"),
+                            null,
+                            listOf(
+                                t("Delete", "حذف") to {
+                                    f.delete()
+                                    fillList()
+                                },
+                                t("Cancel", "تراجع") to {}
+                            )
+                        )
                     }
                     row.addView(del, LinearLayout.LayoutParams(dp(46), dp(46)).apply { marginStart = dp(12) })
                     val share = ImageButton(context)
@@ -699,13 +712,15 @@ class ParentActivity : Activity() {
     }
 
     private fun chooseExport(f: File) {
-        AlertDialog.Builder(this)
-            .setTitle(t("Video", "الفيديو"))
-            .setItems(arrayOf(t("Share", "مشاركة"), t("Save to the gallery (Movies/LiquidBaby)", "حفظ في المعرض (Movies/LiquidBaby)"))) { _, which ->
-                exportVideo(f, share = which == 0)
-            }
-            .setNegativeButton(t("Cancel", "تراجع"), null)
-            .show()
+        Dialogs.show(
+            this,
+            t("Video", "الفيديو"),
+            null,
+            listOf(
+                t("Share", "مشاركة") to { exportVideo(f, share = true) },
+                t("Save to the gallery (Movies/LiquidBaby)", "حفظ في المعرض (Movies/LiquidBaby)") to { exportVideo(f, share = false) }
+            )
+        )
     }
 
     /** Decrypts the video and writes a normal MP4 to Movies/LiquidBaby (Android 10 and newer), then optionally shares it. */
@@ -775,15 +790,18 @@ class ParentActivity : Activity() {
 
     private fun showNotFound() {
         val own = Net.wifiIp(this) ?: "--"
-        AlertDialog.Builder(this)
-            .setTitle(t("Child phone not found", "لم نجد جوال الطفل"))
-            .setMessage(t(
+        Dialogs.show(
+            this,
+            t("Child phone not found", "لم نجد جوال الطفل"),
+            t(
                 "This phone: $own\n\nCheck:\n- The child phone is monitoring and on the same Wi-Fi.\n- The router is not in Guest mode.\n- 'AP isolation' or 'Client isolation' is OFF in the router. If it is ON, phones on the same Wi-Fi cannot see each other.\n- The VPN is off on both phones.",
                 "هذا الجوال: $own\n\nتأكد من:\n- جوال الطفل شغّال على نفس الواي فاي.\n- الراوتر ليس في وضع الضيوف (Guest).\n- خاصية 'AP isolation' أو 'Client isolation' مطفية في الراوتر. إذا كانت شغّالة، الجوالات على نفس الواي فاي ما تشوف بعض.\n- الـ VPN مطفي على الجوالين."
-            ))
-            .setPositiveButton(t("Type the address", "اكتب العنوان")) { _, _ -> askIp() }
-            .setNegativeButton(t("Cancel", "تراجع"), null)
-            .show()
+            ),
+            listOf(
+                t("Type the address", "اكتب العنوان") to { askIp() },
+                t("Cancel", "تراجع") to {}
+            )
+        )
     }
 
     private fun showPicker(found: List<Discovery.Found>) {
@@ -834,13 +852,16 @@ class ParentActivity : Activity() {
             return
         }
         if (own.isNotEmpty() && !Ip.sameSubnet24(ip, own)) {
-            AlertDialog.Builder(this)
-                .setTitle(t("Different network?", "شبكة مختلفة؟"))
-                .setMessage(t("This phone is on $own but you typed $ip. Both phones must start with the same first three numbers.",
-                    "هذا الجوال على $own وكتبت $ip. لازم الجوالين يبدأون بنفس الأرقام الثلاثة الأولى."))
-                .setPositiveButton(t("Try anyway", "جرّب على أي حال")) { _, _ -> pair(ip) }
-                .setNegativeButton(t("Fix it", "صحّحه")) { _, _ -> askIp() }
-                .show()
+            Dialogs.show(
+                this,
+                t("Different network?", "شبكة مختلفة؟"),
+                t("This phone is on $own but you typed $ip. Both phones must start with the same first three numbers.",
+                  "هذا الجوال على $own وكتبت $ip. لازم الجوالين يبدأون بنفس الأرقام الثلاثة الأولى."),
+                listOf(
+                    t("Try anyway", "جرّب على أي حال") to { pair(ip) },
+                    t("Fix it", "صحّحه") to { askIp() }
+                )
+            )
             return
         }
         pair(ip)
@@ -851,14 +872,17 @@ class ParentActivity : Activity() {
         ParentEngine.pair(this, ip, object : ParentEngine.PairListener {
             override fun onSas(sas: String, childName: String, decide: (Boolean) -> Unit) {
                 runOnUiThread {
-                    AlertDialog.Builder(this@ParentActivity)
-                        .setTitle(t("Check the code", "تحقق من الرمز"))
-                        .setMessage(t("The child phone ($childName) must show the same number:\n\n$sas\n\nIs it the same?",
-                            "جوال الطفل ($childName) لازم يُظهر نفس الرقم:\n\n$sas\n\nهل هو نفسه؟"))
-                        .setCancelable(false)
-                        .setPositiveButton(t("Yes, same", "نعم، نفسه")) { _, _ -> decide(true) }
-                        .setNegativeButton(t("No", "لا")) { _, _ -> decide(false) }
-                        .show()
+                    Dialogs.show(
+                        this@ParentActivity,
+                        t("Check the code", "تحقق من الرمز"),
+                        t("The child phone ($childName) must show the same number:\n\n$sas\n\nIs it the same?",
+                          "جوال الطفل ($childName) لازم يُظهر نفس الرقم:\n\n$sas\n\nهل هو نفسه؟"),
+                        listOf(
+                            t("Yes, same", "نعم، نفسه") to { decide(true) },
+                            t("No", "لا") to { decide(false) }
+                        ),
+                        cancelable = false
+                    )
                 }
             }
 

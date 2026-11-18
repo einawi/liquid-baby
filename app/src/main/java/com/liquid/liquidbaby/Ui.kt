@@ -28,12 +28,7 @@ object Look {
     val BUTTON: Int get() = Themes.current().button
     val BANNER: Int get() = Themes.current().banner
 
-    fun background(alpha: Int): GradientDrawable {
-        val t = Themes.current()
-        val g = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(t.top, t.mid, t.bottom))
-        g.setAlpha(alpha)
-        return g
-    }
+    fun background(alpha: Int): android.graphics.drawable.Drawable = ShiftingBackground(Themes.current(), alpha)
 
     /** Corner radius follows the theme: sharp for neon, round for ocean and aurora. */
     fun pill(fill: Int): GradientDrawable {

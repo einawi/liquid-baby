@@ -110,7 +110,6 @@ object ChildEngine {
         Diag.i("Child unit starting. " + Net.describe(appCtx).replace("\n", ", "))
         try {
             udp = Discovery.startResponder(appCtx, PairStore.unitId(), Build.MODEL)
-            Nsd.register(appCtx, PairStore.unitId())
         } catch (e: Exception) {
             Diag.e("Discovery responder failed", e)
         }
@@ -201,6 +200,9 @@ object ChildEngine {
             ss.reuseAddress = true
             ss.bind(InetSocketAddress(Discovery.TCP_PORT))
             server = ss
+            // announced only now: the port is open, so a parent that finds this phone can connect
+            Nsd.register(appCtx, PairStore.unitId())
+            Diag.i("Listening on port " + Discovery.TCP_PORT + ", announced")
             while (running) {
                 val s = ss.accept()
                 Thread { handle(s) }.start()

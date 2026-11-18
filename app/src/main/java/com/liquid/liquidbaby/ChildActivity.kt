@@ -248,14 +248,18 @@ class ChildActivity : Activity() {
                 b.background = Look.glass(context, 18, 0x22FF5252)
                 b.minHeight = dp(44)
                 b.setOnClickListener {
-                    AlertDialog.Builder(this@ChildActivity)
-                        .setTitle(t("Remove this parent phone?", "إزالة جوال الأبوين هذا؟"))
-                        .setPositiveButton(t("Remove", "إزالة")) { _, _ ->
-                            PairStore.removeParent(p.id)
-                            fillParents()
-                        }
-                        .setNegativeButton(t("Cancel", "تراجع"), null)
-                        .show()
+                    Dialogs.show(
+                        this@ChildActivity,
+                        t("Remove this parent phone?", "إزالة جوال الأبوين هذا؟"),
+                        null,
+                        listOf(
+                            t("Remove", "إزالة") to {
+                                PairStore.removeParent(p.id)
+                                fillParents()
+                            },
+                            t("Cancel", "تراجع") to {}
+                        )
+                    )
                 }
                 row.addView(b)
             }

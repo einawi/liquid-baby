@@ -1,5 +1,17 @@
 package com.liquid.liquidbaby
 
+import android.widget.FrameLayout
+
+import android.widget.LinearLayout
+
+import android.widget.TextView
+
+import android.graphics.drawable.GradientDrawable
+
+import android.view.View
+
+import android.view.Gravity
+
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.ClipboardManager
@@ -45,32 +57,94 @@ class SettingsActivity : Activity() {
                     }
                 }
                 addBody(t("Theme", "السمة"))
-                for (st in listOf("minimal", "classic", "teal", "bright")) {
-                    val label = when (st) {
-                        "minimal" -> t("Flat", "مسطّح")
-                        "classic" -> t("Glass", "زجاجي")
-                        "teal" -> t("Teal", "فيروزي")
-                        else -> t("Bright", "مشرق")
+                // colour swatches in two rows of five: each dot shows its look, the chosen one has a ring
+                val looks = listOf(
+                    Triple("minimal", t("Flat", "مسطّح"), 0xFF2A3A55.toInt()),
+                    Triple("classic", t("Glass", "زجاجي"), 0xFF3D5A80.toInt()),
+                    Triple("teal", t("Teal", "فيروزي"), 0xFF7FE3D6.toInt()),
+                    Triple("bright", t("Bright", "مشرق"), 0xFFFF6B6B.toInt()),
+                    Triple("midnight", t("Midnight", "منتصف الليل"), 0xFF141F44.toInt()),
+                    Triple("aurora", t("Aurora", "الشفق"), 0xFF1A4D5C.toInt()),
+                    Triple("sunset", t("Sunset", "الغروب"), 0xFFE0734D.toInt()),
+                    Triple("rose", t("Rose", "وردي"), 0xFFC2446F.toInt()),
+                    Triple("forest", t("Forest", "غابة"), 0xFF2F7A3E.toInt()),
+                    Triple("graphite", t("Graphite", "جرافيت"), 0xFF4A5563.toInt())
+                )
+                for (chunk in looks.chunked(5)) {
+                    val row = LinearLayout(context)
+                    row.orientation = LinearLayout.HORIZONTAL
+                    row.gravity = Gravity.CENTER
+                    row.setPadding(0, context.dp(4), 0, context.dp(4))
+                    for ((st, name, colour) in chunk) {
+                        val item = LinearLayout(context)
+                        item.orientation = LinearLayout.VERTICAL
+                        item.gravity = Gravity.CENTER_HORIZONTAL
+                        val dot = View(context)
+                        val selected = Themes.style() == st
+                        dot.background = GradientDrawable().apply {
+                            shape = GradientDrawable.OVAL
+                            setColor(colour)
+                            if (selected) setStroke(context.dp(3), Look.TEXT)
+                        }
+                        item.addView(dot, LinearLayout.LayoutParams(context.dp(40), context.dp(40)))
+                        val label = TextView(context)
+                        label.text = name
+                        label.textSize = 12f
+                        label.setTextColor(Look.TEXT)
+                        label.gravity = Gravity.CENTER
+                        label.setPadding(0, context.dp(4), 0, 0)
+                        item.addView(label)
+                        item.setOnClickListener {
+                            Themes.setStyle(st)
+                            build()
+                        }
+                        row.addView(item, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
                     }
-                    addButton((if (Themes.style() == st) "✓ " else "") + label) {
-                        Themes.setStyle(st)
-                        build()
-                    }
+                    addView(row)
                 }
             }
 
             sectionLabel(t("Sound visual", "شكل الصوت"))
             card(14) {
                 val current = Prefs.getString("soundVisual", "wave")
+                // three live previews: each one moves with a sample level; the chosen one has a ring
+                val previews = LinearLayout(context)
+                previews.orientation = LinearLayout.HORIZONTAL
+                previews.gravity = Gravity.CENTER
+                previews.setPadding(0, context.dp(6), 0, context.dp(6))
                 for ((id, label) in listOf(
                     "wave" to t("Calm wave", "موجة هادئة"),
                     "rings" to t("Ripple rings", "حلقات الانتشار"),
                     "orb" to t("Glowing orb", "كرة متوهجة"))) {
-                    addButton((if (current == id) "✓ " else "") + label) {
+                    val item = LinearLayout(context)
+                    item.orientation = LinearLayout.VERTICAL
+                    item.gravity = Gravity.CENTER_HORIZONTAL
+                    val box = FrameLayout(context)
+                    box.background = GradientDrawable().apply {
+                        shape = GradientDrawable.RECTANGLE
+                        cornerRadius = context.dp(14).toFloat()
+                        setColor(0x33000000)
+                        if (current == id) setStroke(context.dp(3), Look.TEXT)
+                    }
+                    val live = SoundVisual(context)
+                    live.setStyle(id)
+                    live.setLevel(55)
+                    box.addView(live, FrameLayout.LayoutParams(context.dp(96), context.dp(60)))
+                    item.addView(box, LinearLayout.LayoutParams(context.dp(108), context.dp(68)))
+                    val text = TextView(context)
+                    text.text = label
+                    text.textSize = 13f
+                    text.setTextColor(Look.TEXT)
+                    text.gravity = Gravity.CENTER
+                    text.setPadding(0, context.dp(4), 0, 0)
+                    item.addView(text)
+                    item.setOnClickListener {
                         Prefs.putString("soundVisual", id)
                         build()
                     }
+                    previews.addView(item, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
                 }
+                addView(previews)
             }
 
             sectionLabel(t("Alerts", "التنبيهات"))
@@ -116,13 +190,17 @@ class SettingsActivity : Activity() {
 
     private fun askRole() {
         val items = arrayOf(t("Child unit", "وحدة الطفل"), t("Parent unit", "وحدة الأبوين"))
-        AlertDialog.Builder(this)
-            .setTitle(t("This phone is the", "هذا الجوال هو"))
-            .setItems(items) { _, which ->
-                Prefs.putString("role", if (which == 0) "child" else "parent")
-                toast(t("Saved", "تم الحفظ"))
+        Dialogs.show(
+            this,
+            t("This phone is the", "هذا الجوال هو"),
+            null,
+            items.mapIndexed { i, label ->
+                label to {
+                    Prefs.putString("role", if (i == 0) "child" else "parent")
+                    toast(t("Saved", "تم الحفظ"))
+                }
             }
-            .show()
+        )
     }
 
     private fun pickTone() {

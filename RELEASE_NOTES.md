@@ -1,3 +1,23 @@
+0.9.56 (build 123): six new looks (Midnight, Aurora, Sunset, Rose, Forest, Graphite), each in dark and light, shown as swatches in Settings. The background drifts slowly with the theme colours.
+
+0.9.56 (build 123): ستة سمات جديدة (منتصف الليل، الشفق، الغروب، وردي، غابة، جرافيت) بالوضعين الداكن والفاتح، وتظهر دوائر في الإعدادات. الخلفية تتحرك ببطء بألوان السمة.
+
+0.9.55 (build 122): most windows use the app's own look now (confirmations, choices, notices, lists). Five windows that need text input or a custom picker still use the system style.
+
+0.9.55 (build 122): أغلب النوافذ صارت بشكل التطبيق (التأكيدات والخيارات والتنبيهات والقوائم). خمس نوافذ تحتاج إدخال نص أو قائمة مخصصة ما زالت بالشكل الافتراضي.
+
+0.9.54 (build 121): help windows in the app's own look (the child-not-found help). The flash: one tap turns it on or off; a long press chooses light, medium or high.
+
+0.9.54 (build 121): نوافذ المساعدة بشكل التطبيق (مساعدة 'لم نجد جوال الطفل'). الفلاش: نقرة واحدة للتشغيل والإطفاء، والضغط المطوّل يختار خفيف أو متوسط أو عالي.
+
+0.9.53 (build 120): the child phone announces itself only after its listening port opens (no false announcement). Settings shows the three sound visuals as live previews, with a ring on the chosen one. Update the child phone.
+
+0.9.53 (build 120): جوال الطفل يُعلن نفسه فقط بعد فتح منفذ الاستماع (بلا إعلان كاذب). الإعدادات تعرض أشكال الصوت الثلاثة كمعاينات حية، مع حلقة حول المختار. يُفضّل تحديث جوال الطفل.
+
+0.9.52 (build 119): visual pass on the Settings screen: the theme choice shows colour swatches, with a ring on the chosen one. Look only.
+
+0.9.52 (build 119): تحسين شكل شاشة الإعدادات: اختيار السمة يعرض دوائر ملونة، مع حلقة حول السمة المختارة. للشكل فقط.
+
 0.9.51 (build 118): night mode is one level (off or on) with better low-light clarity that avoids ghosting on moving parts. Black and white is removed. The flash has manual levels: off, low, medium, full (dimmer where the phone supports it, otherwise on or off). Update both phones.
 
 0.9.51 (build 118): الوضع الليلي مستوى واحد (إيقاف أو تشغيل) مع وضوح أفضل في الإضاءة الخافتة دون ظلال على الأجزاء المتحركة. حُذف الأبيض والأسود. الفلاش له مستويات يدوية: إيقاف، منخفض، متوسط، كامل (أخفت حيث يدعم الجهاز ذلك، وإلا تشغيل أو إيقاف). يُفضّل تحديث الجوالين.

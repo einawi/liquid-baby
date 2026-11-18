@@ -60,11 +60,12 @@ class MainActivity : Activity() {
         if (last in 1 until current) {
             val info = Updater.cached()
             val notes = if (info != null && info.code == current) info.notes else ""
-            AlertDialog.Builder(this)
-                .setTitle(Tr.t("Was updated to ") + AppInfo.versionName(this))
-                .setMessage(if (notes.isBlank()) Tr.t("The app was updated successfully.") else Tr.t(notes))
-                .setPositiveButton(Tr.t("OK"), null)
-                .show()
+            Dialogs.show(
+                this,
+                Tr.t("Was updated to ") + AppInfo.versionName(this),
+                if (notes.isBlank()) Tr.t("The app was updated successfully.") else Tr.t(notes),
+                listOf(Tr.t("OK") to {})
+            )
         }
     }
 
@@ -117,10 +118,11 @@ class MainActivity : Activity() {
             "1. Keep this phone on the same Wi-Fi as the child phone.\n2. On the child phone, tap Start monitoring.\n3. Here, tap Pair with the child phone, choose it, and check that both phones show the same code.",
             "1. خلّ هذا الجوال على نفس واي فاي جوال الطفل.\n2. على جوال الطفل اضغط ابدأ المراقبة.\n3. هنا اضغط اقرن مع جوال الطفل، واختره، وتأكد أن الرمز متطابق على الجوالين."
         )
-        AlertDialog.Builder(this)
-            .setTitle(Tr.pick("Next steps", "الخطوات التالية"))
-            .setMessage(msg)
-            .setPositiveButton(Tr.pick("OK", "حسناً"), null)
-            .show()
+        Dialogs.show(
+            this,
+            Tr.pick("Next steps", "الخطوات التالية"),
+            msg,
+            listOf(Tr.pick("OK", "حسناً") to {})
+        )
     }
 }

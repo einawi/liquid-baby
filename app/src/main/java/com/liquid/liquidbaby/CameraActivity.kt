@@ -118,7 +118,11 @@ class CameraActivity : android.app.Activity() {
             })
 
             flashBtn = addButton(t("Flash", "الفلاش")) {
-                cycleFlash()
+                tapFlash()
+            }
+            flashBtn?.setOnLongClickListener {
+                showFlashChoice()
+                true
             }
             switchBtn = addButton(t("Switch camera", "تبديل الكاميرا")) {
                 ParentEngine.setView(ParentEngine.viewQuality, !ParentEngine.viewFront, false)
@@ -224,11 +228,15 @@ class CameraActivity : android.app.Activity() {
     override fun onBackPressed() {
         when {
             overlay != null -> exitFull()
-            recorder != null -> AlertDialog.Builder(this)
-                .setTitle(t("Stop the recording and leave?", "إيقاف التسجيل والخروج؟"))
-                .setPositiveButton(t("Stop and leave", "إيقاف وخروج")) { _, _ -> stopRecording(); super.onBackPressed() }
-                .setNegativeButton(t("Keep recording", "متابعة التسجيل"), null)
-                .show()
+            recorder != null -> Dialogs.show(
+                this,
+                t("Stop the recording and leave?", "إيقاف التسجيل والخروج؟"),
+                null,
+                listOf(
+                    t("Stop and leave", "إيقاف وخروج") to { stopRecording(); super.onBackPressed() },
+                    t("Keep recording", "متابعة التسجيل") to {}
+                )
+            )
             else -> super.onBackPressed()
         }
     }
@@ -378,7 +386,11 @@ class CameraActivity : android.app.Activity() {
         bar.orientation = LinearLayout.HORIZONTAL
         bar.gravity = Gravity.CENTER
         fullFlash = iconButton(R.drawable.ic_flash, t("Flash", "الفلاش")) {
-            cycleFlash()
+            tapFlash()
+        }
+        fullFlash?.setOnLongClickListener {
+            showFlashChoice()
+            true
         }
         bar.addView(fullFlash, barParams())
         bar.addView(iconButton(R.drawable.ic_quality, t("Quality", "الجودة")) { chooseQuality() }, barParams())
@@ -423,15 +435,19 @@ class CameraActivity : android.app.Activity() {
     }
 
     private fun chooseFps() {
-        AlertDialog.Builder(this)
-            .setTitle(t("Frame rate", "معدل الفريمات"))
-            .setItems((10..30).map { "$it fps" }.toTypedArray()) { _, which ->
-                ParentEngine.setFps(which + 10)
-                checkHeavy(ParentEngine.viewQuality, which + 10)
-                fpsSpinner?.setSelection(which, false)
-            }
-            .setNegativeButton(t("Cancel", "تراجع"), null)
-            .show()
+        Dialogs.show(
+            this,
+            t("Frame rate", "معدل الفريمات"),
+            null,
+            (10..30).map { n ->
+                "$n fps" to {
+                    ParentEngine.setFps(n)
+                    checkHeavy(ParentEngine.viewQuality, n)
+                    fpsSpinner?.setSelection(n - 10, false)
+                    Unit
+                }
+            } + listOf(t("Cancel", "تراجع") to {})
+        )
     }
 
     /** Off, then low light, then pitch dark, then off again. */
@@ -442,17 +458,43 @@ class CameraActivity : android.app.Activity() {
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
     }
 
-    /** Flash by hand: off, low, medium, full, then off again. */
-    private fun cycleFlash() {
-        val next = (ParentEngine.viewFlashLevel + 1) % 4
-        ParentEngine.setFlashLevel(next)
-        val msg = when (next) {
-            1 -> t("Flash: low", "الفلاش: منخفض")
-            2 -> t("Flash: medium", "الفلاش: متوسط")
-            3 -> t("Flash: full", "الفلاش: كامل")
-            else -> t("Flash: off", "الفلاش: إيقاف")
+    /** One tap: on at the last chosen strength, or off. */
+    private fun tapFlash() {
+        if (ParentEngine.viewFlashLevel != 0) {
+            ParentEngine.setFlashLevel(0)
+            Toast.makeText(this, t("Flash: off", "الفلاش: إيقاف"), Toast.LENGTH_SHORT).show()
+        } else {
+            val level = Prefs.getString("flashPref", "2").toIntOrNull() ?: 2
+            ParentEngine.setFlashLevel(level)
+            Toast.makeText(this, flashName(level), Toast.LENGTH_SHORT).show()
         }
-        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+    }
+
+    /** Long press: choose the strength, light, medium or high. */
+    private fun showFlashChoice() {
+        Dialogs.show(
+            this,
+            t("Flash strength", "شدة الفلاش"),
+            null,
+            listOf(
+                t("Light", "خفيف") to { chooseFlash(1) },
+                t("Medium", "متوسط") to { chooseFlash(2) },
+                t("High", "عالي") to { chooseFlash(3) },
+                t("Off", "إيقاف") to { chooseFlash(0) }
+            )
+        )
+    }
+
+    private fun chooseFlash(level: Int) {
+        if (level != 0) Prefs.putString("flashPref", level.toString())
+        ParentEngine.setFlashLevel(level)
+        Toast.makeText(this, if (level == 0) t("Flash: off", "الفلاش: إيقاف") else flashName(level), Toast.LENGTH_SHORT).show()
+    }
+
+    private fun flashName(level: Int): String = when (level) {
+        1 -> t("Flash: light", "الفلاش: خفيف")
+        2 -> t("Flash: medium", "الفلاش: متوسط")
+        else -> t("Flash: high", "الفلاش: عالي")
     }
 
     /** Warns when 720p is combined with a high frame rate, which stutters on this phone. */
@@ -469,15 +511,18 @@ class CameraActivity : android.app.Activity() {
 
     private fun chooseQuality() {
         val labels = qualityLabels
-        AlertDialog.Builder(this)
-            .setTitle(t("Quality", "الجودة"))
-            .setItems(labels) { _, which ->
-                ParentEngine.setView(which, ParentEngine.viewFront, ParentEngine.viewFlash)
-                checkHeavy(which, ParentEngine.viewFps)
-                refresh()
-            }
-            .setNegativeButton(t("Cancel", "تراجع"), null)
-            .show()
+        Dialogs.show(
+            this,
+            t("Quality", "الجودة"),
+            null,
+            labels.mapIndexed { i, label ->
+                label to {
+                    ParentEngine.setView(i, ParentEngine.viewFront, ParentEngine.viewFlash)
+                    checkHeavy(i, ParentEngine.viewFps)
+                    refresh()
+                }
+            } + listOf(t("Cancel", "تراجع") to {})
+        )
     }
 
     /** Leaves full screen: stops any talk that is running and restores the normal screen. */

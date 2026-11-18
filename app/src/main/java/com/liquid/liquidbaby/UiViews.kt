@@ -251,3 +251,45 @@ class SoundVisual(ctx: Context) : View(ctx) {
         }
     }
 }
+
+/**
+ * The app background: the theme's three colours, drifting very slowly so the screen feels alive.
+ * It only moves a little (about 12% of the height over 14 seconds) and costs almost nothing to draw.
+ */
+class ShiftingBackground(private val t: Style, alpha: Int) : android.graphics.drawable.Drawable() {
+    private var phase = 0f
+    private var a = alpha
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val drift = ValueAnimator.ofFloat(0f, 1f).apply {
+        duration = 14000L
+        repeatCount = ValueAnimator.INFINITE
+        repeatMode = ValueAnimator.REVERSE
+        addUpdateListener {
+            phase = it.animatedValue as Float
+            invalidateSelf()
+        }
+    }
+
+    override fun draw(c: Canvas) {
+        if (!drift.isRunning) drift.start()
+        val b = bounds
+        val h = b.height().toFloat()
+        val shift = (phase - 0.5f) * h * 0.12f
+        paint.shader = android.graphics.LinearGradient(
+            0f, shift, 0f, h + shift,
+            intArrayOf(t.top, t.mid, t.bottom), null,
+            android.graphics.Shader.TileMode.CLAMP
+        )
+        paint.alpha = a
+        c.drawRect(b, paint)
+    }
+
+    override fun setAlpha(alpha: Int) {
+        a = alpha
+    }
+
+    override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) {}
+
+    @Suppress("OVERRIDE_DEPRECATION")
+    override fun getOpacity(): Int = android.graphics.PixelFormat.TRANSLUCENT
+}
