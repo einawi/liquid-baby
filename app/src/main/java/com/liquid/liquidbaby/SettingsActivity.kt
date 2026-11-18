@@ -14,7 +14,6 @@ import android.view.Gravity
 
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import android.view.View
 import android.app.AlertDialog
 import android.content.ClipboardManager
 import android.content.Context

@@ -1,3 +1,7 @@
+0.9.59 (build 134): build fix: removed a duplicate import in Settings.
+
+0.9.59 (build 134): إصلاح البناء: إزالة استيراد مكرر في الإعدادات.
+
 0.9.59 (build 133): Settings, Diagnostics and App updates now run inside the Compose page host. Their content and behavior are unchanged.
 
 0.9.59 (build 133): شاشات الإعدادات والتشخيص والتحديثات صارت تعمل داخل الإطار الجديد بـ Compose. المحتوى والسلوك كما هما.
