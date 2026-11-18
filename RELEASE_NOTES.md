@@ -1,3 +1,7 @@
+0.9.58 (build 125): liquid glass look. The background shows soft pools of the theme's colours drifting slowly, and the glass cards have a light highlight at the top.
+
+0.9.58 (build 125): شكل الزجاج السائل. الخلفية تُظهر بقعاً ناعمة من ألوان السمة تتحرك ببطء، والبطاقات الزجاجية فيها لمعة خفيفة أعلاها.
+
 0.9.57 (build 124): Settings keeps its scroll position when you choose something (no more jumping to the top). The glowing orb on the home screen is larger.
 
 0.9.57 (build 124): شاشة الإعدادات تحافظ على موضع التمرير عند الاختيار (بلا قفز للأعلى). الكرة المتوهجة في الشاشة الرئيسية أكبر.

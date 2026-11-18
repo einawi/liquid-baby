@@ -261,9 +261,9 @@ class ShiftingBackground(private val t: Style, alpha: Int) : android.graphics.dr
     private var a = alpha
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val drift = ValueAnimator.ofFloat(0f, 1f).apply {
-        duration = 14000L
+        duration = 24000L
         repeatCount = ValueAnimator.INFINITE
-        repeatMode = ValueAnimator.REVERSE
+        repeatMode = ValueAnimator.RESTART
         addUpdateListener {
             phase = it.animatedValue as Float
             invalidateSelf()
@@ -273,15 +273,34 @@ class ShiftingBackground(private val t: Style, alpha: Int) : android.graphics.dr
     override fun draw(c: Canvas) {
         if (!drift.isRunning) drift.start()
         val b = bounds
+        val w = b.width().toFloat()
         val h = b.height().toFloat()
-        val shift = (phase - 0.5f) * h * 0.12f
+        // base: the theme's three colours
         paint.shader = android.graphics.LinearGradient(
-            0f, shift, 0f, h + shift,
+            0f, 0f, 0f, h,
             intArrayOf(t.top, t.mid, t.bottom), null,
             android.graphics.Shader.TileMode.CLAMP
         )
         paint.alpha = a
         c.drawRect(b, paint)
+        // liquid light: three soft pools of colour that drift in slow orbits behind the content
+        val pools = intArrayOf(t.accent, t.button, t.sub)
+        val orbit = (phase * 2.0 * Math.PI).toFloat()
+        for (k in 0 until 3) {
+            val ang = orbit + k * 2.1f
+            val cx = w * (0.5f + 0.34f * kotlin.math.cos(ang))
+            val cy = h * (0.5f + 0.26f * kotlin.math.sin(ang * 0.8f + k))
+            val r = w * (0.55f + 0.1f * k)
+            val col = pools[k]
+            paint.shader = android.graphics.RadialGradient(
+                cx, cy, r,
+                intArrayOf((col and 0x00FFFFFF) or (0x59 shl 24), (col and 0x00FFFFFF)),
+                floatArrayOf(0f, 1f),
+                android.graphics.Shader.TileMode.CLAMP
+            )
+            paint.alpha = a
+            c.drawRect(b, paint)
+        }
     }
 
     override fun setAlpha(alpha: Int) {

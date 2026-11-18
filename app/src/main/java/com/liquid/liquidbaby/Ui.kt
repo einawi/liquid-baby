@@ -44,7 +44,11 @@ object Look {
         val g = GradientDrawable()
         g.shape = GradientDrawable.RECTANGLE
         g.cornerRadius = ctx.dp((t.radius * radiusDp / 22).coerceAtLeast(2)).toFloat()
-        g.setColor(fill)
+        // liquid glass: a soft highlight at the top fades into the body, with a thin light edge
+        val a = (fill ushr 24) and 0xFF
+        val lit = (minOf(255, a + 34) shl 24) or (fill and 0x00FFFFFF)
+        g.colors = intArrayOf(lit, fill)
+        g.orientation = GradientDrawable.Orientation.TOP_BOTTOM
         g.setStroke(ctx.dp(1), t.edge)
         return g
     }
