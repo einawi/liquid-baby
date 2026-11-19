@@ -3,7 +3,11 @@ package com.liquid.liquidbaby
 import android.content.Context
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
+import android.os.Build
+import java.net.Inet4Address
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executor
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 
@@ -14,6 +18,7 @@ import java.util.concurrent.atomic.AtomicReference
 object Nsd {
     private const val TYPE = "_liquidbaby._tcp."
     private var registration: NsdManager.RegistrationListener? = null
+    private val resolver: Executor = Executors.newSingleThreadExecutor()
 
     private fun nameFor(unitId: String): String = "lb" + unitId.take(16)
 
@@ -48,6 +53,48 @@ object Nsd {
         }
     }
 
+    /**
+     * Turns a found service into its IPv4 address and passes it to onIp.
+     * Android 14 and later: the callback API, which keeps the address up to date.
+     * Older phones: the classic resolve call.
+     */
+    private fun resolveIp(mgr: NsdManager, info: NsdServiceInfo, onIp: (String) -> Unit) {
+        if (Build.VERSION.SDK_INT >= 34) {
+            val callback = object : NsdManager.ServiceInfoCallback {
+                override fun onServiceInfoCallbackRegistrationFailed(errorCode: Int) {
+                    Diag.i("Address callback failed: code $errorCode")
+                }
+                override fun onServiceUpdated(serviceInfo: NsdServiceInfo) {
+                    val ip = serviceInfo.hostAddresses.firstOrNull { it is Inet4Address }?.hostAddress
+                    if (ip != null) {
+                        onIp(ip)
+                        try {
+                            mgr.unregisterServiceInfoCallback(this)
+                        } catch (_: Exception) {
+                        }
+                    }
+                }
+                override fun onServiceLost() {}
+                override fun onServiceInfoCallbackUnregistered() {}
+            }
+            try {
+                mgr.registerServiceInfoCallback(info, resolver, callback)
+            } catch (e: Exception) {
+                Diag.i("Address callback problem: " + e.message)
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            mgr.resolveService(info, object : NsdManager.ResolveListener {
+                override fun onResolveFailed(x: NsdServiceInfo, errorCode: Int) {}
+                @Suppress("DEPRECATION")
+                override fun onServiceResolved(x: NsdServiceInfo) {
+                    val ip = x.host?.hostAddress
+                    if (ip != null && !ip.contains(':')) onIp(ip)
+                }
+            })
+        }
+    }
+
     /** Parent, pairing: every child phone announcing itself, as (name, ip). */
     fun findAll(ctx: Context, timeoutMs: Long = 4000L): List<Pair<String, String>> {
         return try {
@@ -61,13 +108,7 @@ object Nsd {
                 override fun onServiceLost(i: NsdServiceInfo) {}
                 override fun onServiceFound(i: NsdServiceInfo) {
                     if (!i.serviceName.startsWith("lb")) return
-                    mgr.resolveService(i, object : NsdManager.ResolveListener {
-                        override fun onResolveFailed(x: NsdServiceInfo, errorCode: Int) {}
-                        override fun onServiceResolved(x: NsdServiceInfo) {
-                            val ip = x.host?.hostAddress
-                            if (ip != null && !ip.contains(':')) list.add(Pair(x.serviceName, ip))
-                        }
-                    })
+                    resolveIp(mgr, i) { ip -> list.add(Pair(i.serviceName, ip)) }
                 }
             }
             mgr.discoverServices(TYPE, NsdManager.PROTOCOL_DNS_SD, listener)
@@ -95,16 +136,10 @@ object Nsd {
                 override fun onServiceLost(i: NsdServiceInfo) {}
                 override fun onServiceFound(i: NsdServiceInfo) {
                     if (i.serviceName != wanted) return
-                    mgr.resolveService(i, object : NsdManager.ResolveListener {
-                        override fun onResolveFailed(x: NsdServiceInfo, errorCode: Int) {}
-                        override fun onServiceResolved(x: NsdServiceInfo) {
-                            val ip = x.host?.hostAddress
-                            if (ip != null && !ip.contains(':')) {
-                                found.compareAndSet(null, ip)
-                                done.countDown()
-                            }
-                        }
-                    })
+                    resolveIp(mgr, i) { ip ->
+                        found.compareAndSet(null, ip)
+                        done.countDown()
+                    }
                 }
             }
             mgr.discoverServices(TYPE, NsdManager.PROTOCOL_DNS_SD, listener)

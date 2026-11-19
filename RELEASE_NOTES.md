@@ -1,3 +1,7 @@
+0.9.7 (build 156): finding the child phone on the network uses the current Android callback API on Android 14 and later; older phones keep the classic call. Same behavior, no more deprecation warnings in discovery.
+
+0.9.7 (build 156): البحث عن جوال الطفل على الشبكة يستخدم واجهة Android الحديثة على أندرويد 14 فما بعد؛ والأجهزة الأقدم تبقى على الطريقة القديمة. السلوك نفسه، دون تحذيرات الاستدعاءات المهجورة في الاكتشاف.
+
 0.9.7 (build 155): cleaned build warnings: back press in the camera uses the current dispatcher, full screen uses the current system-bar API, screen transitions and ringtone results use the newer calls where the phone supports them. No change in behavior.
 
 0.9.7 (build 155): تنظيف تحذيرات البناء: زر الرجوع في الكاميرا يستخدم الآلية الحالية، وملء الشاشة يستخدم واجهة أشرطة النظام الحديثة، وانتقالات الشاشات ونتيجة صوت الإشعار تستخدم الاستدعاءات الأحدث حيث يدعمها الجوال. دون تغيير في السلوك.
