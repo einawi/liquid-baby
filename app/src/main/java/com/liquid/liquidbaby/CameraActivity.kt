@@ -31,6 +31,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -432,7 +433,7 @@ class CameraActivity : androidx.activity.ComponentActivity(), MicHost {
         val sb = StringBuilder()
         sb.append(if (ParentEngine.viewing) t("Live", "مباشر") else t("Starting...", "جارٍ البدء..."))
         sb.append(" - ").append(t("watching now: ", "يشاهد الآن: ")).append(maxOf(ParentEngine.viewers, 1)).append("\n")
-        if (ParentEngine.talkNote.isNotEmpty()) sb.append(ParentEngine.talkNote).append("\n")
+        if (ParentEngine.talkNote.isNotEmpty() && !ParentEngine.connected) sb.append(ParentEngine.talkNote).append("\n")
         frames = 0
         statusTv?.text = sb.toString()
         camState.status = sb.toString()
@@ -544,12 +545,18 @@ class CameraActivity : androidx.activity.ComponentActivity(), MicHost {
                         checkHeavy(q, ParentEngine.viewFps)
                         refresh()
                     },
-                    modifier = Modifier.weight(1f).height(48.dp),
+                    modifier = Modifier.weight(1f).height(52.dp),
                     shape = glass,
+                    contentPadding = PaddingValues(horizontal = 2.dp),
                     colors = if (chosen) ButtonDefaults.buttonColors(containerColor = accent, contentColor = ComposeColor.White)
                     else glassColors
                 ) {
-                    Text((if (chosen) "✓ " else "") + labels[q], fontSize = 13.sp)
+                    Text(
+                        (if (chosen) "✓ " else "") + labels[q],
+                        fontSize = 11.sp,
+                        maxLines = 1,
+                        softWrap = false
+                    )
                 }
             }
         }

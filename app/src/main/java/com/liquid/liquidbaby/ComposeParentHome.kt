@@ -245,8 +245,8 @@ fun ParentHomeTop(
 }
 
 /**
- * One talk card, shared by the child and partner buttons: hold or tap, the Hold / Tap switch in its corner,
- * dimmed when disabled, and an optional notice line below it.
+ * One talk card, shared by the child and partner buttons: hold or tap. The Hold / Tap switch sits on its own
+ * row at the top, the label is below it, so the two never overlap.
  */
 @Composable
 fun TalkCard(
@@ -285,31 +285,41 @@ fun TalkCard(
     } else Modifier
 
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(104.dp)
+                .height(116.dp)
                 .alpha(if (dim) 0.45f else 1f)
                 .scale(if (pressed) 0.97f else 1f)
                 .background(bg, RoundedCornerShape(26.dp))
-                .then(pointer),
-            contentAlignment = Alignment.Center
+                .then(pointer)
+                .padding(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Text(text, fontSize = 18.sp, color = textColor, textAlign = TextAlign.Center)
-            Row(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 8.dp, end = 12.dp)
-                    .background(Color(0x66000000), RoundedCornerShape(14.dp))
-                    .padding(start = 8.dp, end = 6.dp, top = 4.dp, bottom = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier
+                        .background(Color(0x66000000), RoundedCornerShape(14.dp))
+                        .padding(start = 8.dp, end = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        if (pressMode) Tr.pick("Tap", "نقرة") else Tr.pick("Hold", "ضغط"),
+                        fontSize = 12.sp,
+                        color = Color.White
+                    )
+                    Switch(checked = pressMode, onCheckedChange = onMode)
+                }
+            }
+            Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
                 Text(
-                    if (pressMode) Tr.pick("Tap", "نقرة") else Tr.pick("Hold", "ضغط"),
-                    fontSize = 13.sp,
-                    color = Color.White
+                    text,
+                    fontSize = 16.sp,
+                    lineHeight = 20.sp,
+                    maxLines = 2,
+                    color = textColor,
+                    textAlign = TextAlign.Center
                 )
-                Switch(checked = pressMode, onCheckedChange = onMode)
             }
         }
         if (notice.isNotEmpty()) {

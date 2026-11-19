@@ -342,6 +342,9 @@ object ParentEngine {
         if (levelWanted) sendAsync(c, T.SUB_LEVEL, byteArrayOf(1))
         PairStore.setLastIp(ip)
         connected = true
+        talkNote = ""
+        listenNote = ""
+        viewNote = ""
         offlineAlerted = false
         lastContact = System.currentTimeMillis()
         status = "Connected to " + p.childName

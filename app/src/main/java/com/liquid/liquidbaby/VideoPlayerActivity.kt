@@ -9,6 +9,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -51,6 +52,7 @@ class VideoPlayerActivity : ComponentActivity() {
 
     private var playing by mutableStateOf(false)
     private var loading by mutableStateOf(true)
+    private var videoRatio by mutableStateOf(0f)
     private var status by mutableStateOf("")
     private var posMs by mutableStateOf(0)
     private var durMs by mutableStateOf(0)
@@ -91,7 +93,7 @@ class VideoPlayerActivity : ComponentActivity() {
                 .background(Color.Black)
                 .systemBarsPadding()
         ) {
-            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 AndroidView(
                     factory = { c ->
                         SurfaceView(c).also { sv ->
@@ -106,7 +108,7 @@ class VideoPlayerActivity : ComponentActivity() {
                             })
                         }
                     },
-                    modifier = Modifier.fillMaxSize()
+                    modifier = if (videoRatio > 0f) Modifier.aspectRatio(videoRatio) else Modifier.fillMaxSize()
                 )
                 if (loading) {
                     CircularProgressIndicator(
@@ -210,6 +212,7 @@ class VideoPlayerActivity : ComponentActivity() {
                 mp.setVideoScalingMode(MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT)
                 mp.setOnPreparedListener {
                     Diag.i("Video playing: " + it.videoWidth + "x" + it.videoHeight + ", " + it.duration + " ms")
+                    if (it.videoWidth > 0 && it.videoHeight > 0) videoRatio = it.videoWidth.toFloat() / it.videoHeight
                     ready = true
                     loading = false
                     status = ""

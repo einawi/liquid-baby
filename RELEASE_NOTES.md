@@ -1,3 +1,7 @@
+0.9.7 (build 152): review fixes: the stale 'Not connected' message no longer stays on the camera screen; the quality buttons show their full labels; the talk card's Hold/Tap switch no longer covers the text; light themes keep dark text readable; the video keeps its own proportions.
+
+0.9.7 (build 152): مراجعة: لم تعد رسالة 'غير متصل' تبقى في شاشة الكاميرا؛ أزرار الجودة تظهر كاملة؛ مفتاح ضغط/نقرة لم يعد يغطي النص؛ الثيمات الفاتحة تحافظ على وضوح النص الداكن؛ الفيديو يحتفظ بنسبته الأصلية.
+
 0.9.7 (build 151): version renamed to 0.9.7. Build fix: the Compose dp import no longer clashes with the classic dp helper in the camera and other screens.
 
 0.9.7 (build 151): تغيير رقم الإصدار إلى 0.9.7. إصلاح البناء: استيراد dp من Compose لم يعد يتعارض مع دالة dp الكلاسيكية في الكاميرا وبقية الشاشات.
