@@ -14,7 +14,27 @@ import java.io.File
  */
 object VideoExport {
 
+    /** Sharing is a choice the user makes now. Saving to the gallery makes an unlocked copy visible to other apps, so ask first. */
     fun run(activity: Activity, src: File, share: Boolean) {
+        if (share) {
+            exportNow(activity, src, true)
+            return
+        }
+        Dialogs.show(
+            activity,
+            Tr.pick("Save an unlocked copy?", "حفظ نسخة غير مشفّرة؟"),
+            Tr.pick(
+                "The saved video is not encrypted, and other apps with access to media can see it. Continue?",
+                "الفيديو المحفوظ غير مشفّر، ويمكن لتطبيقات الوسائط رؤيته. هل تتابع؟"
+            ),
+            listOf(
+                Tr.pick("Save", "حفظ") to { exportNow(activity, src, false) },
+                Tr.pick("Cancel", "تراجع") to {}
+            )
+        )
+    }
+
+    private fun exportNow(activity: Activity, src: File, share: Boolean) {
         fun t(en: String, ar: String): String = Tr.pick(en, ar)
         fun msg(text: String) = Toast.makeText(activity, text, Toast.LENGTH_SHORT).show()
 

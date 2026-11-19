@@ -35,6 +35,15 @@ object ChildEngine {
     @Volatile
     var pendingPair: PairRequest? = null
 
+    /** Four-digit code shown on the child phone while pairing is open; the parent must type it. */
+    @Volatile
+    var pairCode = ""
+
+    fun newPairCode(): String {
+        val n = java.nio.ByteBuffer.wrap(Crypto.random(4)).int and 0x7fffffff
+        return String.format(java.util.Locale.US, "%04d", n % 10000)
+    }
+
     @Volatile
     var lastClipMs = 0L
 
@@ -258,10 +267,21 @@ object ChildEngine {
     }
 
     private fun pair(c: Conn, data: ByteArray) {
+        if (!Vault.canStore()) {
+            c.send(T.ERROR, "This phone cannot store pairing keys securely, so it cannot pair.".toByteArray())
+            return
+        }
         val f = Wire.unpack(data)
-        if (f.size < 3) throw java.io.IOException("Bad pairing request")
+        if (f.size < 4) throw java.io.IOException("Bad pairing request")
         if (System.currentTimeMillis() > pairingUntil) {
             c.send(T.ERROR, "The child phone is not in pairing mode. Tap 'Allow a new parent phone' on it first.".toByteArray())
+            return
+        }
+        // The parent must know the code shown here: without it, a stranger on the network cannot pair.
+        val expected = Crypto.hmac(pairCode.toByteArray(), "LBPAIR".toByteArray(), f[0], f[1])
+        if (pairCode.isEmpty() || !java.security.MessageDigest.isEqual(expected, f[3])) {
+            Diag.i("A pairing request with a wrong code was refused")
+            c.send(T.ERROR, "Wrong pairing code. Type the code shown on the child phone.".toByteArray())
             return
         }
         if (pendingPair != null) {
@@ -296,6 +316,7 @@ object ChildEngine {
             return
         }
         PairStore.addParent(PairStore.Peer(parentId, name, Hex.encode(Crypto.pairKey(secret))))
+        pairCode = ""
         pairingUntil = 0L
         Diag.i("Paired with parent phone $name")
         changed()
@@ -304,10 +325,18 @@ object ChildEngine {
     /** Returns the parent id once logged in. */
     private fun session(c: Conn, data: ByteArray): String? {
         val f = Wire.unpack(data)
-        if (f.size < 2) throw java.io.IOException("Bad login")
+        if (f.size < 3) throw java.io.IOException("Bad login")
         val id = Hex.encode(f[0])
         val key = PairStore.keyFor(id)
         if (key == null) {
+            c.send(T.ERROR, "This phone is not paired with the child phone.".toByteArray())
+            return null
+        }
+        // The parent must prove it holds the pairing key. Without this, anyone on the network who knows
+        // the parent's id could take over the live connection of the real parent phone.
+        val proof = Crypto.hmac(key, "LBAUTH".toByteArray(), f[1])
+        if (!java.security.MessageDigest.isEqual(proof, f[2])) {
+            Diag.i("A login without the right key was refused")
             c.send(T.ERROR, "This phone is not paired with the child phone.".toByteArray())
             return null
         }

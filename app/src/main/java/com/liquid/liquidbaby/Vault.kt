@@ -47,6 +47,12 @@ object Vault {
         plain
     }
 
+    /** True only when the Keystore can encrypt on this phone; pairing refuses to store keys otherwise. */
+    fun canStore(): Boolean {
+        val probe = enc("check")
+        return probe.startsWith("v1:")
+    }
+
     fun dec(stored: String): String {
         if (!stored.startsWith("v1:")) return stored
         return try {

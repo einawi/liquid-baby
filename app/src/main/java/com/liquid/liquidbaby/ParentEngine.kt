@@ -315,7 +315,7 @@ object ParentEngine {
             c.socket.soTimeout = 5000
             val key = Hex.decode(p.key)
             val nc = Crypto.random(16)
-            c.send(T.HELLO_AUTH, Wire.pack(Hex.decode(p.parentId), nc))
+            c.send(T.HELLO_AUTH, Wire.pack(Hex.decode(p.parentId), nc, Crypto.hmac(key, "LBAUTH".toByteArray(), nc)))
             val r = c.read()
             if (r.type == T.ERROR) throw IOException(String(r.data))
             if (r.type != T.AUTH_REPLY) throw IOException("Unexpected reply")
@@ -949,10 +949,14 @@ object ParentEngine {
     }
 
     /** Pairing, started by the user. Runs on its own thread. */
-    fun pair(ctx: Context, ip: String, listener: PairListener) {
+    fun pair(ctx: Context, ip: String, code: String, listener: PairListener) {
         val app = ctx.applicationContext
         Thread {
             var c: Conn? = null
+            if (!Vault.canStore()) {
+                listener.onResult(false, "This phone cannot store pairing keys securely, so it cannot pair.")
+                return@Thread
+            }
             try {
                 val s = Socket()
                 Net.bind(app, s)
@@ -962,7 +966,9 @@ object ParentEngine {
                 val kp = Crypto.newKeyPair()
                 val pub = kp.public.encoded
                 val myId = PairStore.parentId()
-                c.send(T.HELLO_PAIR, Wire.pack(pub, Hex.decode(myId), Build.MODEL.toByteArray()))
+                val myIdBytes = Hex.decode(myId)
+                val proof = Crypto.hmac(code.toByteArray(), "LBPAIR".toByteArray(), pub, myIdBytes)
+                c.send(T.HELLO_PAIR, Wire.pack(pub, myIdBytes, Build.MODEL.toByteArray(), proof))
                 val r = c.read()
                 if (r.type == T.ERROR) {
                     listener.onResult(false, String(r.data))

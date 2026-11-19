@@ -235,6 +235,7 @@ class ChildActivity : ComponentActivity() {
             return
         }
         ChildEngine.pairingUntil = System.currentTimeMillis() + 120_000
+        ChildEngine.pairCode = ChildEngine.newPairCode()
         toast(t("Now start pairing on the parent phone.", "الآن ابدأ الإقران من جوال الأبوين."))
         refresh()
     }
@@ -322,7 +323,8 @@ class ChildActivity : ComponentActivity() {
 
         val left = (ChildEngine.pairingUntil - System.currentTimeMillis()) / 1000
         state.pairNote = if (left > 0)
-            t("Pairing is open for $left more seconds.", "الإقران مفتوح لمدة $left ثانية أخرى.")
+            t("Pairing is open for $left more seconds.", "الإقران مفتوح لمدة $left ثانية أخرى.") +
+                "\n" + t("Pairing code: ${ChildEngine.pairCode}", "رمز الإقران: ${ChildEngine.pairCode}")
         else t("Let a parent phone pair with this phone for 2 minutes.", "اسمح لجوال أبوين بالاقتران مع هذا الجوال لمدة دقيقتين.")
 
         state.batteryWarn = if (ignoringBattery())

@@ -114,7 +114,9 @@ class LockActivity : ComponentActivity() {
                 Button(
                     onClick = {
                         unlockWith(pin) {
-                            error = Tr.pick("Wrong PIN", "الرمز غير صحيح")
+                            val wait = Lock.lockedSecondsLeft()
+                            error = if (wait > 0) Tr.pick("Too many wrong tries. Wait $wait s.", "محاولات خاطئة كثيرة. انتظر $wait ثانية.")
+                            else Tr.pick("Wrong PIN", "الرمز غير صحيح")
                             pin = ""
                         }
                     },

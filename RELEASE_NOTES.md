@@ -1,3 +1,11 @@
+0.9.8 (build 159): security: pairing needs a 4-digit code shown on the child phone, typed on the parent phone; pairing is refused when keys cannot be stored securely; saving to the gallery asks first, since the copy is unlocked; five wrong PIN tries lock the PIN for a growing time; the child screen reminds you to keep router port forwarding and UPnP off. Both phones must run this build.
+
+0.9.8 (build 159): الأمان: الإقران يحتاج رمزاً من 4 أرقام يظهر على جوال الطفل ويُكتب على جوال الأب؛ يُرفض الإقران إذا تعذّر حفظ المفاتيح بأمان؛ الحفظ في المعرض يسأل أولاً لأن النسخة غير مشفّرة؛ خمس محاولات خاطئة للرمز تقفله لمدة تزداد؛ شاشة الطفل تذكّرك بإبقاء توجيه المنافذ و UPnP مطفيين في الراوتر. يجب تثبيت هذا البناء على الجوالين معاً.
+
+0.9.7 (build 158): security: a parent phone must prove it holds its pairing key before the child phone accepts its login, so nobody on the network can take over the live connection; the settings export no longer includes pairing keys. Both phones must run this build, because the login format changed.
+
+0.9.7 (build 158): الأمان: يجب على جوال الأب إثبات أنه يملك مفتاح الإقران قبل أن يقبل جوال الطفل تسجيل دخوله، فلا يستطيع أحد على الشبكة أخذ الاتصال الحي؛ وتصدير الإعدادات لم يعد يتضمن مفاتيح الإقران. يجب تثبيت هذا البناء على الجوالين معاً، لأن صيغة تسجيل الدخول تغيّرت.
+
 0.9.7 (build 157): the child phone's sound meter and sound visual update ten times a second, so they move as smoothly as on the parent phone.
 
 0.9.7 (build 157): مؤشر الصوت وشكل الصوت على جوال الطفل يتحدثان عشر مرات في الثانية، فيتحركان بسلاسة كما على جوال الأب.

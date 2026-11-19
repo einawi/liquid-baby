@@ -24,7 +24,7 @@ object Prefs {
     fun remove(k: String) = sp.edit().remove(k).apply()
 
     /** Settings that are re-created by the app itself are not exported. */
-    private val transientKeys = setOf("availableJson", "lastCheckMs", "notifiedCode", "lastSeenCode", "lockHash", "lockSalt")
+    private val transientKeys = setOf("availableJson", "lastCheckMs", "notifiedCode", "lastSeenCode", "lockHash", "lockSalt", "parents", "childKey")
 
     fun exportJson(): String {
         val o = JSONObject()

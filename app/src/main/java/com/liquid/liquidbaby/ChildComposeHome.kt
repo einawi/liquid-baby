@@ -117,6 +117,14 @@ fun ChildHomeTop(
         }
     }
 
+    Text(
+        Tr.pick(
+            "Keep port forwarding and UPnP OFF on your router. The phones only talk on the home network.",
+            "أبقِ توجيه المنافذ (Port Forwarding) و UPnP مطفيين في الراوتر. الجوالان يتصلان داخل الشبكة المنزلية فقط."
+        ),
+        color = sub,
+        fontSize = 12.sp
+    )
     Text(Tr.pick("Paired parent phones", "جوالات الأبوين المقترنة"), color = sub, fontSize = 13.sp)
     AndroidView(factory = { ctx -> views.parents(ctx) }, modifier = Modifier.fillMaxWidth())
 

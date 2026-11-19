@@ -604,9 +604,23 @@ class ParentActivity : ComponentActivity(), MicHost {
         pair(ip)
     }
 
+    /** First ask for the code shown on the child phone, then pair. */
     private fun pair(ip: String) {
+        val input = EditText(this)
+        input.hint = t("4-digit code", "الرمز من 4 أرقام")
+        input.inputType = InputType.TYPE_CLASS_NUMBER
+        AlertDialog.Builder(this)
+            .setTitle(t("Type the pairing code", "اكتب رمز الإقران"))
+            .setMessage(t("The child phone shows a 4-digit code while pairing is open.", "جوال الطفل يعرض رمزاً من 4 أرقام أثناء فتح الإقران."))
+            .setView(input)
+            .setPositiveButton(t("Pair", "اقرن")) { _, _ -> pairWith(ip, input.text.toString().trim()) }
+            .setNegativeButton(t("Cancel", "تراجع"), null)
+            .show()
+    }
+
+    private fun pairWith(ip: String, code: String) {
         toast(t("Connecting...", "جارٍ الاتصال..."))
-        ParentEngine.pair(this, ip, object : ParentEngine.PairListener {
+        ParentEngine.pair(this, ip, code, object : ParentEngine.PairListener {
             override fun onSas(sas: String, childName: String, decide: (Boolean) -> Unit) {
                 runOnUiThread {
                     Dialogs.show(
