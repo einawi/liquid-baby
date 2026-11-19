@@ -248,7 +248,7 @@ class ParentActivity : ComponentActivity(), MicHost {
         }
         if (!entered) {
             entered = true
-            overridePendingTransition(R.anim.screen_in, R.anim.screen_out)
+            animateScreenIn()
         }
         if (Prefs.getBool("serviceWanted", false) && !ParentEngine.running && pairedCache != null) {
             UnitService.start(this)

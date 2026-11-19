@@ -26,7 +26,10 @@ import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -132,6 +135,9 @@ class CameraActivity : androidx.activity.ComponentActivity(), MicHost {
         applyLookTo()
         shownKey = ThemeWatch.key()
         camState.pressMode = Prefs.getString("talkMode", "hold") == "press"
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() = handleBack()
+        })
         setContent { CameraPage() }
         refresh()
     }
@@ -177,7 +183,11 @@ class CameraActivity : androidx.activity.ComponentActivity(), MicHost {
         ParentEngine.endView()
     }
 
-    override fun onBackPressed() {
+    private fun leaveCamera() {
+        finish()
+    }
+
+    private fun handleBack() {
         when {
             camState.fullOpen -> exitFull()
             recorder != null -> Dialogs.show(
@@ -185,11 +195,11 @@ class CameraActivity : androidx.activity.ComponentActivity(), MicHost {
                 t("Stop the recording and leave?", "إيقاف التسجيل والخروج؟"),
                 null,
                 listOf(
-                    t("Stop and leave", "إيقاف وخروج") to { stopRecording(); super.onBackPressed() },
+                    t("Stop and leave", "إيقاف وخروج") to { stopRecording(); leaveCamera() },
                     t("Keep recording", "متابعة التسجيل") to {}
                 )
             )
-            else -> super.onBackPressed()
+            else -> leaveCamera()
         }
     }
 
@@ -289,12 +299,10 @@ class CameraActivity : androidx.activity.ComponentActivity(), MicHost {
     private fun enterFull() {
         if (camState.fullOpen) return
         camState.fullOpen = true
-        window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_FULLSCREEN or
-            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
-            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
-            View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
-            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
-            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+        WindowInsetsControllerCompat(window, window.decorView).apply {
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            hide(WindowInsetsCompat.Type.systemBars())
+        }
         refreshFull()
     }
 
@@ -412,7 +420,7 @@ class CameraActivity : androidx.activity.ComponentActivity(), MicHost {
         camState.fullOpen = false
         fullPicture = null
         zoom = 1f
-        window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
+        WindowInsetsControllerCompat(window, window.decorView).show(WindowInsetsCompat.Type.systemBars())
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
     }
 

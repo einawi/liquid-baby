@@ -136,7 +136,7 @@ class ChildActivity : ComponentActivity() {
             recreate()
             return
         }
-        overridePendingTransition(R.anim.screen_in, R.anim.screen_out)
+        animateScreenIn()
         if (builtAr != Tr.isAr()) {
             recreate()
             return

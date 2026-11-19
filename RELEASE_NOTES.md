@@ -1,3 +1,7 @@
+0.9.7 (build 155): cleaned build warnings: back press in the camera uses the current dispatcher, full screen uses the current system-bar API, screen transitions and ringtone results use the newer calls where the phone supports them. No change in behavior.
+
+0.9.7 (build 155): تنظيف تحذيرات البناء: زر الرجوع في الكاميرا يستخدم الآلية الحالية، وملء الشاشة يستخدم واجهة أشرطة النظام الحديثة، وانتقالات الشاشات ونتيجة صوت الإشعار تستخدم الاستدعاءات الأحدث حيث يدعمها الجوال. دون تغيير في السلوك.
+
 0.9.7 (build 154): code review: the child screen's list of paired parent phones now updates while the screen is open.
 
 0.9.7 (build 154): مراجعة الكود: قائمة جوالات الأبوين في شاشة الطفل تتحدث الآن أثناء فتح الشاشة.

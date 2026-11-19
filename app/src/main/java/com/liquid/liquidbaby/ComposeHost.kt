@@ -90,3 +90,13 @@ class MicAsk(private val host: androidx.activity.ComponentActivity) : MicHost {
 object ThemeWatch {
     fun key(): String = Themes.mode() + "|" + Themes.style() + "|" + Themes.isDark() + "|" + Tr.isAr()
 }
+
+/** Screen-in animation: the newer call where the phone has it, the older one otherwise. */
+fun Activity.animateScreenIn() {
+    if (Build.VERSION.SDK_INT >= 34) {
+        overrideActivityTransition(Activity.OVERRIDE_TRANSITION_OPEN, R.anim.screen_in, R.anim.screen_out)
+    } else {
+        @Suppress("DEPRECATION")
+        overridePendingTransition(R.anim.screen_in, R.anim.screen_out)
+    }
+}

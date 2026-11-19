@@ -52,6 +52,7 @@ class VideoRecorder(private val outFile: File, private val maxMs: Long = 600_000
     var onFinished: ((Boolean) -> Unit)? = null
 
     @Synchronized
+    @Suppress("DEPRECATION")
     fun start(w: Int, h: Int, fps: Int, bitrate: Int): Boolean {
         return try {
             width = w and 1.inv()

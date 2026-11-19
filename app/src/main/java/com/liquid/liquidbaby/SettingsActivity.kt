@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.media.RingtoneManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.text.InputType
 import android.view.View
@@ -58,7 +59,7 @@ class SettingsActivity : ComponentActivity() {
 
     private val tonePicker = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
-            val uri = result.data?.getParcelableExtra<Uri>(RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
+            val uri = pickedTone(result.data)
             Prefs.putString("alertTone", uri?.toString() ?: "")
             toast(t("Notification sound saved", "تم حفظ صوت الإشعار"))
         }
@@ -66,7 +67,7 @@ class SettingsActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        overridePendingTransition(R.anim.screen_in, R.anim.screen_out)
+        animateScreenIn()
         applyLookTo()
         shownKey = ThemeWatch.key()
         builtAr = Tr.isAr()
@@ -87,6 +88,11 @@ class SettingsActivity : ComponentActivity() {
     private fun changed() {
         refreshTick++
     }
+
+    @Suppress("DEPRECATION")
+    private fun pickedTone(data: Intent?): Uri? =
+        if (Build.VERSION.SDK_INT >= 33) data?.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI, Uri::class.java)
+        else data?.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
 
     private fun askRole() {
         val items = arrayOf(t("Child unit", "وحدة الطفل"), t("Parent unit", "وحدة الأبوين"))
