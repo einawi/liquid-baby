@@ -1,3 +1,7 @@
+0.9.7 (build 154): code review: the child screen's list of paired parent phones now updates while the screen is open.
+
+0.9.7 (build 154): مراجعة الكود: قائمة جوالات الأبوين في شاشة الطفل تتحدث الآن أثناء فتح الشاشة.
+
 0.9.7 (build 153): theme and light/dark changes now apply at once on every screen, without leaving the screen or the app.
 
 0.9.7 (build 153): تغيير السمة والوضع الفاتح/الداكن يطبق فوراً على كل الشاشات، دون الخروج من الشاشة أو التطبيق.

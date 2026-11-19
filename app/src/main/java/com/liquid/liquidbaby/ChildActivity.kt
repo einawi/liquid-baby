@@ -274,6 +274,8 @@ class ChildActivity : ComponentActivity() {
 
     /** Writes the current values into the Compose state and the classic views. Runs every second. */
     private fun refresh() {
+        // a parent phone can pair while this screen is open: keep the list in step
+        if (PairStore.parents().size != lastParentCount) fillParents()
         val running = ChildEngine.running
         val connected = ChildEngine.connectedCount()
         val paired = lastParentCount.coerceAtLeast(0)
