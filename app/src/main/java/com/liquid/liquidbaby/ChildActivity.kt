@@ -60,6 +60,16 @@ class ChildActivity : ComponentActivity() {
         }
     }
 
+    /** The room sound moves ten times a second, so the meter and the wave look alive on the child phone. */
+    private val levelTick = object : Runnable {
+        override fun run() {
+            val level = ChildEngine.soundPercent()
+            meter?.progress = level
+            soundVisual?.setLevel(level)
+            ui.postDelayed(this, 100)
+        }
+    }
+
     /** Classic views shown inside the Compose home. Each factory stores its view so refresh() can update it. */
     private val views = ChildViews(
         meter = { ctx ->
@@ -68,7 +78,7 @@ class ChildActivity : ComponentActivity() {
                 visibility = View.GONE
             }.also { meter = it }
         },
-        sound = { ctx -> SoundVisual(ctx).also { soundVisual = it } },
+        sound = { ctx -> SoundVisual(ctx).also { it.setStyle(Prefs.getString("soundVisual", "wave")); soundVisual = it } },
         parents = { ctx -> buildParentsBox(ctx) }
     )
 
@@ -148,12 +158,14 @@ class ChildActivity : ComponentActivity() {
             UnitService.start(this)
         }
         ui.post(tick)
+        ui.post(levelTick)
     }
 
     override fun onPause() {
         super.onPause()
         ChildEngine.onChange = null
         ui.removeCallbacks(tick)
+        ui.removeCallbacks(levelTick)
     }
 
     private fun toggle() {
@@ -304,9 +316,6 @@ class ChildActivity : ComponentActivity() {
         state.address = t("Wi-Fi address: ", "عنوان الواي فاي: ") + (Net.wifiIp(this) ?: "--")
 
         styleLevelMeter(meter)
-        meter?.progress = ChildEngine.soundPercent()
-        soundVisual?.setStyle(Prefs.getString("soundVisual", "wave"))
-        soundVisual?.setLevel(ChildEngine.soundPercent())
 
         state.vpnWarn = Net.vpnBlocksLocal(this)
         state.camNeeded = checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED

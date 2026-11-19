@@ -1,3 +1,7 @@
+0.9.7 (build 157): the child phone's sound meter and sound visual update ten times a second, so they move as smoothly as on the parent phone.
+
+0.9.7 (build 157): مؤشر الصوت وشكل الصوت على جوال الطفل يتحدثان عشر مرات في الثانية، فيتحركان بسلاسة كما على جوال الأب.
+
 0.9.7 (build 156): finding the child phone on the network uses the current Android callback API on Android 14 and later; older phones keep the classic call. Same behavior, no more deprecation warnings in discovery.
 
 0.9.7 (build 156): البحث عن جوال الطفل على الشبكة يستخدم واجهة Android الحديثة على أندرويد 14 فما بعد؛ والأجهزة الأقدم تبقى على الطريقة القديمة. السلوك نفسه، دون تحذيرات الاستدعاءات المهجورة في الاكتشاف.
