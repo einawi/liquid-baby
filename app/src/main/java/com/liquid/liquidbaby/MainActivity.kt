@@ -36,6 +36,8 @@ import androidx.compose.ui.unit.sp
 /** Start screen: shows the update banner and lets this phone pick its role. Built with Compose. */
 class MainActivity : ComponentActivity() {
 
+    private var shownKey = ""
+
     private var refreshTick by mutableStateOf(0)
     private var renderedKey = ""
 
@@ -44,6 +46,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         applyLookTo()
+        shownKey = ThemeWatch.key()
         setContent { MainScreen() }
         try {
             startMain()
@@ -76,6 +79,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        if (shownKey != ThemeWatch.key()) {
+            recreate()
+            return
+        }
         if (CrashGuard.shouldEnterSafeMode(this)) return
         val key = Prefs.getString("role") + "|" + Tr.isAr() + "|" + Themes.mode() + "|" + Themes.style()
         if (key != renderedKey) {

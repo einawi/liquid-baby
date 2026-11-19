@@ -33,17 +33,24 @@ import androidx.compose.ui.unit.sp
 /** Diagnostics: filter the log, and copy or share it with secrets removed. Built with Compose. */
 class DiagnosticsActivity : ComponentActivity() {
 
+    private var shownKey = ""
+
     private var builtAr: Boolean? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         applyLookTo()
+        shownKey = ThemeWatch.key()
         builtAr = Tr.isAr()
         setContent { DiagnosticsScreen() }
     }
 
     override fun onResume() {
         super.onResume()
+        if (shownKey != ThemeWatch.key()) {
+            recreate()
+            return
+        }
         if (builtAr != Tr.isAr()) recreate()
     }
 }

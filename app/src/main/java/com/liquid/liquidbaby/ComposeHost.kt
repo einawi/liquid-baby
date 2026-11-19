@@ -85,3 +85,8 @@ class MicAsk(private val host: androidx.activity.ComponentActivity) : MicHost {
         launcher.launch(android.Manifest.permission.RECORD_AUDIO)
     }
 }
+
+/** Everything that changes how a screen looks. A screen recreates itself when this changes. */
+object ThemeWatch {
+    fun key(): String = Themes.mode() + "|" + Themes.style() + "|" + Themes.isDark() + "|" + Tr.isAr()
+}

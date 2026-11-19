@@ -37,11 +37,14 @@ import androidx.compose.ui.unit.sp
 /** Lock screen for the parent phone: PIN, and fingerprint when the phone supports it. Built with Compose. */
 class LockActivity : ComponentActivity() {
 
+    private var shownKey = ""
+
     private var builtAr: Boolean? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         applyLookTo()
+        shownKey = ThemeWatch.key()
         builtAr = Tr.isAr()
         setContent { LockScreen() }
         if (Build.VERSION.SDK_INT >= 28) askFingerprint()
@@ -49,6 +52,10 @@ class LockActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        if (shownKey != ThemeWatch.key()) {
+            recreate()
+            return
+        }
         if (builtAr != Tr.isAr()) recreate()
     }
 

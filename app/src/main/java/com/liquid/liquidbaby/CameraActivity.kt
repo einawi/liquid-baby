@@ -76,6 +76,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 /** Parent unit: live camera. Normal view, and a separate full-screen layer with pinch zoom and icon controls. */
 class CameraActivity : androidx.activity.ComponentActivity(), MicHost {
 
+    private var shownKey = ""
+
     private val mic = MicAsk(this)
     override fun askMic(onGranted: () -> Unit) = mic.askMic(onGranted)
 
@@ -128,6 +130,7 @@ class CameraActivity : androidx.activity.ComponentActivity(), MicHost {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         applyLookTo()
+        shownKey = ThemeWatch.key()
         camState.pressMode = Prefs.getString("talkMode", "hold") == "press"
         setContent { CameraPage() }
         refresh()
@@ -135,6 +138,10 @@ class CameraActivity : androidx.activity.ComponentActivity(), MicHost {
 
     override fun onResume() {
         super.onResume()
+        if (shownKey != ThemeWatch.key()) {
+            recreate()
+            return
+        }
         ParentEngine.frameListener = { bmp ->
             latest = bmp
             frames++

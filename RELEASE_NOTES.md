@@ -1,3 +1,7 @@
+0.9.7 (build 153): theme and light/dark changes now apply at once on every screen, without leaving the screen or the app.
+
+0.9.7 (build 153): تغيير السمة والوضع الفاتح/الداكن يطبق فوراً على كل الشاشات، دون الخروج من الشاشة أو التطبيق.
+
 0.9.7 (build 152): review fixes: the stale 'Not connected' message no longer stays on the camera screen; the quality buttons show their full labels; the talk card's Hold/Tap switch no longer covers the text; light themes keep dark text readable; the video keeps its own proportions.
 
 0.9.7 (build 152): مراجعة: لم تعد رسالة 'غير متصل' تبقى في شاشة الكاميرا؛ أزرار الجودة تظهر كاملة؛ مفتاح ضغط/نقرة لم يعد يغطي النص؛ الثيمات الفاتحة تحافظ على وضوح النص الداكن؛ الفيديو يحتفظ بنسبته الأصلية.

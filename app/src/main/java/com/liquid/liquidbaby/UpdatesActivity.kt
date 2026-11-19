@@ -40,6 +40,8 @@ import androidx.compose.ui.unit.sp
 /** App updates: installed version, check, download, install, skip and the Wi-Fi pre-download option. Built with Compose. */
 class UpdatesActivity : ComponentActivity() {
 
+    private var shownKey = ""
+
     private var message by mutableStateOf("")
     private var busy by mutableStateOf(false)
     private var refreshTick by mutableStateOf(0)
@@ -49,6 +51,7 @@ class UpdatesActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         applyLookTo()
+        shownKey = ThemeWatch.key()
         builtAr = Tr.isAr()
         wifiPredownload = Prefs.getBool("wifiPredownload", true)
         setContent { UpdatesScreen() }
@@ -56,6 +59,10 @@ class UpdatesActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        if (shownKey != ThemeWatch.key()) {
+            recreate()
+            return
+        }
         if (builtAr != Tr.isAr()) {
             recreate()
             return

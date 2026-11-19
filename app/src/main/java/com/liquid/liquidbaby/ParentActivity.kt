@@ -66,6 +66,8 @@ import kotlin.math.roundToInt
 /** Parent screen: the home part is Compose; recordings and settings are the classic views shown inside it. */
 class ParentActivity : ComponentActivity(), MicHost {
 
+    private var shownKey = ""
+
     private val ui = Handler(Looper.getMainLooper())
     private var builtAr: Boolean? = null
     private var pairedCache: PairStore.Paired? = null
@@ -128,6 +130,7 @@ class ParentActivity : ComponentActivity(), MicHost {
         builtAr = Tr.isAr()
         state.pressMode = Prefs.getString("talkMode", "hold") == "press"
         applyWindowLook()
+        shownKey = ThemeWatch.key()
         syncPaired()
         setContent { ParentRoot() }
         lastClipsVersion = ParentEngine.clipsVersion
@@ -227,6 +230,10 @@ class ParentActivity : ComponentActivity(), MicHost {
 
     override fun onResume() {
         super.onResume()
+        if (shownKey != ThemeWatch.key()) {
+            recreate()
+            return
+        }
         partnerHandler.removeCallbacks(partnerTick)
         partnerHandler.post(partnerTick)
         if (builtAr != Tr.isAr()) {

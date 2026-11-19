@@ -51,6 +51,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 /** Settings in three groups: appearance and language, alerts, and advanced. Built with Compose. */
 class SettingsActivity : ComponentActivity() {
 
+    private var shownKey = ""
+
     private var refreshTick by mutableStateOf(0)
     private var builtAr: Boolean? = null
 
@@ -66,12 +68,17 @@ class SettingsActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         overridePendingTransition(R.anim.screen_in, R.anim.screen_out)
         applyLookTo()
+        shownKey = ThemeWatch.key()
         builtAr = Tr.isAr()
         setContent { SettingsScreen() }
     }
 
     override fun onResume() {
         super.onResume()
+        if (shownKey != ThemeWatch.key()) {
+            recreate()
+            return
+        }
         if (builtAr != Tr.isAr()) recreate()
     }
 
@@ -226,7 +233,7 @@ class SettingsActivity : ComponentActivity() {
                         Button(
                             onClick = {
                                 Themes.setMode(m)
-                                changed()
+                                recreate()
                             },
                             modifier = Modifier.fillMaxWidth().height(48.dp),
                             shape = glass,
@@ -248,7 +255,7 @@ class SettingsActivity : ComponentActivity() {
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     modifier = Modifier.clickable {
                                         Themes.setStyle(st)
-                                        changed()
+                                        recreate()
                                     }
                                 ) {
                                     Box(

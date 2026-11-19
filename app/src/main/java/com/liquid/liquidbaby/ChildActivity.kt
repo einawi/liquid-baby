@@ -34,6 +34,8 @@ import androidx.compose.ui.unit.dp
 /** Child screen: the status card, the monitoring switch and the parent phones it serves. Compose hosts the layout. */
 class ChildActivity : ComponentActivity() {
 
+    private var shownKey = ""
+
     private val ui = Handler(Looper.getMainLooper())
     private var builtAr: Boolean? = null
     private var dialogShown = false
@@ -76,6 +78,8 @@ class ChildActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val t0 = System.nanoTime()
         builtAr = Tr.isAr()
+        applyLookTo()
+        shownKey = ThemeWatch.key()
         setContent { ChildRoot() }
         entered = true
         Diag.limited("buildChild", "Child screen built in ${(System.nanoTime() - t0) / 1_000_000} ms", 60_000L)
@@ -128,6 +132,10 @@ class ChildActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        if (shownKey != ThemeWatch.key()) {
+            recreate()
+            return
+        }
         overridePendingTransition(R.anim.screen_in, R.anim.screen_out)
         if (builtAr != Tr.isAr()) {
             recreate()
