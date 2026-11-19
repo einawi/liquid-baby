@@ -27,22 +27,19 @@ jobs:
         continue-on-error: true
       - uses: gradle/actions/setup-gradle@v5
       - name: Use the signing key from GitHub Secrets
-        # Never stops the build. The key is read from the AIY_KEYSTORE_BASE64 secret and is never committed.
-        continue-on-error: true
+        # The key is read only from the AIY_KEYSTORE_BASE64 secret and is never committed.
+        # If the secret is missing the build stops: a new key would give phones that already
+        # have this app an update they cannot install.
         env:
           AIY_KEYSTORE_BASE64: ${{ secrets.AIY_KEYSTORE_BASE64 }}
         run: |
           mkdir -p ~/.android
-          if [ -n "$AIY_KEYSTORE_BASE64" ]; then
-            echo "$AIY_KEYSTORE_BASE64" | base64 -d > ~/.android/debug.keystore
-            echo "Using the signing key from the AIY_KEYSTORE_BASE64 secret."
-          elif [ -f .aiy/debug.keystore ]; then
-            cp .aiy/debug.keystore ~/.android/debug.keystore
-            echo "::warning::Using the old key still stored in the repo. Put it in the AIY_KEYSTORE_BASE64 secret, then delete .aiy/debug.keystore."
-          else
-            keytool -genkeypair -keystore ~/.android/debug.keystore -storepass android -keypass android -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
-            echo "::warning::A new signing key was created. Phones with older builds will not update over this build."
+          if [ -z "$AIY_KEYSTORE_BASE64" ]; then
+            echo "::error::The AIY_KEYSTORE_BASE64 secret is missing. Add the signing key as this secret, then run the build again."
+            exit 1
           fi
+          echo "$AIY_KEYSTORE_BASE64" | base64 -d > ~/.android/debug.keystore
+          echo "Using the signing key from the AIY_KEYSTORE_BASE64 secret."
       - name: Build the debug APK
         env:
           BUILD_NUMBER: ${{ github.run_number }}

@@ -1,3 +1,11 @@
+0.9.8 (build 160, repository): the signing key is no longer stored in the repository (.aiy/debug.keystore removed). The AIY build reads it only from the AIY_KEYSTORE_BASE64 secret and stops if the secret is missing.
+
+0.9.8 (build 160، المستودع): مفتاح التوقيع لم يعد محفوظاً في المستودع (تم حذف .aiy/debug.keystore). بناء AIY يقرأه فقط من السر AIY_KEYSTORE_BASE64 ويتوقف إن كان السر مفقوداً.
+
+0.9.8 (build 160): fixed a message-number clash between partner talk and listening/settings messages (partner start/data/stop now use unique numbers). Both phones must run this build.
+
+0.9.8 (build 160): إصلاح تضارب أرقام الرسائل بين الحديث مع الشريك وبين الاستماع والإعدادات. يجب تثبيت هذا البناء على الجوالين معاً.
+
 0.9.8 (build 159): security: pairing needs a 4-digit code shown on the child phone, typed on the parent phone; pairing is refused when keys cannot be stored securely; saving to the gallery asks first, since the copy is unlocked; five wrong PIN tries lock the PIN for a growing time; the child screen reminds you to keep router port forwarding and UPnP off. Both phones must run this build.
 
 0.9.8 (build 159): الأمان: الإقران يحتاج رمزاً من 4 أرقام يظهر على جوال الطفل ويُكتب على جوال الأب؛ يُرفض الإقران إذا تعذّر حفظ المفاتيح بأمان؛ الحفظ في المعرض يسأل أولاً لأن النسخة غير مشفّرة؛ خمس محاولات خاطئة للرمز تقفله لمدة تزداد؛ شاشة الطفل تذكّرك بإبقاء توجيه المنافذ و UPnP مطفيين في الراوتر. يجب تثبيت هذا البناء على الجوالين معاً.

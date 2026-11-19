@@ -39,9 +39,11 @@ object T {
     const val VIEW_ERROR = 30
     const val LISTEN_START = 31
     // partner talk: parent -> child (start, audio, stop); the child forwards them to the other parent
-    const val PARTNER_START = 32
-    const val PARTNER_DATA = 33
-    const val PARTNER_STOP = 34
+    // Unique numbers: these used to share 32-34 with LISTEN_STOP, SET_INTERVAL and SET_TALKVOL,
+    // so a parent's 'stop listening' could be read as 'partner started talking'.
+    const val PARTNER_START = 41
+    const val PARTNER_DATA = 42
+    const val PARTNER_STOP = 43
     const val LISTEN_STOP = 32
     const val SET_INTERVAL = 33
     const val SET_TALKVOL = 34
