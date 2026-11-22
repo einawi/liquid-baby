@@ -1,3 +1,7 @@
+0.9.8 (build 161): first official release signed with the new key. Same code as build 160. Phones must have the app reinstalled once, because the signing key changed.
+
+0.9.8 (build 161): أول إصدار رسمي موقّع بالمفتاح الجديد. الكود نفسه كما في البناء 160. يجب إعادة تثبيت التطبيق مرة واحدة على الجوالات لأن مفتاح التوقيع تغيّر.
+
 0.9.8 (build 160, repository): the signing key is no longer stored in the repository (.aiy/debug.keystore removed). The AIY build reads it only from the AIY_KEYSTORE_BASE64 secret and stops if the secret is missing.
 
 0.9.8 (build 160، المستودع): مفتاح التوقيع لم يعد محفوظاً في المستودع (تم حذف .aiy/debug.keystore). بناء AIY يقرأه فقط من السر AIY_KEYSTORE_BASE64 ويتوقف إن كان السر مفقوداً.
