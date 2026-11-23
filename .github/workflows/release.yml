@@ -55,20 +55,6 @@ jobs:
       - name: Unit tests
         run: ./gradlew --no-daemon testDebugUnitTest -PgithubRepo=${{ github.repository }}
 
-      - name: TEMP diagnostic
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: |
-          echo "KEYSTORE_PASSWORD length: ${#KEYSTORE_PASSWORD}"
-          echo "KEY_PASSWORD length: ${#KEY_PASSWORD}"
-          echo "KEY_ALIAS length: ${#KEY_ALIAS}"
-          echo "KEY_ALIAS value between brackets: [$KEY_ALIAS]"
-          echo "$KEYSTORE_BASE64" | base64 -d > /tmp/test.jks
-          sha256sum /tmp/test.jks
-          keytool -list -keystore /tmp/test.jks -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" || true
 
       - name: Decode signing key
         env:
