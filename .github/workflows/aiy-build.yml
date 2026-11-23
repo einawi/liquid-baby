@@ -44,7 +44,7 @@ jobs:
         env:
           BUILD_NUMBER: ${{ github.run_number }}
         run: |
-          if [ -f ./gradlew ]; then chmod +x ./gradlew; ./gradlew --no-daemon assembleDebug --stacktrace; else gradle --no-daemon assembleDebug --stacktrace; fi
+          if [ -f ./gradlew ]; then chmod +x ./gradlew; ./gradlew --no-daemon assembleDebug --stacktrace -PgithubRepo=${{ github.repository }}; else gradle --no-daemon assembleDebug --stacktrace -PgithubRepo=${{ github.repository }}; fi
       - uses: actions/upload-artifact@v5
         with:
           name: apk
