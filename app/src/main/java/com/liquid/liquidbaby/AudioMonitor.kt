@@ -181,7 +181,13 @@ class AudioMonitor(
         try {
             if (!dir.exists()) dir.mkdirs()
             val wav = Wav.header(data.size) + data
-            val stored = ClipCrypt.seal(wav) ?: wav
+            // Never store a clip unencrypted: if the Keystore cannot encrypt, drop the clip and say so.
+            val stored = ClipCrypt.seal(wav)
+            if (stored == null) {
+                Diag.e("Clip dropped: the Keystore could not encrypt it")
+                onStatus("Listening")
+                return
+            }
             val tmp = File(dir, "$startMs.tmp")
             FileOutputStream(tmp).use { it.write(stored) }
             val done = File(dir, "$startMs.wav")
