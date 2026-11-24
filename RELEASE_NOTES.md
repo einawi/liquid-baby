@@ -1,3 +1,7 @@
+0.9.9 (build 162): fixed in-app update checks (the AIY trial build now works the same way). Clean release after the signing key rotation.
+
+0.9.9 (build 162): إصلاح التحقق من التحديثات داخل التطبيق (بناء AIY التجريبي يعمل الآن بنفس الطريقة). إصدار نظيف بعد تغيير مفتاح التوقيع.
+
 0.9.8 (build 161): first official release signed with the new key. Same code as build 160. Phones must have the app reinstalled once, because the signing key changed.
 
 0.9.8 (build 161): أول إصدار رسمي موقّع بالمفتاح الجديد. الكود نفسه كما في البناء 160. يجب إعادة تثبيت التطبيق مرة واحدة على الجوالات لأن مفتاح التوقيع تغيّر.

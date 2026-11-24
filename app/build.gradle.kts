@@ -3,8 +3,8 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
-val appVersionName = "0.9.8"
-val appVersionCode = 161
+val appVersionName = "0.9.9"
+val appVersionCode = 162
 
 val keystoreFile: String? = System.getenv("KEYSTORE_FILE")
 
